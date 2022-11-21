@@ -1,0 +1,31 @@
+{
+    "name": "wedrix/watchtower",
+    "description": "A wrapper around graphql-php for serving GraphQL from Doctrine-based frameworks like Symfony.",
+    "type": "library",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Wedrix\\Watchtower\\": "src/",
+            "Wedrix\\Watchtower\\string\\": "extensions/"
+        },
+        "files": ["extensions/string.php"]
+    },
+    "authors": [
+        {
+            "name": "Wedam Anewenah",
+            "email": "wedamja@gmail.com"
+        }
+    ],
+    "minimum-stability": "stable",
+    "require": {
+        "php": "^8.1",
+        "doctrine/orm": "^2.8",
+        "webonyx/graphql-php": "^14.4",
+        "wedrix/inflector": "^1.0"
+    },
+    "require-dev": {
+        "phpstan/phpstan": "^1.9",
+        "phploc/phploc": "^7.0",
+        "phpstan/phpstan-doctrine": "^1.3"
+    }
+}
