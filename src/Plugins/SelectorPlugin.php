@@ -22,7 +22,7 @@ final class SelectorPlugin implements Plugin
 
     public function __construct(
         private readonly string $nodeType,
-        private readonly string $field
+        private readonly string $fieldName
     )
     {
         $this->type = (function (): string {
@@ -31,7 +31,7 @@ final class SelectorPlugin implements Plugin
 
         $this->name = (function (): string {
             return "apply_".tableize($this->nodeType)
-                    ."_".tableize($this->field)."_selector";
+                    ."_".tableize($this->fieldName)."_selector";
         })();
 
         $this->namespace = (function (): string {

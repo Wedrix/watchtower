@@ -84,6 +84,11 @@ final class Console
             );
     }
 
+    public function scalarTypeDefinitions(): ScalarTypeDefinitions
+    {
+        return $this->scalarTypeDefinitions;
+    }
+
     public function addFilterPlugin(
         string $nodeType,
         string $filter
@@ -114,14 +119,14 @@ final class Console
 
     public function addSelectorPlugin(
         string $nodeType,
-        string $field
+        string $fieldName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new SelectorPlugin(
                     nodeType: $nodeType,
-                    field: $field
+                    fieldName: $fieldName
                 )
             );
     }

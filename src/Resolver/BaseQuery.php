@@ -91,10 +91,10 @@ final class BaseQuery implements Query
                     return array_merge($selectedEntityFields, $otherSelectedFields);
                 })();
         
-                foreach ($selectedFields as $field) {
+                foreach ($selectedFields as $fieldName) {
                     $selectorPlugin = new SelectorPlugin(
                         nodeType: $this->node->type(),
-                        field: $field
+                        fieldName: $fieldName
                     );
         
                     if ($this->plugins->contains($selectorPlugin)) {
@@ -103,7 +103,7 @@ final class BaseQuery implements Query
                         $selectorPlugin->callback()($queryBuilder, $this->node, $this->context);
                     }
                     else {
-                        $queryBuilder->addSelect("{$queryBuilder->rootAlias()}.$field");
+                        $queryBuilder->addSelect("{$queryBuilder->rootAlias()}.$fieldName");
                     }
                 }
             }
