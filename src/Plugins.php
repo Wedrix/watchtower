@@ -60,7 +60,7 @@ final class Plugins implements \IteratorAggregate
 
         foreach ($pluginDirectories as $pluginDirectory) {
             yield new PluginInfo(
-                pluginDirectory: $pluginDirectory[0]->getPath()
+                pluginDirectory: $pluginDirectory[0]
             );
         }
     }
