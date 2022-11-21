@@ -51,16 +51,22 @@ final class Plugins implements \IteratorAggregate
     public function getIterator(): \Traversable
     {
         $pluginDirectories = new \RegexIterator(
-            iterator: new \RecursiveIteratorIterator(
-                iterator: new \RecursiveDirectoryIterator($this->directory)
-            ), 
+            iterator: (function () {
+                $directoryIterator = new \RecursiveIteratorIterator(
+                    iterator: new \RecursiveDirectoryIterator($this->directory)
+                );
+
+                foreach ($directoryIterator as $directory) {
+                    yield $directory->getPath();
+                }
+            })(), 
             pattern: '/.+\.php/i',
             mode: \RecursiveRegexIterator::GET_MATCH
         );
 
         foreach ($pluginDirectories as $pluginDirectory) {
             yield new PluginInfo(
-                pluginDirectory: $pluginDirectory->getPath()
+                pluginDirectory: $pluginDirectory
             );
         }
     }
