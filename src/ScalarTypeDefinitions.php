@@ -49,9 +49,11 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
     public function getIterator(): \Traversable
     {
         foreach (new \DirectoryIterator($this->directory) as $directory) {
+            $dirElements = explode(\DIRECTORY_SEPARATOR, explode("_type_definition.php", $directory->getPath())[0]);
+
             yield new ScalarTypeDefinition(
                 typeName: classify(
-                    ($dirElements = explode(\DIRECTORY_SEPARATOR, explode("_type_definition.php", $directory->getPath())[0]))[count($dirElements) - 1]
+                    $dirElements[count($dirElements) - 1]
                 )
             );
         }

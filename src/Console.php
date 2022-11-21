@@ -51,7 +51,7 @@ final class Console
     }
 
     /**
-     * Generate the schema.
+     * Generate the schema file.
      * Use all Entity classes to generate the Query fields (single and collection queries).
      * Create types for all Entity classes using their fields and relations.
      * Create input types for collection queries' queryInput params.
@@ -61,14 +61,10 @@ final class Console
     }
 
     /**
-     * Update the schema and bust the cache.
-     * Updates are not forceful, i.e., they do not overide or remove fields.
-     * To force updates, call with the 'forcefully' argument.
-     * Only applies to Query.
+     * Sync queries in the schema file to match the project\'s Doctrine models.
+     * Busts the cache to reflect the changes.
      */
-    public function updateSchema(
-        bool $forcefully
-    ): void
+    public function syncSchema(): void
     {
     }
 
