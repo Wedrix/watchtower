@@ -62,10 +62,7 @@ final class Console
             data: SchemaPrinter::doPrint(
                 schema: new SyncedQuerySchema(
                     entityManager: $this->entityManager
-                ),
-                options: [
-                    'sortTypes' => false
-                ]
+                )
             )
         );
 
