@@ -31,12 +31,18 @@ final class SyncedQuerySchema extends SchemaType
             $entityClassNames = $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
                     ?? throw new \Exception("Invalid EntityManager. The metadata driver implementation is not set.");
     
+            /**
+             * @var array<string,mixed>
+             */
             $types = [];
 
             $createEntityType = function (string $entityName) use ($types, &$createEntityType): ObjectType {
                 $types[$entityName] = new ObjectType([
                     'name' => $entityName,
                     'fields' => (function () use ($entityName, $types, &$createEntityType): array {
+                        /**
+                         * @var array<string,array>
+                         */
                         $fields = [];
 
                         $entity = new Entity(
@@ -44,6 +50,9 @@ final class SyncedQuerySchema extends SchemaType
                             entityManager: $this->entityManager
                         );
 
+                        /**
+                         * @var array<string,array>
+                         */
                         $entityFields = [];
 
                         foreach ($entity->fields() as $field) {
@@ -95,7 +104,7 @@ final class SyncedQuerySchema extends SchemaType
                                 $nameElements = explode("\\", $embeddedClass);
                                 $embeddedTypeName = end($nameElements);
 
-                                $fields[$embeddedTypeName] ??= new ObjectType([
+                                $types[$embeddedTypeName] ??= new ObjectType([
                                     'name' => $embeddedTypeName,
                                     'fields' => (function () use ($fieldInfo, &$getTypeFromFieldInfo): array {
                                         $embedFields = [];
@@ -110,7 +119,7 @@ final class SyncedQuerySchema extends SchemaType
                                     })()
                                 ]);
 
-                                $fields[$fieldName] = $fields[$embeddedTypeName];
+                                $fields[$fieldName] = $types[$embeddedTypeName];
                             }
                             
                             if (isset($fieldInfo['mapping'])) {
@@ -118,17 +127,17 @@ final class SyncedQuerySchema extends SchemaType
                             }
                         }
 
-                        // foreach ($entity->associations() as $associationName) {
-                        //     $associationMapping = $entity->associationMapping($associationName);
+                        foreach ($entity->associations() as $associationName) {
+                            $associationMapping = $entity->associationMapping($associationName);
 
-                        //     $nameElements = explode("\\",$associationMapping['targetEntity']);
-                        //     $associationClassName = end($nameElements);
+                            $nameElements = explode("\\",$associationMapping['targetEntity']);
+                            $associationClassName = end($nameElements);
 
-                        //     $types[$associationClassName] ??= $createEntityType($associationClassName);
+                            $types[$associationClassName] ??= $createEntityType($associationClassName);
 
-                        //     $feilds[$associationName] = $types[$associationClassName];
+                            $feilds[$associationName] = $types[$associationClassName];
 
-                        // }
+                        }
 
                         return $fields;
                     })()
@@ -143,7 +152,7 @@ final class SyncedQuerySchema extends SchemaType
 
                 $createEntityType($entityName);
             }
-var_dump($types);    
+   
             $queries = [];
     
             foreach ($entityClassNames as $entityClassName) {
@@ -181,7 +190,7 @@ var_dump($types);
                     ]
                 ];
             }
-var_dump($queries);    
+   
             return new SchemaType([
                 'query' => new ObjectType([
                     'name' => 'Query',
