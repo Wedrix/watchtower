@@ -178,7 +178,7 @@ final class SyncedQuerySchema extends SchemaType
                     'type' => Type::nonNull(Type::listOf($type)),
                     'args' => [
                         'queryParams' => [
-                            'type' => Type::nonNull($types[$queryParamsTypeName])
+                            'type' => $types[$queryParamsTypeName]
                         ],
                         'distinct' => [
                             'type' => Type::boolean()
