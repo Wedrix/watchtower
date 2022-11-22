@@ -118,17 +118,17 @@ final class SyncedQuerySchema extends SchemaType
                             }
                         }
 
-                        foreach ($entity->associations() as $associationName) {
-                            $associationMapping = $entity->associationMapping($associationName);
+                        // foreach ($entity->associations() as $associationName) {
+                        //     $associationMapping = $entity->associationMapping($associationName);
 
-                            $nameElements = explode("\\",$associationMapping['targetEntity']);
-                            $associationClassName = end($nameElements);
+                        //     $nameElements = explode("\\",$associationMapping['targetEntity']);
+                        //     $associationClassName = end($nameElements);
 
-                            $types[$associationClassName] ??= $createEntityType($associationClassName);
+                        //     $types[$associationClassName] ??= $createEntityType($associationClassName);
 
-                            $feilds[$associationName] = $types[$associationClassName];
+                        //     $feilds[$associationName] = $types[$associationClassName];
 
-                        }
+                        // }
 
                         return $fields;
                     })()
