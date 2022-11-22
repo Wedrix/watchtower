@@ -55,12 +55,12 @@ final class SyncedQuerySchema extends SchemaType
                                 [$fieldName, $embeddedFieldName] = explode('.', $field);
 
                                 if (isset($entityFields[$fieldName])) {
-                                    $entityFields[$fieldName]['embedded_fields'][$embeddedFieldName] = $entity->fieldType($fieldName);
+                                    $entityFields[$fieldName]['embedded_fields'][$embeddedFieldName] = $entity->fieldType($embeddedFieldName);
                                 }
                                 else {
                                     $entityFields[$fieldName] = [
                                         'embedded_fields' => [
-                                            $embeddedFieldName => $entity->fieldType($fieldName)
+                                            $embeddedFieldName => $entity->fieldType($embeddedFieldName)
                                         ]
                                     ];
                                 }
