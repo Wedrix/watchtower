@@ -61,6 +61,11 @@ final class Entity
         })();
     }
 
+    public function name(): string
+    {
+        return $this->name;
+    }
+
     public function class(): string
     {
         return $this->class;
