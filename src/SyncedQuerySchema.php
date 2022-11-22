@@ -119,21 +119,19 @@ final class SyncedQuerySchema extends SchemaType
                         foreach ($entity->associations() as $associationName) {
                             $associatedEntityName = ($nameElements = explode("\\",$entity->associationTargetEntity($associationName)))[count($nameElements) - 1];
 
-                            if ($entity->associationIsSingleValued($associationName)) {
-                                if ($entity->associationIsNullable($associationName)) {
-                                    $fields[$associationName] = &$types[$associatedEntityName];
-                                }
-                                else {
-                                    $fields[$associationName] = Type::nonNull(function () use (&$types, $associatedEntityName): NullableType {
-                                        return $types[$associatedEntityName];
-                                    });
-                                }
+                            $associatedType = function () use (&$types, $associatedEntityName): NullableType {
+                                return $types[$associatedEntityName];
+                            };
+
+                            if (!$entity->associationIsSingleValued($associationName)) {
+                                $associatedType = Type::listOf(Type::nonNull($associatedType));
                             }
-                            else {
-                                $fields[$associationName] = Type::nonNull(Type::listOf(Type::nonNull(function () use (&$types, $associatedEntityName): NullableType {
-                                    return $types[$associatedEntityName];
-                                })));
+
+                            if (!$entity->associationIsNullable($associationName)) {
+                                $associatedType = Type::nonNull($associatedType);
                             }
+
+                            $fields[$associationName] = $associatedType;
                         }
 
                         return $fields;
