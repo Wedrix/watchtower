@@ -37,7 +37,7 @@ final class SyncedQuerySchema extends SchemaType
              */
             $types = [];
 
-            $createEntityType = function (Entity $entity) use (&$types): void {
+            $addEntityType = function (Entity $entity) use (&$types): void {
                 $types[$entity->name()] ??= new ObjectType([
                     'name' => $entity->name(),
                     'fields' => (function () use ($entity, &$types): array {
@@ -142,14 +142,12 @@ final class SyncedQuerySchema extends SchemaType
             };
     
             foreach ($entityClassNames as $entityClassName) {
-                $entityName = ($nameElements = explode("\\", $entityClassName))[count($nameElements) - 1];
-
-                $entity = new Entity(
-                    name: $entityName,
-                    entityManager: $this->entityManager
+                $addEntityType(
+                    new Entity(
+                        name: ($nameElements = explode("\\", $entityClassName))[count($nameElements) - 1],
+                        entityManager: $this->entityManager
+                    )
                 );
-
-                $createEntityType($entity);
             }
  
             $queries = [];
