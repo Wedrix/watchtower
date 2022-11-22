@@ -36,10 +36,10 @@ final class SyncedQuerySchema extends SchemaType
              */
             $types = [];
 
-            $createEntityType = function (string $entityName) use ($types, &$createEntityType): ObjectType {
-                $types[$entityName] = new ObjectType([
+            $createEntityType = function (string $entityName) use (&$types, &$createEntityType): ObjectType {
+                $types[$entityName] ??= new ObjectType([
                     'name' => $entityName,
-                    'fields' => (function () use ($entityName, $types, &$createEntityType): array {
+                    'fields' => (function () use ($entityName, &$types, &$createEntityType): array {
                         /**
                          * @var array<string,array>
                          */
