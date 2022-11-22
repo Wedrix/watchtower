@@ -57,17 +57,17 @@ final class SyncedQuerySchema extends SchemaType
 
                         foreach ($entity->fields() as $field) {
                             if (str_contains($field, '.')) {
-                                $embeddedFieldElements = explode('.', $field);
+                                [$fieldName, $embeddedFieldName] = explode('.', $field);
 
-                                if (isset($entityFields[$embeddedFieldElements[0]])) {
-                                    $entityFields[$embeddedFieldElements[0]]['embeds'][$embeddedFieldElements[1]] = [
+                                if (isset($entityFields[$fieldName])) {
+                                    $entityFields[$fieldName]['embeds'][$embeddedFieldName] = [
                                         'mapping' => $entity->fieldMapping($field)
                                     ];
                                 }
                                 else {
-                                    $entityFields[$embeddedFieldElements[0]] = [
+                                    $entityFields[$fieldName] = [
                                         'embeds' => [
-                                            $embeddedFieldElements[1] => [
+                                            $embeddedFieldName => [
                                                 'mapping' => $entity->fieldMapping($field)
                                             ]
                                         ]
@@ -100,9 +100,8 @@ final class SyncedQuerySchema extends SchemaType
                         foreach ($entityFields as $fieldName => $fieldInfo) {
                             if (isset($fieldInfo['embeds'])) {
                                 $embeddedClass = $entity->embeddedFieldClass($fieldName);
-                                
-                                $nameElements = explode("\\", $embeddedClass);
-                                $embeddedTypeName = end($nameElements);
+
+                                $embeddedTypeName = ($nameElements = explode("\\", $embeddedClass))[count($nameElements) - 1];
 
                                 $types[$embeddedTypeName] ??= new ObjectType([
                                     'name' => $embeddedTypeName,
@@ -127,17 +126,16 @@ final class SyncedQuerySchema extends SchemaType
                             }
                         }
 
-                        // foreach ($entity->associations() as $associationName) {
-                        //     $associationMapping = $entity->associationMapping($associationName);
+                        foreach ($entity->associations() as $associationName) {
+                            $associationMapping = $entity->associationMapping($associationName);
 
-                        //     $nameElements = explode("\\",$associationMapping['targetEntity']);
-                        //     $associationClassName = end($nameElements);
+                            $associationClassName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
 
-                        //     $types[$associationClassName] ??= $createEntityType($associationClassName);
+                            $types[$associationClassName] ??= $createEntityType($associationClassName);
 
-                        //     $feilds[$associationName] = $types[$associationClassName];
+                            $feilds[$associationName] = $types[$associationClassName];
 
-                        // }
+                        }
 
                         return $fields;
                     })()
@@ -147,17 +145,15 @@ final class SyncedQuerySchema extends SchemaType
             };
     
             foreach ($entityClassNames as $entityClassName) {
-                $nameElements = explode("\\", $entityClassName);
-                $entityName = end($nameElements);
+                $entityName = ($nameElements = explode("\\", $entityClassName))[count($nameElements) - 1];
 
                 $createEntityType($entityName);
             }
-var_dump($types);   
+ 
             $queries = [];
     
             foreach ($entityClassNames as $entityClassName) {
-                $nameElements = explode("\\", $entityClassName);
-                $singleQueryName = camelize($entityName = end($nameElements));
+                $singleQueryName = camelize($entityName = ($nameElements = explode("\\", $entityClassName))[count($nameElements) - 1]);
 
                 $collectionQueryName = pluralize($singleQueryName);
     
