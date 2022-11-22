@@ -131,7 +131,9 @@ final class SyncedQuerySchema extends SchemaType
                                 entityManager: $this->entityManager
                             );
         
-                            $types[$associatedEntityName] ??= $createEntityType($associatedEntity);
+                            if (!isset($types[$associatedEntityName])) {
+                                $createEntityType($associatedEntity);
+                            }
         
                             $feilds[$associationName] = $types[$associatedEntityName];
         
@@ -172,6 +174,12 @@ final class SyncedQuerySchema extends SchemaType
                 $types[$queryParamsTypeName = pluralize($entityName)."QueryParams"] = new InputObjectType([
                     'name' => $queryParamsTypeName,
                     'fields' => [
+                        'filters' => new InputObjectType([
+                            'name' => $queryParamsTypeName."FiltersParam"
+                        ]),
+                        'ordering' => new InputObjectType([
+                            'name' => $queryParamsTypeName."OrderingParam"
+                        ]),
                         'limit' => Type::nonNull(Type::int()),
                         'page' => Type::nonNull(Type::int()),
                     ]
