@@ -126,7 +126,7 @@ final class SyncedQuerySchema extends SchemaType
         
                             $associatedEntityName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
         
-                            $feilds[$associationName] = &$types[$associatedEntityName];
+                            $fields[$associationName] = &$types[$associatedEntityName];
                         }
 
                         return $fields;
