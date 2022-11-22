@@ -12,6 +12,7 @@ use GraphQL\Type\Definition\Directive;
 use GraphQL\Type\Definition\ImplementingType;
 use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\InterfaceType;
+use GraphQL\Type\Definition\NullableType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Utils\InterfaceImplementations;
@@ -123,11 +124,15 @@ final class SyncedQuerySchema extends SchemaType
                                     $fields[$associationName] = &$types[$associatedEntityName];
                                 }
                                 else {
-                                    //$fields[$associationName] = Type::nonNull(fn&() => $types[$associatedEntityName]);
+                                    $fields[$associationName] = Type::nonNull(function () use (&$types, $associatedEntityName): NullableType {
+                                        return $types[$associatedEntityName];
+                                    });
                                 }
                             }
                             else {
-                                //$fields[$associationName] = Type::nonNull(Type::listOf(Type::nonNull(fn&() => $types[$associatedEntityName])));
+                                $fields[$associationName] = Type::nonNull(Type::listOf(Type::nonNull(function () use (&$types, $associatedEntityName): NullableType {
+                                    return $types[$associatedEntityName];
+                                })));
                             }
                         }
 
