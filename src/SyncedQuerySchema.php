@@ -35,11 +35,16 @@ final class SyncedQuerySchema extends SchemaType
              * @var array<string,mixed>
              */
             $types = [];
+    
+            /**
+             * @var array<string,mixed>
+             */
+            $typesBeingResolved = [];
 
-            $createEntityType = function (Entity $entity) use (&$types, &$createEntityType): void {
+            $createEntityType = function (Entity $entity) use (&$types, &$typesBeingResolved, &$createEntityType): void {
                 $types[$entity->name()] ??= new ObjectType([
                     'name' => $entity->name(),
-                    'fields' => (function () use ($entity, &$types, &$createEntityType): array {
+                    'fields' => (function () use ($entity, &$types, &$typesBeingResolved, &$createEntityType): array {
                         /**
                          * @var array<string,array>
                          */
@@ -125,19 +130,21 @@ final class SyncedQuerySchema extends SchemaType
                             $associationMapping = $entity->associationMapping($associationName);
         
                             $associatedEntityName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
-var_dump($associatedEntityName);        
+        
                             $associatedEntity = new Entity(
                                 name: $associatedEntityName,
                                 entityManager: $this->entityManager
                             );
         
-                            if (!isset($types[$associatedEntityName])) {
+                            if (!isset($types[$associatedEntityName]) && !in_array($associatedEntityName, $typesBeingResolved)) {
+                                $typesBeingResolved[] = $associatedEntityName;
+
                                 $createEntityType($associatedEntity);
                             }
         
                             $feilds[$associationName] = $types[$associatedEntityName];
                         }
-var_dump($fields);
+
                         return $fields;
                     })()
                 ]);
