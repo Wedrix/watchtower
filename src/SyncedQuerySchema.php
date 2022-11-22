@@ -171,8 +171,8 @@ final class SyncedQuerySchema extends SchemaType
                 $types[$queryParamsTypeName = pluralize($entityName)."QueryParams"] = new InputObjectType([
                     'name' => $queryParamsTypeName,
                     'fields' => [
-                        'limit' => Type::nonNull(Type::int()),
-                        'page' => Type::nonNull(Type::int()),
+                        'limit' => Type::int(),
+                        'page' => Type::int(),
                     ]
                 ]);
     
