@@ -6,7 +6,7 @@ namespace Wedrix\Watchtower\Resolver;
 
 use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManagerInterface as DoctrineEntityManager;
-use Doctrine\ORM\Mapping\ClassMetadata;
+use Wedrix\Watchtower\Entity;
 
 final class EntityManager
 {
@@ -46,19 +46,12 @@ final class EntityManager
     {
         return $this->entities[$name] ??= new Entity(
             name: $name,
-            entityManager: $this
+            entityManager: $this->doctrineEntityManager
         );
     }
 
     public function getConfiguration(): Configuration
     {
         return $this->doctrineEntityManager->getConfiguration();
-    }
-
-    public function getClassMetadata(
-        string $className
-    ): ClassMetadata
-    {
-        return $this->doctrineEntityManager->getClassMetadata($className);
     }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower;
 
 use Doctrine\ORM\EntityManagerInterface;
+use GraphQL\Utils\SchemaPrinter;
 use Wedrix\Watchtower\Plugins\AuthorizorPlugin;
 use Wedrix\Watchtower\Plugins\FilterPlugin;
 use Wedrix\Watchtower\Plugins\MutationPlugin;
@@ -50,22 +51,35 @@ final class Console
         })();
     }
 
-    /**
-     * Generate the schema file.
-     * Use all Entity classes to generate the Query fields (single and collection queries).
-     * Create types for all Entity classes using their fields and relations.
-     * Create input types for collection queries' queryInput params.
-     */
     public function generateSchema(): void
     {
+        if (file_exists($this->schemaFileDirectory)) {
+            throw new \Exception("A schema file already exists.");
+        }
+
+        file_put_contents(
+            filename: $this->schemaFileDirectory,
+            data: SchemaPrinter::doPrint(
+                schema: new SyncedQuerySchema(
+                    entityManager: $this->entityManager
+                )
+            )
+        );
+
+        if (file_exists($this->schemaCacheFileDirectory)) {
+            unlink($this->schemaCacheFileDirectory);
+        }
     }
 
     /**
-     * Sync queries in the schema file to match the project\'s Doctrine models.
+     * Update queries in the schema file to match the project\'s current Doctrine models.
      * Busts the cache to reflect the changes.
      */
-    public function syncSchema(): void
+    public function updateSchema(): void
     {
+        if (file_exists($this->schemaCacheFileDirectory)) {
+            unlink($this->schemaCacheFileDirectory);
+        }
     }
 
     public function addScalarTypeDifinition(

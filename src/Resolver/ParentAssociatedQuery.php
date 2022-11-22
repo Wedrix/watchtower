@@ -49,20 +49,16 @@ final class ParentAssociatedQuery implements Query
         
                 $association = $this->node->fieldName();
         
-                $parentClassMetadata = $this->entityManager->getClassMetadata($parentAssociatedEntity->class());
-                
-                $classMetadata = $this->entityManager->getClassMetadata($rootEntity->class());
-        
                 $entityAlias = $queryBuilder->rootAlias();
         
                 $parentAlias = $queryBuilder->reconciledAlias('__parent');
         
                 $parentAssociatedEntityIdParameterAlias = $queryBuilder->reconciledAlias('__parentAssociatedEntityIdValue');
         
-                if ($parentClassMetadata->isAssociationInverseSide($association)) {
-                    $association = $parentClassMetadata->getAssociationMappedByTargetField($association);
+                if ($parentAssociatedEntity->associationIsInverside($association)) {
+                    $association = $parentAssociatedEntity->associationMappedByTargetField($association);
         
-                    if ($classMetadata->isSingleValuedAssociation($association)) {
+                    if ($rootEntity->associationIsSingleValued($association)) {
                         $queryBuilder->join("$entityAlias.$association", $association);
         
                         $queryBuilder->andWhere(

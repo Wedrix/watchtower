@@ -22,12 +22,13 @@ final class FieldResult implements Result
             return $this->node->isLeafType()
                         || (
                             !$this->node->isTopLevel()
-                                && (
-                                    $parentEntity = new Entity(
-                                        name: $this->node->parentType(), 
-                                        entityManager: $this->entityManager
-                                    )
-                                )->hasEmbeddedField(fieldName: $this->node->fieldName())
+                                && $this->entityManager
+                                        ->findEntity(
+                                            name: $this->node->parentType()
+                                        )
+                                        ->hasEmbeddedField(
+                                            fieldName: $this->node->fieldName()
+                                        )
                         );
         })();
 

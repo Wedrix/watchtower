@@ -33,3 +33,10 @@ function classify(
 {
     return (new Inflector())->classify($word);
 }
+
+function camelize(
+    string $word
+): string
+{
+    return (new Inflector())->camelize($word);
+}

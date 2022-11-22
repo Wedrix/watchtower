@@ -2,11 +2,16 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Resolver;
+namespace Wedrix\Watchtower;
+
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\Mapping\ClassMetadata;
 
 final class Entity
 {
     private readonly string $class;
+
+    private readonly ClassMetadata $metadata;
 
     /**
      * @var array<string>
@@ -25,7 +30,7 @@ final class Entity
 
     public function __construct(
         private readonly string $name,
-        private readonly EntityManager $entityManager
+        private readonly EntityManagerInterface $entityManager
     )
     {
         $this->class = (function (): string {
@@ -39,22 +44,20 @@ final class Entity
                 ?? throw new \Exception("No entity with the name '{$this->name}' exists for the given entity manager instance.");
         })();
 
+        $this->metadata = (function (): ClassMetadata {
+            return $this->entityManager->getClassMetadata($this->class);
+        })();
+
         $this->fields = (function (): array {
-            $classMetadata = $this->entityManager->getClassMetadata($this->class);
-    
-            return $classMetadata->getFieldNames();
+            return $this->metadata->getFieldNames();
         })();
 
         $this->idFields = (function (): array {
-            $classMetadata = $this->entityManager->getClassMetadata($this->class);
-    
-            return $classMetadata->getIdentifierFieldNames();
+            return $this->metadata->getIdentifierFieldNames();
         })();
 
         $this->associations = (function (): array {
-            $classMetadata = $this->entityManager->getClassMetadata($this->class);
-    
-            return $classMetadata->getAssociationNames();
+            return $this->metadata->getAssociationNames();
         })();
     }
 
@@ -91,8 +94,54 @@ final class Entity
         string $fieldName
     ): bool
     {
-        $classMetadata = $this->entityManager->getClassMetadata($this->class);
+        return isset($this->metadata->embeddedClasses[$fieldName]);
+    }
 
-        return isset($classMetadata->embeddedClasses[$fieldName]);
+    /**
+     * @return array<mixed>
+     */
+    public function fieldMapping(
+        string $fieldName
+    ): array
+    {
+        return $this->metadata->getFieldMapping($fieldName);
+    }
+
+    /**
+     * @return array<mixed>
+     */
+    public function associationMapping(
+        string $associationName
+    ): array
+    {
+        return $this->metadata->getAssociationMapping($associationName);
+    }
+
+    public function embeddedFieldClass(
+        string $fieldName
+    ): string
+    {
+        return $this->metadata->embeddedClasses[$fieldName]['class'];
+    }
+
+    public function associationIsInverside(
+        string $associationName
+    ): bool
+    {
+        return $this->metadata->isAssociationInverseSide($associationName);
+    }
+
+    public function associationMappedByTargetField(
+        string $fieldName
+    ): string
+    {
+        return $this->metadata->getAssociationMappedByTargetField($fieldName);
+    }
+
+    public function associationIsSingleValued(
+        string $associationName
+    ): bool
+    {
+        return $this->metadata->isSingleValuedAssociation($associationName);
     }
 }

@@ -49,8 +49,7 @@ final class BaseQuery implements Query
             
                     $selectedEntityFields = array_filter(
                         $rootEntity->fields(), 
-                        fn (string $entityField) => in_array($entityField, $rootEntity->fields())
-                            || in_array($entityField, $requestedFields)
+                        fn (string $entityField) => in_array($entityField, $requestedFields)
                             || array_reduce(
                                 $requestedFields, 
                                 function (bool $isRequestedEmbeddedField, string $requestedField) use ($entityField, $fieldsSelection) {
