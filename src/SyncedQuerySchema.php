@@ -134,16 +134,21 @@ final class SyncedQuerySchema extends SchemaType
                     entityManager: $this->entityManager
                 );
 
-                $createEntityType($entityName);
+                $createEntityType($entity);
 
                 foreach ($entity->associations() as $associationName) {
                     $associationMapping = $entity->associationMapping($associationName);
 
-                    $associationClassName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
+                    $associatedEntityName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
 
-                    $types[$associationClassName] ??= $createEntityType($associationClassName);
+                    $associatedEntity = new Entity(
+                        name: $associatedEntityName,
+                        entityManager: $this->entityManager
+                    );
 
-                    $feilds[$associationName] = $types[$associationClassName];
+                    $types[$associatedEntityName] ??= $createEntityType($associatedEntity);
+
+                    $feilds[$associationName] = $types[$associatedEntityName];
 
                 }
             }
