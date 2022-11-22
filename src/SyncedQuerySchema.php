@@ -119,9 +119,9 @@ final class SyncedQuerySchema extends SchemaType
                             $associatedEntityName = ($nameElements = explode("\\",$entity->associationTargetEntity($associationName)))[count($nameElements) - 1];
 
                             if ($entity->associationIsSingleValued($associationName)) {
-                                if (!$entity->associationIsNullable($associationName)) {
-                                    $fields[$associationName] = Type::nonNull(fn&() => $types[$associatedEntityName]);
-                                }
+                                $fields[$associationName] =& $entity->associationIsNullable($associationName)
+                                    ? $types[$associatedEntityName]
+                                    : Type::nonNull(fn&() => $types[$associatedEntityName]);
                             }
                             else {
                                 $fields[$associationName] = Type::nonNull(Type::listOf(Type::nonNull(fn&() => $types[$associatedEntityName])));
