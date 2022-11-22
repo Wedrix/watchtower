@@ -171,6 +171,7 @@ final class SyncedQuerySchema extends SchemaType
                     'fields' => [
                         'limit' => Type::int(),
                         'page' => Type::int(),
+                        'distinct' => Type::boolean()
                     ]
                 ]);
     
@@ -179,9 +180,6 @@ final class SyncedQuerySchema extends SchemaType
                     'args' => [
                         'queryParams' => [
                             'type' => $types[$queryParamsTypeName]
-                        ],
-                        'distinct' => [
-                            'type' => Type::boolean()
                         ]
                     ]
                 ];
