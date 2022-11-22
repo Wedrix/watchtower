@@ -36,10 +36,10 @@ final class SyncedQuerySchema extends SchemaType
              */
             $types = [];
 
-            $createEntityType = function (Entity $entity) use (&$types): void {
+            $createEntityType = function (Entity $entity) use (&$types, &$createEntityType): void {
                 $types[$entity->name()] ??= new ObjectType([
                     'name' => $entity->name(),
-                    'fields' => (function () use ($entity, &$types): array {
+                    'fields' => (function () use ($entity, &$types, &$createEntityType): array {
                         /**
                          * @var array<string,array>
                          */
@@ -121,6 +121,22 @@ final class SyncedQuerySchema extends SchemaType
                             }
                         }
 
+                        foreach ($entity->associations() as $associationName) {
+                            $associationMapping = $entity->associationMapping($associationName);
+        
+                            $associatedEntityName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
+        
+                            $associatedEntity = new Entity(
+                                name: $associatedEntityName,
+                                entityManager: $this->entityManager
+                            );
+        
+                            $types[$associatedEntityName] ??= $createEntityType($associatedEntity);
+        
+                            $feilds[$associationName] = $types[$associatedEntityName];
+        
+                        }
+
                         return $fields;
                     })()
                 ]);
@@ -135,22 +151,6 @@ final class SyncedQuerySchema extends SchemaType
                 );
 
                 $createEntityType($entity);
-
-                foreach ($entity->associations() as $associationName) {
-                    $associationMapping = $entity->associationMapping($associationName);
-
-                    $associatedEntityName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
-
-                    $associatedEntity = new Entity(
-                        name: $associatedEntityName,
-                        entityManager: $this->entityManager
-                    );
-
-                    $types[$associatedEntityName] ??= $createEntityType($associatedEntity);
-
-                    $feilds[$associationName] = $types[$associatedEntityName];
-
-                }
             }
  
             $queries = [];
