@@ -35,16 +35,11 @@ final class SyncedQuerySchema extends SchemaType
              * @var array<string,mixed>
              */
             $types = [];
-    
-            /**
-             * @var array<string,mixed>
-             */
-            $typesBeingResolved = [];
 
-            $createEntityType = function (Entity $entity) use (&$types, &$typesBeingResolved, &$createEntityType): void {
+            $createEntityType = function (Entity $entity) use (&$types): void {
                 $types[$entity->name()] ??= new ObjectType([
                     'name' => $entity->name(),
-                    'fields' => (function () use ($entity, &$types, &$typesBeingResolved, &$createEntityType): array {
+                    'fields' => (function () use ($entity, &$types): array {
                         /**
                          * @var array<string,array>
                          */
@@ -131,18 +126,7 @@ final class SyncedQuerySchema extends SchemaType
         
                             $associatedEntityName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
         
-                            $associatedEntity = new Entity(
-                                name: $associatedEntityName,
-                                entityManager: $this->entityManager
-                            );
-        
-                            if (!isset($types[$associatedEntityName]) && !in_array($associatedEntityName, $typesBeingResolved)) {
-                                $typesBeingResolved[] = $associatedEntityName;
-
-                                $createEntityType($associatedEntity);
-                            }
-        
-                            $feilds[$associationName] = $types[$associatedEntityName];
+                            $feilds[$associationName] = &$types[$associatedEntityName];
                         }
 
                         return $fields;
