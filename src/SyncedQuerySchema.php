@@ -55,78 +55,81 @@ final class SyncedQuerySchema extends SchemaType
                                 [$fieldName, $embeddedFieldName] = explode('.', $field);
 
                                 if (isset($entityFields[$fieldName])) {
-                                    $entityFields[$fieldName]['embeds'][$embeddedFieldName] = [
-                                        'mapping' => $entity->fieldMapping($field)
-                                    ];
+                                    $entityFields[$fieldName]['embedded_fields'][$embeddedFieldName] = $entity->fieldType($fieldName);
                                 }
                                 else {
                                     $entityFields[$fieldName] = [
-                                        'embeds' => [
-                                            $embeddedFieldName => [
-                                                'mapping' => $entity->fieldMapping($field)
-                                            ]
+                                        'embedded_fields' => [
+                                            $embeddedFieldName => $entity->fieldType($fieldName)
                                         ]
                                     ];
                                 }
                             }
                             else {
-                                $entityFields[$field] = [
-                                    'mapping' => $entity->fieldMapping($field)
-                                ];
+                                $entityFields[$field] = $entity->fieldType($field);
                             }
                         }
 
-                        $getTypeFromFieldInfo = function (array $fieldInfo): Type {
-                            if (in_array($fieldInfo['mapping']['type'], ['smallint','integer','bigint'])) {
+                        $mapScalarType = function (string $scalarType): Type {
+                            if (in_array($scalarType, ['smallint','integer','bigint'])) {
                                 return Type::int();
                             }
 
-                            if (in_array($fieldInfo['mapping']['type'], ['decimal','float'])) {
+                            if (in_array($scalarType, ['decimal','float'])) {
                                 return Type::float();
                             }
 
-                            if (in_array($fieldInfo['mapping']['type'], ['boolean'])) {
+                            if (in_array($scalarType, ['boolean'])) {
                                 return Type::boolean();
                             }
 
                             return Type::string();
                         };
 
-                        foreach ($entityFields as $fieldName => $fieldInfo) {
-                            if (isset($fieldInfo['embeds'])) {
+                        foreach ($entityFields as $fieldName => $fieldTypeOrInfo) {
+                            if (is_array($fieldTypeOrInfo) && isset($fieldTypeOrInfo['embedded_fields'])) {
                                 $embeddedClass = $entity->embeddedFieldClass($fieldName);
 
                                 $embeddedTypeName = ($nameElements = explode("\\", $embeddedClass))[count($nameElements) - 1];
 
                                 $types[$embeddedTypeName] ??= new ObjectType([
                                     'name' => $embeddedTypeName,
-                                    'fields' => (function () use ($fieldInfo, &$getTypeFromFieldInfo): array {
-                                        $embedFields = [];
+                                    'fields' => (function () use ($fieldTypeOrInfo, &$mapScalarType): array {
+                                        $embeddedFields = [];
 
-                                        $embeds = $fieldInfo['embeds'];
+                                        $embeddedFieldTypes = $fieldTypeOrInfo['embedded_fields'];
 
-                                        foreach ($embeds as $embedFieldName => $embedFieldInfo) {
-                                            $embedFields[$embedFieldName] = $getTypeFromFieldInfo($embedFieldInfo);
+                                        foreach ($embeddedFieldTypes as $embeddedFieldName => $embeddedFieldType) {
+                                            $embeddedFields[$embeddedFieldName] = $mapScalarType($embeddedFieldType);
                                         }
 
-                                        return $embedFields;
+                                        return $embeddedFields;
                                     })()
                                 ]);
 
                                 $fields[$fieldName] = $types[$embeddedTypeName];
                             }
                             
-                            if (isset($fieldInfo['mapping'])) {
-                                $fields[$fieldName] = $getTypeFromFieldInfo($fieldInfo);
+                            if (is_string($fieldTypeOrInfo)){
+                                $fields[$fieldName] = $mapScalarType($fieldTypeOrInfo);
                             }
                         }
 
                         foreach ($entity->associations() as $associationName) {
-                            $associationMapping = $entity->associationMapping($associationName);
+                            $associatedEntityName = ($nameElements = explode("\\",$entity->associationTargetEntity($associationName)))[count($nameElements) - 1];
         
-                            $associatedEntityName = ($nameElements = explode("\\",$associationMapping['targetEntity']))[count($nameElements) - 1];
-        
-                            $fields[$associationName] = &$types[$associatedEntityName];
+                            $associatedType = &$types[$associatedEntityName];
+
+                            if ($entity->associationIsSingleValued($associationName)) {
+                                if (!$entity->associationIsNullable($associationName)) {
+                                    $associatedType = Type::nonNull($associatedType);
+                                }
+                            }
+                            else {
+                                $associatedType = Type::nonNull(Type::listOf(Type::nonNull($associatedType)));
+                            }
+
+                            $fields[$associationName] = $associatedType;
                         }
 
                         return $fields;

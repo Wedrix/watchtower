@@ -102,24 +102,18 @@ final class Entity
         return isset($this->metadata->embeddedClasses[$fieldName]);
     }
 
-    /**
-     * @return array<mixed>
-     */
-    public function fieldMapping(
+    public function fieldType(
         string $fieldName
-    ): array
+    ): string
     {
-        return $this->metadata->getFieldMapping($fieldName);
+        return $this->metadata->getFieldMapping($fieldName)['type'];
     }
 
-    /**
-     * @return array<mixed>
-     */
-    public function associationMapping(
+    public function associationTargetEntity(
         string $associationName
-    ): array
+    ): string
     {
-        return $this->metadata->getAssociationMapping($associationName);
+        return $this->metadata->getAssociationMapping($associationName)['targetEntity'];
     }
 
     public function embeddedFieldClass(
@@ -148,5 +142,12 @@ final class Entity
     ): bool
     {
         return $this->metadata->isSingleValuedAssociation($associationName);
+    }
+
+    public function associationIsNullable(
+        string $associationName
+    ): bool
+    {
+        return false; // TODO: Implement method
     }
 }
