@@ -74,12 +74,10 @@ final class Console
         }
     }
 
-    /**
-     * Update queries in the schema file to match the project\'s current Doctrine models.
-     * Busts the cache to reflect the changes.
-     */
     public function updateSchema(): void
     {
+        // TODO: Update Schema
+        
         if (file_exists($this->schemaCacheFileDirectory)) {
             unlink($this->schemaCacheFileDirectory);
         }

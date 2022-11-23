@@ -33,7 +33,7 @@ final class SyncedQuerySchema extends SchemaType
                     ?? throw new \Exception("Invalid EntityManager. The metadata driver implementation is not set.");
     
             /**
-             * @var array<string,mixed>
+             * @var array<string,NullableType>
              */
             $types = [];
 
@@ -42,12 +42,12 @@ final class SyncedQuerySchema extends SchemaType
                     'name' => $entity->name(),
                     'fields' => (function () use ($entity, &$types): array {
                         /**
-                         * @var array<string,array>
+                         * @var array<string,Type>
                          */
                         $fields = [];
 
                         /**
-                         * @var array<string,array>
+                         * @var array<string,string|array<string,mixed>>
                          */
                         $entityFields = [];
 
@@ -95,13 +95,19 @@ final class SyncedQuerySchema extends SchemaType
 
                                 $types[$embeddedTypeName] ??= new ObjectType([
                                     'name' => $embeddedTypeName,
-                                    'fields' => (function () use ($fieldTypeOrInfo, &$mapScalarType): array {
+                                    'fields' => (function () use ($entity, $fieldName, $fieldTypeOrInfo, &$mapScalarType): array {
                                         $embeddedFields = [];
 
                                         $embeddedFieldTypes = $fieldTypeOrInfo['embedded_fields'];
 
                                         foreach ($embeddedFieldTypes as $embeddedFieldName => $embeddedFieldType) {
-                                            $embeddedFields[$embeddedFieldName] = $mapScalarType($embeddedFieldType);
+                                            $fieldType = $mapScalarType($embeddedFieldType);
+
+                                            if (!$entity->fieldIsNullable("$fieldName.$embeddedFieldName")) {
+                                                $fieldType = Type::nonNull($fieldType);
+                                            }
+
+                                            $embeddedFields[$embeddedFieldName] = $fieldType;
                                         }
 
                                         return $embeddedFields;
@@ -112,26 +118,32 @@ final class SyncedQuerySchema extends SchemaType
                             }
                             
                             if (is_string($fieldTypeOrInfo)){
-                                $fields[$fieldName] = $mapScalarType($fieldTypeOrInfo);
+                                $fieldType = $mapScalarType($fieldTypeOrInfo);
+
+                                if (!$entity->fieldIsNullable($fieldName)) {
+                                    $fieldType = Type::nonNull($fieldType);
+                                }
+
+                                $fields[$fieldName] = $fieldType;
                             }
                         }
 
                         foreach ($entity->associations() as $associationName) {
                             $associatedEntityName = ($nameElements = explode("\\",$entity->associationTargetEntity($associationName)))[count($nameElements) - 1];
 
-                            $associatedType = function () use (&$types, $associatedEntityName): NullableType {
+                            $associatedEntityType = function () use (&$types, $associatedEntityName): NullableType {
                                 return $types[$associatedEntityName];
                             };
 
                             if (!$entity->associationIsSingleValued($associationName)) {
-                                $associatedType = Type::listOf(Type::nonNull($associatedType));
+                                $associatedEntityType = Type::listOf(Type::nonNull($associatedEntityType));
                             }
 
                             if (!$entity->associationIsNullable($associationName)) {
-                                $associatedType = Type::nonNull($associatedType);
+                                $associatedEntityType = Type::nonNull($associatedEntityType);
                             }
 
-                            $fields[$associationName] = $associatedType;
+                            $fields[$associationName] = $associatedEntityType;
                         }
 
                         return $fields;

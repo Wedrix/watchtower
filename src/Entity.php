@@ -109,6 +109,13 @@ final class Entity
         return $this->metadata->getFieldMapping($fieldName)['type'];
     }
 
+    public function fieldIsNullable(
+        string $fieldName
+    ): bool
+    {
+        return $this->metadata->isNullable($fieldName);
+    }
+
     public function associationTargetEntity(
         string $associationName
     ): string
