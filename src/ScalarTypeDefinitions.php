@@ -14,7 +14,12 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
 {
     public function __construct(
         private readonly string $directory
-    ){}
+    )
+    {
+        if (!is_dir($this->directory)) {
+            throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
+        }
+    }
 
     public function contains(
         ScalarTypeDefinition $scalarTypeDefinition

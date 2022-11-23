@@ -29,18 +29,15 @@ final class SyncedQuerySchema extends SchemaType
     )
     {
         $this->schema = (function (): SchemaType {
-            $entityClassNames = $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
-                    ?? throw new \Exception("Invalid EntityManager. The metadata driver implementation is not set.");
-    
             /**
              * @var array<string,NullableType>
              */
             $types = [];
 
-            $addEntityType = function (Entity $entity) use (&$types): void {
+            $addEntityType = function (Entity $entity) use (&$types, &$addEntityType): void {
                 $types[$entity->name()] ??= new ObjectType([
                     'name' => $entity->name(),
-                    'fields' => (function () use ($entity, &$types): array {
+                    'fields' => (function () use ($entity, &$types, &$addEntityType): array {
                         /**
                          * @var array<string,Type>
                          */
@@ -93,6 +90,7 @@ final class SyncedQuerySchema extends SchemaType
 
                                 $embeddedTypeName = ($nameElements = explode("\\", $embeddedClass))[count($nameElements) - 1];
 
+                                //TODO: Handle Non-Nullable Embeddables
                                 $types[$embeddedTypeName] ??= new ObjectType([
                                     'name' => $embeddedTypeName,
                                     'fields' => (function () use ($entity, $fieldName, $fieldTypeOrInfo, &$mapScalarType): array {
@@ -131,7 +129,16 @@ final class SyncedQuerySchema extends SchemaType
                         foreach ($entity->associations() as $associationName) {
                             $associatedEntityName = ($nameElements = explode("\\",$entity->associationTargetEntity($associationName)))[count($nameElements) - 1];
 
-                            $associatedEntityType = function () use (&$types, $associatedEntityName): NullableType {
+                            $associatedEntityType = function () use (&$types, $associatedEntityName, $addEntityType): NullableType {
+                                if (!isset($types[$associatedEntityName])) {
+                                    $addEntityType(
+                                        new Entity(
+                                            name: $associatedEntityName,
+                                            entityManager: $this->entityManager
+                                        )
+                                    );
+                                }
+
                                 return $types[$associatedEntityName];
                             };
 
@@ -150,7 +157,10 @@ final class SyncedQuerySchema extends SchemaType
                     })()
                 ]);
             };
-    
+            
+            $entityClassNames = $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
+                    ?? throw new \Exception("Invalid EntityManager. The metadata driver implementation is not set.");
+
             foreach ($entityClassNames as $entityClassName) {
                 $addEntityType(
                     new Entity(
@@ -159,7 +169,7 @@ final class SyncedQuerySchema extends SchemaType
                     )
                 );
             }
- 
+
             $queries = [];
     
             foreach ($entityClassNames as $entityClassName) {
