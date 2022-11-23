@@ -150,7 +150,18 @@ final class SyncedQuerySchema extends SchemaType
                                 $associatedEntityType = Type::nonNull($associatedEntityType);
                             }
 
-                            $fields[$associationName] = $associatedEntityType;
+                            $fields[$associationName] = $entity->associationIsSingleValued($associationName) 
+                                        ? $associatedEntityType
+                                        : [
+                                            'type' => $associatedEntityType,
+                                            'args' => [
+                                                'queryParams' => [
+                                                    'type' => function () use (&$types, $associatedEntityName): NullableType {
+                                                        return $types[pluralize($associatedEntityName)."QueryParams"];
+                                                    }
+                                                ]
+                                            ]
+                                        ];
                         }
 
                         return $fields;
