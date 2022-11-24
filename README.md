@@ -9,6 +9,7 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
 - [Installation](#installation)
   - [Note for Symfony Users](#note-for-symfony-users)
 - [Usage](#usage)
+  - [For Symfony Users](#for-symfony-users)
 - [Schema](#schema)
   - [Custom Scalars](#custom-scalars)
     - [Scalar Type Definitions](#scalar-type-definitions)
@@ -16,6 +17,10 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
     - [Finding Entities](#finding-entities)
     - [Relations](#relations)
     - [Pagination](#pagination)
+    - [Distinct Queries](#distinct-queries)
+  - [Generating the Schema](#generating-the-schema)
+  - [Updating the Schema](#updating-the-schema)
+  - [Using Multiple Schemas](#using-multiple-schemas)
 - [Plugins](#plugins)
 - [Computed Fields](#computed-fields)
   - [Selector Plugins](#selector-plugins)
@@ -29,12 +34,17 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
 - [Mutations](#mutations)
 - [Subscriptions](#subscriptions)
 - [Authorization](#authorization)
-- [Using Multiple Schemas](#using-multiple-schemas)
+- [Security](#security)
+- [Known Issues](#known-issues)
+  - [N + 1 Problem](#n--1-problem)
+  - [Case Sensitivity & Naming](#case-sensitivity--naming)
+  - [Aliasing Parameterized Fields](#aliasing-parameterized-fields)
 - [Versioning](#versioning)
 - [Contributing](#contributing)
 - [Running the Tests](#running-the-tests)
-- [Security](#security)
+- [Reporting Vulnerabilities](#reporting-vulnerabilities)
 - [License](#license)
+
 
 # Features
 
@@ -42,15 +52,15 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
  - Out-of-the-box pagination support.
  - Support for computed fields, filtering, ordering, mutations, subscriptions, authorization, and custom resolvers via user-generated plugins. 
  - Support for all type system features including enums, abstract types (i.e. Unions and Interfaces), custom scalars, and custom directives.
- - Schema generation and updating for queries, based on the project's Doctrine models.
+ - Schema generation and updation for queries, based on the project's current Doctrine models.
  - Code generation for plugins and scalar type definitions.
 
 
 # Motivation
 
-Supporting a GraphQL API usually involves writing a lot of redundant boilerplate code. Abstracting most of it could save you precious development and maintenance time, allowing you to focus on the more unique aspects of your API.
+Supporting a GraphQL API usually involves writing a lot of redundant boilerplate code. By abstracting away this boilerplate, you save precious development and maintenance time, allowing you to focus on the more unique aspects of your API.
 
-This library is inspired by similar others for different platforms:
+This library is inspired by similar others created for different platforms:
 
  - [Lighthouse](https://github.com/nuwave/lighthouse) for Laravel and Eloquent
  - [Mongoose GraphQL Server](https://github.com/DanishSiraj/mongoose-graphql-server) for Express and Mongoose
@@ -72,23 +82,38 @@ Via composer:
 
 ## Note for Symfony Users
 
-There is an associated Flex recipe for this package, that generates initial bootstrap files that allow you to instantly access a GraphQL API for your service. Kindly take note of the following changes made to your project before considering the install:
+There is an associated [Symfony Flex recipe](https://github.com/symfony/recipes-contrib/tree/main/wedrix/) for this package, that generates the initial bootstrap files that allow you to instantly access a GraphQL API for your service. Kindly take note of the following changes made to your project folder before considering the install:
 
- 1. List item
+ 1. Adds the controller **Watchtower/Controller.php** to the **Controller** directory
+ 2. Registers the route **/graphql** to point to Watchtower/Controller.php
+ 3. Adds the following commands to the **Command** directory:
+	 - Watchtower/AddPlugin.php - `watchtower:plugins:add` 
+	 - Watchtower/AddScalarTypeDefinition.php - `watchtower:scalar-type-definitions:add`
+	 - Watchtower/GenerateSchema.php - `watchtower:schema:generate`
+	 - Watchtower/ListPlugins.php - `watchtower:plugins:list`
+	 - Watchtower/ListScalarTypeDefinitions.php - `watchtower:scalar-type-definitions:list`
+	 - Watchtower/UpdateSchema.php - `watchtower:schema:update`
+ 4. Adds the following services to the **src** directory:
+	 - WatchtowerExecutor.php
+	 - WatchtowerConsole.php
+ 5. Adds the following directories:
+	 - resources/graphql/plugins
+	 - resources/graphql/scalar_type_definitions
+ 6. Generates the schema file at resources/graphql/schema.graphql
 
-This package does not register a bundle like most others do. Instead, it tries to register the bootstrap files directly into the project. Considering the integral nature of GraphQL for most projects, we believe this to be the most appropriate approach, as it allows you the most flexibility. This simplifies adding custom validation or security rules, [supporting multiple schemas](#using-multiple-schemas), and conforming with your project's structure. 
+This package does not register a bundle like most others do. Instead, it tries to load a few bootstrap files directly into the project folder. This simplifies the library's usage, allowing great flexibility to add custom validation and security rules, [support multiple schemas](#using-multiple-schemas), and to enforce your preferred project structure and choice of configuration. 
 
-If you choose to not run the recipe during installation, the source may still be instructional for your custom integration. It can be accessed here.
+We recommend allowing the flex recipe to run during the install. However, if for whatever reason you choose to disallow it, you may still find the source files instructional. You can access them [here](https://github.com/symfony/recipes-contrib).
 
 
 # Usage
 
 This library has two main components:
 
- 1. The Executor component (`Wedrix\Watchtower\Executor`), responsible for auto-resolving queries.
- 2. The Console component (`Wedrix\Watchtower\Console`), responsible for code generation, schema management, and plugin management.
+ 1. The Executor component `Wedrix\Watchtower\Executor`, responsible for auto-resolving queries.
+ 2. The Console component `Wedrix\Watchtower\Console`, responsible for code generation, schema management, and plugin management.
 
-The Executor component should be used in some form of controller class or callback  function to power your service's GraphQL endpoint. The example below is for a simple Slim 4 application:
+The Executor component should be used in some controller class or callback  function to power your service's GraphQL endpoint. The example usage below is for a Slim 4 application:
 
 ```php
 #index.php
@@ -109,7 +134,9 @@ $app->addRoutingMiddleware();
 
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 
-$app->post('/graphql.json', function (Request $request, Response $response, $args) {
+$app->post(
+	'/graphql.json', 
+	function (Request $request, Response $response, $args) {
 		/**
 		* Instantiating the executor.
 		* Pass the entity manager and other config options using DI or 
@@ -159,11 +186,12 @@ $app->post('/graphql.json', function (Request $request, Response $response, $arg
 $app->run();
 ```
 
-The Console component on the other hand, should be used in a cli-tool, offering convenience services like code generation during development. For example:
+The Console component on the other hand, should be used in a cli-tool to offer convenience services like code generation during development. Check out the [Symfony Flex recipe](https://github.com/symfony/recipes-contrib/tree/main/wedrix/watchtower/1.0/Command) for example usages in Symfony.
 
-```php
 
-```
+## For Symfony Users
+
+If you are a Symfony user, no configuration is needed to start using this package if you allow the associated Flex Recipe to run. After installing the package, your GraphQL API will be available at `/graphql.json` as defined in `App\\Controller\\Watchtower\\Controller.php`. You can access all the associated console commands using `php bin/console watchtower:~`.
 
 
 # Schema
@@ -175,11 +203,11 @@ The library supports the complete GraphQL type system through the SDL and is abl
 
 ## Custom Scalars
 
-In order to support user-defined scalar types (custom scalars), the GraphQL engine must be instructed on how to parse, validate, and serialize values of the said type. We provide these instructions to the engine using Scalar Type Definitions.
+In order to support user-defined scalar types (custom scalars), the GraphQL engine must be instructed on how to parse, validate, and serialize values of the said type. These instructions are provided to the engine via Scalar Type Definitions.
 
 ### Scalar Type Definitions
 
-Scalar Type Definitions are auto-loaded files containing the respective functions: `serialize()`, `parseValue()`, and `parseLiteral()` under a conventional namespace, that instruct the GraphQL engine on how to handle custom scalar values. Since they are auto-loaded, Scalar type Definitions must conform to the following rules:
+Scalar Type Definitions are auto-loaded files containing the respective function definitions: `serialize()`, `parseValue()`, and `parseLiteral()` under a conventional namespace, that instruct the GraphQL engine on how to handle custom scalar values. Since they are auto-loaded, Scalar type Definitions must conform to the following rules:
 
  1. A Scalar Type Definition must be contained within its own script file.
  2. The script file must follow the following naming format:
@@ -319,7 +347,7 @@ query {
 }
 ```
 
-returns the result for the product with id '1'. 
+returns the result for the product with id **1**. 
 
 The type of the specified `id` parameter does not matter. The only requirement is that it must be non-nullable and correspond to the entity's id field. 
 
@@ -357,7 +385,7 @@ query {
 }
 ```
 
-resolves the product with id '1', its best seller, and all its corresponding listings as described by the `bestSeller` and `listings` association of the Product entity. For more details on Doctrine relations check out [the documentation](https://www.doctrine-project.org/projects/doctrine-orm/en/2.13/reference/association-mapping.html).
+resolves the product with id **1**, its best seller, and all its corresponding listings as described by the `bestSeller` and `listings` associations of the Product entity. For more details on Doctrine relations check out [the documentation](https://www.doctrine-project.org/projects/doctrine-orm/en/2.13/reference/association-mapping.html).
 
 ### Pagination
 
@@ -381,12 +409,12 @@ type Listing {
 }
 
 input ListingsQueryParams {
-	limit: Int!, # items per page
-	page: Int!, # page
+	limit: Int, # items per page
+	page: Int, # page
 }
 ```
 
-The type of the specified `queryParams` parameter does not matter. The only requirement is that it must define the two fields `limit` and `page` as non-nullable integer types.
+The type of the specified `queryParams` parameter does not matter. The only requirement is that it must define the two fields `limit` and `page` as integer types. You may also choose to make them non-nullable to force pagination for the particular query field.
 
 `queryParams` may also be used to paginate the results of a query. For instance, given the following schema:
 
@@ -430,9 +458,9 @@ query {
 
 paginates the results, returning only the first five elements.
 
-Note that query names are irrelevant. In other words, you can use any name for your Query fields. This also applies to the Mutation and Subscription types. Fields on other types must however, either correspond to actual Entity/Embeddable attributes, or have associated plugins to resolve their values.
+Note that query names are irrelevant. In other words, you can use any name for your Query fields. This also applies to the mutation and subscription operation types. Fields on other types must however, either correspond to actual Entity/Embeddable attributes, or have associated plugins to resolve their values.
 
-This package also supports aliases:
+This package also supports aliases. For instance:
 
 ```graphql
 query {
@@ -442,7 +470,56 @@ query {
 }
 ```
 
-To facilitate speedy development, the Console component offers the convenience methods `generateSchema()` and `updateSchema()`, which may be used to auto-generate and update queries in the schema file, respectively. The generated schema will be based on the current definitions of the project's Doctrine models.
+To facilitate speedy development, the Console component offers convenience methods to [generate](#generating-the-schema) and [update](#updating-the-schema) the schema file based on the project's Doctrine models.
+
+### Distinct Queries
+
+To return distinct results, add the `distinct` parameter to the `queryParams` argument. For example:
+
+```graphql
+type Query {
+	paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+}
+
+input ProductsQueryParams {
+	distinct: Boolean, # Must be boolean
+	limit: Int!,
+	page: Int!,
+}
+
+type Product {
+	id: ID!,
+	name: String!,
+	bestSeller: Listing
+}
+```
+
+
+## Generating the Schema
+
+The console component comes with the helper method `generateSchema()` which may be used to generate the initial schema file based on the project's Doctrine models. 
+
+Kindly take note of the following when using the schema generator:
+
+ 1. The generator only crates a schema for Query operations. It does not create any Mutations or Subscriptions. Those must be added manually.
+ 2. The generator is able to only resolve the following Doctrine types:
+	 - All [interger types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
+	 - All [decimal types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#decimal-types) - resolve to GraphQL's `Float` type.
+	 - All [string types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#string-types) - resolve to GraphQL's `String` type.
+	 - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to a custom `Date` type that extends the `String` type.
+ 3. The generator skips all fields having scalar types different from the above types. You must add those manually, adding their corresponding Scalar Type Definitions.
+ 4. The generator only resolves actual fields that correspond to a database column. All other fields must be added manually, as either computed or resolved fields. 
+ 5. The generator is not able to properly ascertain the nullability of embedded types and relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
+
+
+## Updating the Schema
+
+The console component also comes with the helper method `updateSchema()` which may be used to update queries in the schema file to match the project's Doctrine models. Updates are merged with the original schema and do not overwrite schema definitions for scalars, mutations, subscriptions, directives etc.
+
+
+## Using Multiple Schemas
+
+Using multiple schemas is as simple as instantiating different objects of the Executor and Console components, with the different schema files' configurations. You can then use them with the appropriate controllers, routes, cli-scripts etc.
 
 
 # Plugins
@@ -590,7 +667,7 @@ function resolve_currency_exchange_rate_field(
     array \$context
 ): mixed
 {
-	$exchangeRateResolver = $context['exchangeRateResolver']; // Assuming we added the service to the $context
+	$exchangeRateResolver = $context['exchangeRateResolver']; // Assuming the service was added to the $context param
 
 	return $exchangeRateResolver->getExchangeRate(
 		currencyCode: $node->root()['isoCode']
@@ -622,7 +699,7 @@ function name_of_plugin_function(
 
 ## Resolving Abstract Types
 
-Use the utility functions `$node->type()`, `$node->isAbstractType()`, `$node->concreteFieldSelection()`, and `$node->abstractFieldSelection()` to determine what type you are resolving, whether it's an abstract type, the concrete fields selected, and the abstract fields selected, respectively.
+Use the utility functions `$node->type()`, `$node->isAbstractType()`, `$node->concreteFieldSelection()`, and `$node->abstractFieldSelection()` to determine what type you are resolving: whether it's an abstract type, and the concrete and abstract fields selected, respectively.
 
 When resolving an abstract type, always add a `__typename` field to the result indicating the concrete type being resolved. For example:
 
@@ -644,7 +721,7 @@ function resolve_user_field(
 }
 ```
 
-You can use abstract types in other operations like mutations and subscriptions.
+Abstract types may be used with other operation types like Mutation and Subscription also.
 
 
 # Filtering
@@ -662,9 +739,28 @@ You can use abstract types in other operations like mutations and subscriptions.
 # Authorization
 
 
-# Using Multiple Schemas
+# Security
 
-Using multiple schemas is as simple as instantiating different objects of the Executor and Console components, with the different schema files' configurations. You can then use them with the appropriate controllers, routes, cli-scripts etc.
+Kindly follow the [graphql-php manual](https://webonyx.github.io/graphql-php/security/) for directions on securing your GraphQL API. Most of the library's security APIs are compatible with this library since they are mostly static, allowing external configuration.
+
+
+# Known Issues
+
+This section detail some of the known issues relating to this library's usage and their possible workarounds.
+
+## N + 1 Problem
+
+This library is susceptible to the [N + 1 problem](https://techdozo.dev/spring-for-graphql-how-to-solve-the-n1-problem/). However, for most use-cases, this shouldn't pose too much of a problem with current database solutions. You may however start to face performance issues when using Resolver Plugins to make external API calls. For such use-cases, we recommend using an async-capable HTTP client paired with a query batching solution like [Dataloader](https://github.com/overblog/dataloader-php) to mitigate network latency bottlenecks.
+
+
+## Case Sensitivity & Naming
+
+GraphQL names are case-sensitive as detailed by the [spec](https://spec.graphql.org/October2021/#sec-Names). However, since [PHP names are case-insensitive](https://www.php.net/manual/en/language.namespaces.rationale.php), we cannot follow this spec requirement. Kindly note that using case-insensitive names with this library may lead to erratic undefined behaviour.
+
+
+## Aliasing Parameterized Fields
+
+There is currently an [open issue](https://github.com/webonyx/graphql-php/issues/1072) in graphql-php that prevents this library from properly resolving a parameterized field passed different arguments. This should probably be fixed in the next major release of graphql-php. Until then, kindly take note of this issue when using aliases.  
 
 
 # Versioning
@@ -674,12 +770,12 @@ This project follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.
 The intended public API elements are marked with the `@api` PHPDoc tag, and are guaranteed to be stable within minor version changes. All other elements are
 not part of this backwards compatibility promise and may change between minor or patch versions.
 
-Check [releases](/releases) for all published releases.
+Check [here](https://github.com/Wedrix/watchtower/releases) for all published releases.
 
 
 # Contributing
 
-For new features or contributions that propose significant breaking changes, kindly [start a discussion](/discussions/new) under the **ideas** category for contributors' feedback.
+For new features or contributions that propose significant breaking changes, kindly [start a discussion](https://github.com/Wedrix/watchtower/discussions/new) under the **ideas** category for contributors' feedback.
 
 For smaller contributions involving bug fixes and patches:
 
@@ -695,7 +791,7 @@ For smaller contributions involving bug fixes and patches:
 To run the tests, run `composer check`.
 
 
-# Security
+# Reporting Vulnerabilities
 
 In case you discover a security vulnerability, kindly send an e-mail to the maintainer via [wedamja@gmail.com](mailto:wedamja@gmail.com). Security vulnerabilities will be promptly addressed.
 
