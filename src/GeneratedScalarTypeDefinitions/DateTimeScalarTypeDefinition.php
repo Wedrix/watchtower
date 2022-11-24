@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\ScalarTypeDefinitions;
+namespace Wedrix\Watchtower\GeneratedScalarTypeDefinitions;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
 use Wedrix\Watchtower\UngeneratedScalarTypeDefinition;
 
-final class LimitScalarTypeDefinition implements ScalarTypeDefinition
+final class DateTimeScalarTypeDefinition implements ScalarTypeDefinition
 {
     private readonly UngeneratedScalarTypeDefinition $ungeneratedScalarTypeDefinition;
 
@@ -17,7 +17,7 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
     {
         $this->ungeneratedScalarTypeDefinition = (function (): UngeneratedScalarTypeDefinition {
             return new UngeneratedScalarTypeDefinition(
-                typeName: 'Limit'
+                typeName: 'DateTime'
             );
         })();
 
@@ -27,39 +27,40 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
 
             declare(strict_types=1);
 
-            namespace Wedrix\Watchtower\ScalarTypeDefinitions\LimitTypeDefinition;
+            namespace Wedrix\Watchtower\ScalarTypeDefinitions\DateTimeTypeDefinition;
 
             use GraphQL\Error\Error;
-            use GraphQL\Language\AST\IntValueNode;
+            use GraphQL\Language\AST\StringValueNode;
             use GraphQL\Utils\Utils;
 
             /**
              * Serializes an internal value to include in a response.
              *
-             * @param int \$value
-             * @return int
+             * @param \DateTime \$value
+             * @return string
              */
             function serialize(\$value)
             {
-                return \$value;
+                return \$value->format(\DateTime::ATOM);
             }
 
             /**
              * Parses an externally provided value (query variable) to use as an input
              *
-             * @param int \$value
-             * @return int
-             * @throws Error
+             * @param string \$value
+             * @return \DateTime
              */
             function parseValue(\$value)
             {
-                if ((\$value < 1) || (\$value > 100)) {
+                try {
+                    return new \DateTime(\$value);
+                }
+                catch (\Exception \$e) {
                     throw new Error(
-                        message: "Cannot represent the following value as Limit: " . Utils::printSafeJson(\$value)
+                        message: "Cannot represent the following value as DateTime: " . Utils::printSafeJson(\$value),
+                        previous: \$e
                     );
                 }
-
-                return \$value;
             }
 
             /**
@@ -67,29 +68,29 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
              * 
              * E.g. 
              * {
-             *   limit: 1,
+             *   user(createdAt: "2021-01-24T05:16:41+00:00") 
              * }
              *
              * @param \GraphQL\Language\AST\Node \$value
              * @param array<string,mixed>|null \$variables
-             * @return int
+             * @return \DateTime
              * @throws Error
              */
             function parseLiteral(\$value, ?array \$variables = null)
             {
-                if (!\$value instanceof IntValueNode) {
+                if (!\$value instanceof StringValueNode) {
                     throw new Error(
-                        message: "Query error: Can only parse ints got: \$value->kind", 
+                        message: "Query error: Can only parse strings got: \$value->kind",
                         nodes: \$value
                     );
                 }
 
                 try {
-                    return parseValue((int) \$value->value);
+                    return parseValue(\$value->value);
                 }
                 catch (\Exception \$e) {
                     throw new Error(
-                        message: "Not a valid Limit Type",
+                        message: "Not a valid DateTime Type", 
                         nodes: \$value,
                         previous: \$e
                     );

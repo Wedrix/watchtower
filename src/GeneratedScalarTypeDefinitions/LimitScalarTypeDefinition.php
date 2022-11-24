@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\ScalarTypeDefinitions;
+namespace Wedrix\Watchtower\GeneratedScalarTypeDefinitions;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
 use Wedrix\Watchtower\UngeneratedScalarTypeDefinition;
 
-final class PageScalarTypeDefinition implements ScalarTypeDefinition
+final class LimitScalarTypeDefinition implements ScalarTypeDefinition
 {
     private readonly UngeneratedScalarTypeDefinition $ungeneratedScalarTypeDefinition;
 
@@ -17,7 +17,7 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
     {
         $this->ungeneratedScalarTypeDefinition = (function (): UngeneratedScalarTypeDefinition {
             return new UngeneratedScalarTypeDefinition(
-                typeName: 'Page'
+                typeName: 'Limit'
             );
         })();
 
@@ -26,13 +26,13 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
             <?php
 
             declare(strict_types=1);
-            
-            namespace Wedrix\Watchtower\ScalarTypeDefinitions\PageTypeDefinition;
-            
+
+            namespace Wedrix\Watchtower\ScalarTypeDefinitions\LimitTypeDefinition;
+
             use GraphQL\Error\Error;
             use GraphQL\Language\AST\IntValueNode;
             use GraphQL\Utils\Utils;
-            
+
             /**
              * Serializes an internal value to include in a response.
              *
@@ -43,7 +43,7 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
             {
                 return \$value;
             }
-            
+
             /**
              * Parses an externally provided value (query variable) to use as an input
              *
@@ -53,21 +53,21 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
              */
             function parseValue(\$value)
             {
-                if ((\$value < 1)) {
+                if ((\$value < 1) || (\$value > 100)) {
                     throw new Error(
-                        message: "Cannot represent the following value as Page: " . Utils::printSafeJson(\$value)
+                        message: "Cannot represent the following value as Limit: " . Utils::printSafeJson(\$value)
                     );
                 }
-            
+
                 return \$value;
             }
-            
+
             /**
              * Parses an externally provided literal value (hardcoded in GraphQL query) to use as an input.
              * 
              * E.g. 
              * {
-             *   page: 1,
+             *   limit: 1,
              * }
              *
              * @param \GraphQL\Language\AST\Node \$value
@@ -79,17 +79,17 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
             {
                 if (!\$value instanceof IntValueNode) {
                     throw new Error(
-                        message: "Query error: Can only parse ints got: \$value->kind",
+                        message: "Query error: Can only parse ints got: \$value->kind", 
                         nodes: \$value
                     );
                 }
-            
+
                 try {
                     return parseValue((int) \$value->value);
                 }
                 catch (\Exception \$e) {
                     throw new Error(
-                        message: "Not a valid Page Type",
+                        message: "Not a valid Limit Type",
                         nodes: \$value,
                         previous: \$e
                     );

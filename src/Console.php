@@ -13,10 +13,9 @@ use Wedrix\Watchtower\Plugins\OrderingPlugin;
 use Wedrix\Watchtower\Plugins\ResolverPlugin;
 use Wedrix\Watchtower\Plugins\SelectorPlugin;
 use Wedrix\Watchtower\Plugins\SubscriptionPlugin;
-use Wedrix\Watchtower\ScalarTypeDefinitions\DateTimeScalarTypeDefinition;
-use Wedrix\Watchtower\ScalarTypeDefinitions\LimitScalarTypeDefinition;
-use Wedrix\Watchtower\ScalarTypeDefinitions\ScalarTypeDefinition;
-use Wedrix\Watchtower\ScalarTypeDefinitions\PageScalarTypeDefinition;
+use Wedrix\Watchtower\GeneratedScalarTypeDefinitions\DateTimeScalarTypeDefinition;
+use Wedrix\Watchtower\GeneratedScalarTypeDefinitions\LimitScalarTypeDefinition;
+use Wedrix\Watchtower\GeneratedScalarTypeDefinitions\PageScalarTypeDefinition;
 
 /**
  * @api

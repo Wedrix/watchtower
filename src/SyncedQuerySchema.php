@@ -30,15 +30,27 @@ final class SyncedQuerySchema extends SchemaType
     )
     {
         $this->schema = (function (): SchemaType {
+            $scalars = [
+                'DateTime' => new CustomScalarType([
+                    'name' => 'DateTime'
+                ]),
+                'Limit' => new CustomScalarType([
+                    'name' => 'Limit'
+                ]),
+                'Page' => new CustomScalarType([
+                    'name' => 'Page'
+                ])
+            ];
+
             /**
              * @var array<string,NullableType>
              */
             $types = [];
 
-            $addEntityType = function (Entity $entity) use (&$types, &$addEntityType): void {
+            $addEntityType = function (Entity $entity) use (&$types, &$scalars, &$addEntityType): void {
                 $types[$entity->name()] ??= new ObjectType([
                     'name' => $entity->name(),
-                    'fields' => (function () use ($entity, &$types, &$addEntityType): array {
+                    'fields' => (function () use ($entity, &$types, &$scalars, &$addEntityType): array {
                         /**
                          * @var array<string,Type>
                          */
@@ -69,7 +81,7 @@ final class SyncedQuerySchema extends SchemaType
                             }
                         }
 
-                        $mapScalarType = function (string $scalarType): Type|null {
+                        $mapScalarType = function (string $scalarType) use (&$scalars): Type|null {
                             if (in_array($scalarType, ['smallint','integer','bigint'])) {
                                 return Type::int();
                             }
@@ -90,9 +102,7 @@ final class SyncedQuerySchema extends SchemaType
                                 'date','date_immutable','datetime','datetime_immutable',
                                 'datetimetz','datetimetz_immutable','time','time_immutable'
                             ])) {
-                                return new CustomScalarType([
-                                    'name' => 'DateTime'
-                                ]);
+                                return $scalars['DateTime'];
                             }
 
                             return null;
@@ -218,12 +228,8 @@ final class SyncedQuerySchema extends SchemaType
                 $types[$queryParamsTypeName = pluralize($entityName)."QueryParams"] = new InputObjectType([
                     'name' => $queryParamsTypeName,
                     'fields' => [
-                        'limit' => new CustomScalarType([
-                            'name' => 'Limit'
-                        ]),
-                        'page' => new CustomScalarType([
-                            'name' => 'Page'
-                        ]),
+                        'limit' => $scalars['Limit'],
+                        'page' => $scalars['Page'],
                         'distinct' => Type::boolean()
                     ]
                 ]);
