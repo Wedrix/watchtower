@@ -588,7 +588,7 @@ use Wedrix\Watchtower\Resolver\QueryBuilder;
 function resolve_currency_exchange_rate_field(
     Node \$node,
     array \$context
-): string|int|float|bool|null|array
+): mixed
 {
 	$exchangeRateResolver = $context['exchangeRateResolver']; // Assuming we added the service to the $context
 
@@ -615,7 +615,7 @@ The rules for Resolver plugins are as follows:
 function name_of_plugin_function(
 	\Wedrix\Watchtower\Resolver\Node $node,
 	array $context
-): string|int|float|bool|null|array;
+): mixed;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Resolvers`.
 
@@ -633,7 +633,7 @@ When resolving an abstract type, always add a `__typename` field to the result i
 function resolve_user_field(
     Node \$node,
     array \$context
-): string|int|float|bool|null|array
+): mixed
 {
 	return [
 		'__typename' => 'Customer', // This indicates the concrete type, i.e., Customer

@@ -8,10 +8,7 @@ final class QueryResult implements Result
 {
     private readonly bool $isWorkable;
 
-    /**
-     * @var string|int|float|bool|null|array<mixed>
-     */
-    private readonly string|int|float|bool|null|array $output;
+    private readonly mixed $output;
 
     public function __construct(
         private readonly Query $query,
@@ -23,7 +20,7 @@ final class QueryResult implements Result
                 && $this->node->operationType() === 'query';
         })();
 
-        $this->output = (function (): string|int|float|bool|null|array {
+        $this->output = (function (): mixed {
             if ($this->isWorkable) {
                 $doctrineQuery = $this->query->builder()->getQuery();
         
@@ -42,7 +39,7 @@ final class QueryResult implements Result
         })();
     }
 
-    public function output(): string|int|float|bool|null|array
+    public function output(): mixed
     {
         return $this->output;
     }

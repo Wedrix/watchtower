@@ -8,10 +8,7 @@ final class FieldResult implements Result
 {
     private readonly bool $isWorkable;
 
-    /**
-     * @var string|int|float|bool|null|array<mixed>
-     */
-    private readonly string|int|float|bool|null|array $output;
+    private readonly mixed $output;
 
     public function __construct(
         private readonly Node $node,
@@ -32,7 +29,7 @@ final class FieldResult implements Result
                         );
         })();
 
-        $this->output = (function (): string|int|float|bool|null|array {
+        $this->output = (function (): mixed {
             if ($this->isWorkable) {
                 $fieldName = $this->node->fieldName();
         
@@ -65,7 +62,7 @@ final class FieldResult implements Result
         })();
     }
 
-    public function output(): string|int|float|bool|null|array
+    public function output(): mixed
     {
         return $this->output;
     }

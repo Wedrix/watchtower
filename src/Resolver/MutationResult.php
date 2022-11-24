@@ -13,10 +13,7 @@ final class MutationResult implements Result
 
     private readonly bool $isWorkable;
 
-    /**
-     * @var string|int|float|bool|null|array<mixed>
-     */
-    private readonly string|int|float|bool|null|array $output;
+    private readonly mixed $output;
 
     /**
      * @param array<string,mixed> $context
@@ -39,7 +36,7 @@ final class MutationResult implements Result
                 && $this->plugins->contains($this->plugin);
         })();
 
-        $this->output = (function (): string|int|float|bool|null|array {
+        $this->output = (function (): mixed {
             if ($this->isWorkable) {
                 require_once $this->plugins->directory($this->plugin);
 
@@ -50,7 +47,7 @@ final class MutationResult implements Result
         })();
     }
 
-    public function output(): string|int|float|bool|null|array
+    public function output(): mixed
     {
         return $this->output;
     }

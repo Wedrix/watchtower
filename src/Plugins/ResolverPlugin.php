@@ -50,13 +50,11 @@ final class ResolverPlugin implements Plugin
             
             /**
              * @param array<string,mixed> \$context
-             * 
-             * @return string|int|float|bool|null|array<mixed>
              */
             function {$this->name}(
                 Node \$node,
                 array \$context
-            ): string|int|float|bool|null|array
+            ): mixed
             {
             }
             EOD;

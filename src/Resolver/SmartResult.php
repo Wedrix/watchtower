@@ -12,10 +12,7 @@ final class SmartResult implements Result
 
     private readonly bool $isWorkable;
 
-    /**
-     * @var string|int|float|bool|null|array<mixed>
-     */
-    private readonly string|int|float|bool|null|array $output;
+    private readonly mixed $output;
 
     /**
      * @param array<string,mixed> $context
@@ -88,12 +85,12 @@ final class SmartResult implements Result
             return $this->result->isWorkable();
         })();
 
-        $this->output = (function (): string|int|float|bool|null|array {
+        $this->output = (function (): mixed {
             return $this->isWorkable ? $this->result->output() : null;
         })();
     }
 
-    public function output(): string|int|float|bool|null|array
+    public function output(): mixed
     {
         return $this->output;
     }
