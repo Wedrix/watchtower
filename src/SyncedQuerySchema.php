@@ -68,7 +68,7 @@ final class SyncedQuerySchema extends SchemaType
                             }
                         }
 
-                        $mapScalarType = function (string $scalarType): Type {
+                        $mapScalarType = function (string $scalarType): Type|null {
                             if (in_array($scalarType, ['smallint','integer','bigint'])) {
                                 return Type::int();
                             }
@@ -81,7 +81,7 @@ final class SyncedQuerySchema extends SchemaType
                                 return Type::boolean();
                             }
 
-                            return Type::string();
+                            return null;
                         };
 
                         foreach ($entityFields as $fieldName => $fieldTypeOrInfo) {
@@ -101,11 +101,13 @@ final class SyncedQuerySchema extends SchemaType
                                         foreach ($embeddedFieldTypes as $embeddedFieldName => $embeddedFieldType) {
                                             $fieldType = $mapScalarType($embeddedFieldType);
 
-                                            if (!$entity->fieldIsNullable("$fieldName.$embeddedFieldName")) {
-                                                $fieldType = Type::nonNull($fieldType);
+                                            if (!is_null($fieldType)) {
+                                                if (!$entity->fieldIsNullable("$fieldName.$embeddedFieldName")) {
+                                                    $fieldType = Type::nonNull($fieldType);
+                                                }
+    
+                                                $embeddedFields[$embeddedFieldName] = $fieldType;
                                             }
-
-                                            $embeddedFields[$embeddedFieldName] = $fieldType;
                                         }
 
                                         return $embeddedFields;
@@ -118,11 +120,13 @@ final class SyncedQuerySchema extends SchemaType
                             if (is_string($fieldTypeOrInfo)){
                                 $fieldType = $mapScalarType($fieldTypeOrInfo);
 
-                                if (!$entity->fieldIsNullable($fieldName)) {
-                                    $fieldType = Type::nonNull($fieldType);
+                                if (!is_null($fieldType)) {
+                                    if (!$entity->fieldIsNullable($fieldName)) {
+                                        $fieldType = Type::nonNull($fieldType);
+                                    }
+    
+                                    $fields[$fieldName] = $fieldType;
                                 }
-
-                                $fields[$fieldName] = $fieldType;
                             }
                         }
 
