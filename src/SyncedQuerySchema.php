@@ -8,6 +8,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Language\AST\SchemaDefinitionNode;
 use GraphQL\Type\Schema as SchemaType;
 use GraphQL\Type\Definition\AbstractType;
+use GraphQL\Type\Definition\CustomScalarType;
 use GraphQL\Type\Definition\Directive;
 use GraphQL\Type\Definition\ImplementingType;
 use GraphQL\Type\Definition\InputObjectType;
@@ -79,6 +80,19 @@ final class SyncedQuerySchema extends SchemaType
 
                             if (in_array($scalarType, ['boolean'])) {
                                 return Type::boolean();
+                            }
+
+                            if (in_array($scalarType, ['string','ascii_string','text','guid'])) {
+                                return Type::string();
+                            }
+
+                            if (in_array($scalarType, [
+                                'date','date_immutable','datetime','datetime_immutable',
+                                'datetimetz','datetimetz_immutable','time','time_immutable'
+                            ])) {
+                                return new CustomScalarType([
+                                    'name' => 'DateTime'
+                                ]);
                             }
 
                             return null;
@@ -204,8 +218,12 @@ final class SyncedQuerySchema extends SchemaType
                 $types[$queryParamsTypeName = pluralize($entityName)."QueryParams"] = new InputObjectType([
                     'name' => $queryParamsTypeName,
                     'fields' => [
-                        'limit' => Type::int(),
-                        'page' => Type::int(),
+                        'limit' => new CustomScalarType([
+                            'name' => 'Limit'
+                        ]),
+                        'page' => new CustomScalarType([
+                            'name' => 'Page'
+                        ]),
                         'distinct' => Type::boolean()
                     ]
                 ]);

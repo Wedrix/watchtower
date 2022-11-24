@@ -49,7 +49,7 @@ final class Schema extends SchemaType
                 $astNode = $typeConfig['astNode'] ?? null;
     
                 if ($astNode instanceof ScalarTypeDefinitionNode) {
-                    $scalarTypeDefinition = new ScalarTypeDefinition(
+                    $scalarTypeDefinition = new UngeneratedScalarTypeDefinition(
                         typeName: $typeName = $typeConfig['name']
                     );
     

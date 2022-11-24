@@ -8,7 +8,7 @@ use function Wedrix\Watchtower\string\classify;
 use function Wedrix\Watchtower\string\tableize;
 
 /**
- * @implements \IteratorAggregate<int,ScalarTypeDefinition>
+ * @implements \IteratorAggregate<int,UngeneratedScalarTypeDefinition>
  */
 final class ScalarTypeDefinitions implements \IteratorAggregate
 {
@@ -62,7 +62,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         foreach ($scalarTypeDefinitionsDirectories as $scalarTypeDefinitionDirectory) {
             ($dirElements = explode(\DIRECTORY_SEPARATOR, ($dirElements = explode("_type_definition.php", $scalarTypeDefinitionDirectory[0]))[0]));
 
-            yield new ScalarTypeDefinition(
+            yield new UngeneratedScalarTypeDefinition(
                 typeName: classify(
                     $dirElements[count($dirElements) - 1]
                 )

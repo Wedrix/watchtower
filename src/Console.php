@@ -13,6 +13,10 @@ use Wedrix\Watchtower\Plugins\OrderingPlugin;
 use Wedrix\Watchtower\Plugins\ResolverPlugin;
 use Wedrix\Watchtower\Plugins\SelectorPlugin;
 use Wedrix\Watchtower\Plugins\SubscriptionPlugin;
+use Wedrix\Watchtower\ScalarTypeDefinitions\DateTimeScalarTypeDefinition;
+use Wedrix\Watchtower\ScalarTypeDefinitions\LimitScalarTypeDefinition;
+use Wedrix\Watchtower\ScalarTypeDefinitions\ScalarTypeDefinition;
+use Wedrix\Watchtower\ScalarTypeDefinitions\PageScalarTypeDefinition;
 
 /**
  * @api
@@ -72,6 +76,20 @@ final class Console
         if (file_exists($this->schemaCacheFileDirectory)) {
             unlink($this->schemaCacheFileDirectory);
         }
+
+        foreach (
+            [
+                new DateTimeScalarTypeDefinition(),
+                new LimitScalarTypeDefinition(),
+                new PageScalarTypeDefinition()
+            ] 
+            as $generatedScalarTypeDefinition
+        ) {
+            if (!$this->scalarTypeDefinitions->contains($generatedScalarTypeDefinition)) {
+                $this->scalarTypeDefinitions
+                    ->add($generatedScalarTypeDefinition);
+            }
+        }
     }
 
     public function updateSchema(): void
@@ -89,7 +107,7 @@ final class Console
     {
         $this->scalarTypeDefinitions
             ->add(
-                scalarTypeDefinition: new ScalarTypeDefinition(
+                scalarTypeDefinition: new UngeneratedScalarTypeDefinition(
                     typeName: $typeName
                 )
             );
