@@ -66,12 +66,12 @@ There is an associated **Symfony Flex recipe** for this package, that generates 
  1. Adds the controller **Watchtower/Controller.php** to the **Controller** directory
  2. Registers the route **/graphql** to point to Watchtower/Controller.php
  3. Adds the following commands to the **Command** directory:
-	 - Watchtower/AddPlugin.php - `watchtower:plugins:add` 
-	 - Watchtower/AddScalarTypeDefinition.php - `watchtower:scalar-type-definitions:add`
-	 - Watchtower/GenerateSchema.php - `watchtower:schema:generate`
-	 - Watchtower/ListPlugins.php - `watchtower:plugins:list`
-	 - Watchtower/ListScalarTypeDefinitions.php - `watchtower:scalar-type-definitions:list`
-	 - Watchtower/UpdateSchema.php - `watchtower:schema:update`
+	 - Watchtower/AddPlugin.php 
+	 - Watchtower/AddScalarTypeDefinition.php
+	 - Watchtower/GenerateSchema.php
+	 - Watchtower/ListPlugins.php
+	 - Watchtower/ListScalarTypeDefinitions.php
+	 - Watchtower/UpdateSchema.php
  4. Adds the following services to the **src** directory:
 	 - WatchtowerExecutor.php
 	 - WatchtowerConsole.php
@@ -82,23 +82,24 @@ There is an associated **Symfony Flex recipe** for this package, that generates 
 
 To install the package on Symfony with the Flex recipe enabled, do the following:
 
- 1. Install Symfony Flex if your project does not already have it:
+ 1. Install Symfony Flex if your project does not already have it:  
 	 `composer req 'symfony/flex:^1.16'`
-	 
- 2. Enable recipes defined in the contrib repository:
+
+ 2. Enable recipes defined in the contrib repository:  
 	 `composer config extra.symfony.allow-contrib true`
 
- 3. Point the SYMFONY_ENDPOINT env variable:
-	 For Unix-like (BSD, Linux, and MacOS)
-	 `export SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json`
-	 
-	 For Windows
+ 3. Point the SYMFONY_ENDPOINT env variable:  
+
+	 For Unix-like (BSD, Linux, and MacOS)  
+	 `export SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json` . 
+
+	 For Windows  
 	 `SET SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json`
 	 
- 4. Install the package:
+ 4. Install the package:  
 	 `composer req 'wedrix/watchtower:^1.0'`
 
-5. Unset the SYMFONY_ENDPOINT env variable:
+5. Unset the SYMFONY_ENDPOINT env variable:  
 	`unset SYMFONY_ENDPOINT`
 
 This package does not register a bundle like most others do. Instead, it tries to load a few bootstrap files directly into the project folder. This simplifies the library's usage, allowing great flexibility to add custom validation and security rules, [support multiple schemas](#using-multiple-schemas), and to enforce your preferred project structure and choice of configuration. 
@@ -207,7 +208,7 @@ In order to support user-defined scalar types (custom scalars), the GraphQL engi
 Scalar Type Definitions are auto-loaded files containing the respective function definitions: `serialize()`, `parseValue()`, and `parseLiteral()` under a conventional namespace, that instruct the GraphQL engine on how to handle custom scalar values. Since they are auto-loaded, Scalar type Definitions must conform to the following rules:
 
  1. A Scalar Type Definition must be contained within its own script file.
- 2. The script file must follow the following naming format:
+ 2. The script file must follow the following naming format:  
 	 {***the scalar type name in snake_case***}_type_definition.php
  3. The script file must be contained within the directory specified for the `scalarTypeDefinitionsDirectory` parameter of both the Executor and Console components.
  4. The respective functions `serialize()`, `parseValue()`, and `parseLiteral()` must have the following function signatures:
@@ -544,7 +545,8 @@ Using multiple schemas is as simple as instantiating different objects of the Ex
 Plugins are special auto-loaded functions you define that allow you to add custom logic to the resolver. Since they are auto-loaded, plugins must follow certain conventions for correct package discovery and use:
 
  1. A plugin must be contained within its own script file. 
- 2. The script file name must correspond with the plugin's name. Example: `function apply_listings_ids_filter(...){...}` should correspond with `apply_listings_ids_filter.php`.
+ 2. The script file name must correspond with the plugin's name.  
+ Example: `function apply_listings_ids_filter(...){...}` should correspond with `apply_listings_ids_filter.php`.
  3. The script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the folder specified for the particular plugin type (see [subsequent sections](#computed-fields) for more details).
  4. The plugin function name must follow the specified naming convention for the particular plugin type (see [subsequent sections](#computed-fields) for more details).
  5. The plugin function signature must follow the specified signature for the particular plugin type (see [subsequent sections](#computed-fields) for more details).
@@ -630,9 +632,9 @@ function apply_product_selling_price_selector(
 The rules for Selector plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `selectors` sub-folder.
- 2. The script file's name must follow the following naming format:
+ 2. The script file's name must follow the following naming format:  
 	 apply_{***name of type in snake_case***}_{***name of field in snake_case***}_selector.php
- 3. Within the script file, the plugin function's name must follow the following naming format: 
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
 	 apply_{***name of type in snake_case***}_{***name of field in snake_case***}_selector
  4. The plugin function must have the following signature: 
 ```php
@@ -697,9 +699,9 @@ function resolve_currency_exchange_rate_field(
 The rules for Resolver plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `resolvers` sub-folder.
- 2. The script file's name must follow the following naming format:
+ 2. The script file's name must follow the following naming format:  
 	 resolve_{***name of type in snake_case***}_{***name of field in snake_case***}_field.php
- 3. Within the script file, the plugin function's name must follow the following naming format: 
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
 	 resolve_{***name of type in snake_case***}_{***name of field in snake_case***}_field
  4. The plugin function must have the following signature: 
 ```php
@@ -790,9 +792,9 @@ function apply_listings_ids_filter(
 The rules for Filter plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `filters` sub-folder.
- 2. The script file's name must follow the following naming format:
+ 2. The script file's name must follow the following naming format:  
 	 apply_{***pluralized name of type in snake_case***}_{***name of the filter in snake_case***}_filter.php
- 3. Within the script file, the plugin function's name must follow the following naming format: 
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
 	 apply_{***pluralized name of type in snake_case***}_{***name of the filter in snake_case***}_filter
  4. The plugin function must have the following signature: 
 ```php
@@ -889,9 +891,9 @@ function apply_listings_newest_ordering(
 The rules for Ordering plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `orderings` sub-folder.
- 2. The script file's name must follow the following naming format:
+ 2. The script file's name must follow the following naming format:  
 	 apply_{***pluralized name of type in snake_case***}_{***name of the ordering in snake_case***}_ordering.php
- 3. Within the script file, the plugin function's name must follow the following naming format: 
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
 	 apply_{***pluralized name of type in snake_case***}_{***name of the ordering in snake_case***}_ordering
  4. The plugin function must have the following signature: 
 ```php
@@ -1019,9 +1021,9 @@ function call_log_in_user_mutation(
 The rules for Mutation plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `mutations` sub-folder.
- 2. The script file's name must follow the following naming format:
+ 2. The script file's name must follow the following naming format:  
 	 call_{***name of mutation in snake_case***}_mutation.php
- 3. Within the script file, the plugin function's name must follow the following naming format: 
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
 	 call_{***name of mutation in snake_case***}_mutation
  4. The plugin function must have the following signature: 
 ```php
@@ -1054,9 +1056,9 @@ Subscription plugins act as connectors to your application's implementation of s
 ### Rules
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `subscriptions` sub-folder.
- 2. The script file's name must follow the following naming format:
+ 2. The script file's name must follow the following naming format:  
 	 call_{***name of subscription in snake_case***}_subscription.php
- 3. Within the script file, the plugin function's name must follow the following naming format: 
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
 	 call_{***name of subscription in snake_case***}_subscription
  4. The plugin function must have the following signature: 
 ```php
@@ -1125,9 +1127,9 @@ function authorize_customer_node(
 The rules for Authorization plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `authorizors` sub-folder.
- 2. The script file's name must follow the following naming format:
+ 2. The script file's name must follow the following naming format:  
 	 authorize_{***name of node (pluralized if for collections) in snake_case***}_node.php
- 3. Within the script file, the plugin function's name must follow the following naming format: 
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
 	 authorize_{***name of node (pluralized if for collections) in snake_case***}_node
  4. The plugin function must have the following signature: 
 ```php
