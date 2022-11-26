@@ -97,17 +97,15 @@ To install the package on Symfony with the Flex recipe enabled, do the following
 5. Unset the SYMFONY_ENDPOINT env variable:  
 	`unset SYMFONY_ENDPOINT`
 
-
-### For Other Frameworks 
-
-    composer require wedrix/watchtower
-
-
 This package does not register a bundle like most others do. Instead, it tries to load a few bootstrap files directly into the project folder. This simplifies the library's usage, allowing great flexibility to add custom validation and security rules, [support multiple schemas](#using-multiple-schemas), and to enforce your preferred project structure and choice of configuration. 
 
 We strongly recommend using the flex recipe. However, if for whatever reason you choose to not use it, you may still find the source files instructional. You can access them [here](https://github.com/symfony/recipes-contrib/pull/1456).
 
 After installing the package, your GraphQL API will be available at `/graphql.json` as defined in `App\\Controller\\Watchtower\\Controller.php`. All the associated console commands can be accessed using `php bin/console watchtower:~`.
+
+### For Other Frameworks 
+
+    composer require wedrix/watchtower
 
 
 # Usage
