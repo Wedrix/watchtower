@@ -75,27 +75,25 @@ There is an associated **Symfony Flex recipe** for this package, that generates 
 	 - resources/graphql/scalar_type_definitions
  6. Generates the schema file at resources/graphql/schema.graphql
 
-To install the package on Symfony with the Flex recipe enabled, do the following:
 
- 1. Install Symfony Flex if your project does not already have it:  
-	 `composer req 'symfony/flex:^1.16'`
+To install the package for Symfony with the Flex recipe enabled, 
 
- 2. Enable recipes defined in the contrib repository:  
-	 `composer config extra.symfony.allow-contrib true`
+For Windows:  
 
- 3. Point the SYMFONY_ENDPOINT env variable:  
+	composer req 'symfony/flex:^1.16'
+	composer config extra.symfony.allow-contrib true
+	SET SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json
+	composer require 'wedrix/watchtower'
+	unset SYMFONY_ENDPOINT
 
-	 For Unix-like (BSD, Linux, and MacOS)  
-	 `export SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json` . 
+For Unix-like systems (BSD, Linux, and MacOS):  
 
-	 For Windows  
-	 `SET SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json`
-	 
- 4. Install the package:  
-	 `composer require 'wedrix/watchtower'`
+	composer req 'symfony/flex:^1.16'
+	composer config extra.symfony.allow-contrib true
+	export SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json
+	composer require 'wedrix/watchtower'
+	unset SYMFONY_ENDPOINT
 
-5. Unset the SYMFONY_ENDPOINT env variable:  
-	`unset SYMFONY_ENDPOINT`
 
 This package does not register a bundle like most others do. Instead, it tries to load a few bootstrap files directly into the project folder. This simplifies the library's usage, allowing great flexibility to add custom validation and security rules, [support multiple schemas](#using-multiple-schemas), and to enforce your preferred project structure and choice of configuration. 
 
