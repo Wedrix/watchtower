@@ -1,7 +1,7 @@
 A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for serving GraphQL from [Doctrine](https://github.com/doctrine/orm)-based frameworks like Symfony.
 
 
-# Table of contents
+# Table of Content
 
 - [Features](#features)
 - [Motivation](#motivation)
@@ -54,12 +54,7 @@ This library is inspired by similar others created for different platforms:
 
 # Installation
 
-Via composer:
-
-    composer require wedrix/watchtower
-
-
-## Setup for Symfony
+## For Symfony
 
 There is an associated **Symfony Flex recipe** for this package, that generates the initial bootstrap files that allow you to instantly access a GraphQL API for your service. Kindly take note of the following changes made to your project folder before considering the install:
 
@@ -97,10 +92,16 @@ To install the package on Symfony with the Flex recipe enabled, do the following
 	 `SET SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json`
 	 
  4. Install the package:  
-	 `composer req 'wedrix/watchtower:^1.0'`
+	 `composer require 'wedrix/watchtower'`
 
 5. Unset the SYMFONY_ENDPOINT env variable:  
 	`unset SYMFONY_ENDPOINT`
+
+
+## For Other Frameworks  
+
+    composer require wedrix/watchtower
+
 
 This package does not register a bundle like most others do. Instead, it tries to load a few bootstrap files directly into the project folder. This simplifies the library's usage, allowing great flexibility to add custom validation and security rules, [support multiple schemas](#using-multiple-schemas), and to enforce your preferred project structure and choice of configuration. 
 
