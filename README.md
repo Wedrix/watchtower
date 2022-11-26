@@ -54,7 +54,7 @@ This library is inspired by similar others created for different platforms:
 
 # Installation
 
-## For Symfony
+**For Symfony**
 
 There is an associated **Symfony Flex recipe** for this package, that generates the initial bootstrap files that allow you to instantly access a GraphQL API for your service. Kindly take note of the following changes made to your project folder before considering the install:
 
@@ -98,7 +98,7 @@ To install the package on Symfony with the Flex recipe enabled, do the following
 	`unset SYMFONY_ENDPOINT`
 
 
-## For Other Frameworks  
+**For Other Frameworks**  
 
     composer require wedrix/watchtower
 
