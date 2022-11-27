@@ -71,9 +71,10 @@ There is an associated **Symfony Flex recipe** for this package, that generates 
 	 - WatchtowerExecutor.php
 	 - WatchtowerConsole.php
  5. Adds the following directories:
-	 - resources/graphql/plugins
-	 - resources/graphql/scalar_type_definitions
- 6. Generates the schema file at resources/graphql/schema.graphql
+ 	 - config/graphql
+	 - config/graphql/plugins
+	 - config/graphql/scalar_type_definitions
+ 6. Generates the schema file in config/graphql/schema.graphql
 
 
 To install the package for Symfony with the Flex recipe enabled, 
@@ -143,42 +144,42 @@ $app->post(
 		* configuration objects. 
 		**/
 		$executor = new Executor(
-				entityManager: new EntityManager(), // Either as a Singleton or from some DI container
-				schemaFileDirectory: __DIR__ . '/resources/graphql/schema.graphql',
-				schemaCacheFileDirectory: __DIR__ . '/var/cache/schema.graphql',
-				cachesTheSchema: true, // Should be false in dev environment
-				pluginsDirectory: __DIR__ . '/resources/graphql/plugins',
-				scalarTypeDefinitionsDirectory: __DIR__. '/resources/graphql/scalar_type_definitions'
-			);
+			entityManager: new EntityManager(), // Either as a Singleton or from some DI container
+			schemaFileDirectory: __DIR__ . '/resources/graphql/schema.graphql',
+			schemaCacheFileDirectory: __DIR__ . '/var/cache/schema.graphql',
+			cachesTheSchema: true, // Should be false in dev environment
+			pluginsDirectory: __DIR__ . '/resources/graphql/plugins',
+			scalarTypeDefinitionsDirectory: __DIR__. '/resources/graphql/scalar_type_definitions'
+		);
 			
 		$response->getBody()
-				->write(
-					is_string(
-						$responseBody = json_encode(
-							/**
-							* Call executeQuery() on the request to 
-							* generate the GraphQL response.
-							**/
-							$executor->executeQuery(
-								source: ($input = (array) $request->getParsedBody())['query'] ?? '',
-								rootValue: [],
-								contextValue: [
-									'request' => $request, 
-									'response' => $response, 
-									'args' => $args
-								],
-								variableValues: $input['variables'] ?? null,
-								operationName: $input['operationName'] ?? null,
-								validationRules: null
-							)
-							->toArray(
-								debug: DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag:INCLUDE_TRACE
-							)
+			->write(
+				is_string(
+					$responseBody = json_encode(
+						/**
+						* Call executeQuery() on the request to 
+						* generate the GraphQL response.
+						**/
+						$executor->executeQuery(
+							source: ($input = (array) $request->getParsedBody())['query'] ?? '',
+							rootValue: [],
+							contextValue: [
+								'request' => $request, 
+								'response' => $response, 
+								'args' => $args
+							],
+							variableValues: $input['variables'] ?? null,
+							operationName: $input['operationName'] ?? null,
+							validationRules: null
 						)
-					) 
-					? $responseBody
-					: throw new \Exception("Unable to encode GraphQL result")
-				);
+						->toArray(
+							debug: DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag:INCLUDE_TRACE
+						)
+					)
+				) 
+				? $responseBody
+				: throw new \Exception("Unable to encode GraphQL result")
+			);
 
 		return $response->withHeader('Content-Type', 'application/json; charset=utf-8');
 });
