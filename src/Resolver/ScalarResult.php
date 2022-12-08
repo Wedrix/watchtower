@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-final class FieldResult implements Result
+final class ScalarResult implements Result
 {
     private readonly bool $isWorkable;
 

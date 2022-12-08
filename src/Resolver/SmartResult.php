@@ -21,13 +21,13 @@ final class SmartResult implements Result
     )
     {
         $this->result = (function (): Result {
-            $fielResult = new FieldResult(
+            $scalarResult = new ScalarResult(
                 node: $this->node,
                 entityManager: $this->entityManager
             );
 
-            if ($fielResult->isWorkable()) {
-                return $fielResult;
+            if ($scalarResult->isWorkable()) {
+                return $scalarResult;
             }
 
             $queryResult = new QueryResult(
