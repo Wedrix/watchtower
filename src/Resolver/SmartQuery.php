@@ -44,24 +44,24 @@ final class SmartQuery implements Query
                     node: $this->node
                 );
     
-                if (!$this->node->isTopLevel()) {
-                    return new ParentAssociatedQuery(
-                        query: $baseQuery,
-                        node: $this->node
-                    );
+                if ($this->node->isTopLevel()) {
+                    return $collectionQuery;
                 }
-    
-                return $collectionQuery;
-            }
-    
-            if (!$this->node->isTopLevel()) {
+
                 return new ParentAssociatedQuery(
+                    query: $collectionQuery,
+                    node: $this->node
+                );
+            }
+
+            if ($this->node->isTopLevel()) {
+                return new FindQuery(
                     query: $baseQuery,
                     node: $this->node
                 );
             }
-    
-            return new FindQuery(
+            
+            return new ParentAssociatedQuery(
                 query: $baseQuery,
                 node: $this->node
             );
