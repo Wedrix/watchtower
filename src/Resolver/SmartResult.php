@@ -14,13 +14,9 @@ final class SmartResult implements Result
 
     private readonly mixed $output;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Node $node,
         private readonly EntityManager $entityManager,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
@@ -38,7 +34,6 @@ final class SmartResult implements Result
                 query: new SmartQuery(
                     node: $this->node,
                     entityManager: $this->entityManager,
-                    context: $this->context,
                     plugins: $this->plugins
                 ),
                 node: $this->node
@@ -50,7 +45,6 @@ final class SmartResult implements Result
 
             $mutationResult = new MutationResult(
                 node: $this->node,
-                context: $this->context,
                 plugins: $this->plugins
             );
 
@@ -60,7 +54,6 @@ final class SmartResult implements Result
 
             $subscriptionResult = new SubscriptionResult(
                 node: $this->node,
-                context: $this->context,
                 plugins: $this->plugins
             );
     
@@ -70,7 +63,6 @@ final class SmartResult implements Result
 
             $resolverResult = new ResolverResult(
                 node: $this->node,
-                context: $this->context,
                 plugins: $this->plugins
             );
 

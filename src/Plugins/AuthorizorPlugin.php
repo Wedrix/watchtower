@@ -51,13 +51,9 @@ final class AuthorizorPlugin implements Plugin
             namespace {$this->namespace};
 
             use Wedrix\Watchtower\Resolver\Node;
-            
-            /**
-             * @param array<string,mixed> \$context
-             */
+
             function {$this->name}(
-                Node \$node,
-                array \$context
+                Node \$node
             ): void
             {
             }

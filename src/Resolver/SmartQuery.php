@@ -14,13 +14,9 @@ final class SmartQuery implements Query
 
     private readonly QueryBuilder $queryBuilder;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Node $node,
         private readonly EntityManager $entityManager,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
@@ -28,7 +24,6 @@ final class SmartQuery implements Query
             $baseQuery = new BaseQuery(
                 node: $this->node,
                 entityManager: $this->entityManager,
-                context: $this->context,
                 plugins: $this->plugins
             );
     
@@ -41,11 +36,9 @@ final class SmartQuery implements Query
                                 node: $this->node
                             ),
                             node: $this->node,
-                            context: $this->context,
                             plugins: $this->plugins
                         ),
                         node: $this->node,
-                        context: $this->context,
                         plugins: $this->plugins
                     ),
                     node: $this->node

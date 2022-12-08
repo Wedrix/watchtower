@@ -13,13 +13,9 @@ final class MaybeOrderedQuery implements Query
 
     private readonly QueryBuilder $queryBuilder;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Query $query,
         private readonly Node $node,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
@@ -47,14 +43,14 @@ final class MaybeOrderedQuery implements Query
             
                     foreach ($ordering as $ordering => $_) {
                         $orderingPlugin = new OrderingPlugin(
-                            nodeType: $this->node->type(),
+                            nodeType: $this->node->unwrappedType(),
                             ordering: $ordering
                         );
         
                         if ($this->plugins->contains($orderingPlugin)) {
                             require_once $this->plugins->directory($orderingPlugin);
         
-                            $orderingPlugin->callback()($queryBuilder, $this->node, $this->context);
+                            $orderingPlugin->callback()($queryBuilder, $this->node);
                         }
                     }
                 }

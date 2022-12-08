@@ -15,24 +15,20 @@ final class ResolverResult implements Result
 
     private readonly mixed $output;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Node $node,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
         $this->plugin = (function (): ResolverPlugin {
             return new ResolverPlugin(
-                nodeType: $this->node->type(),
-                fieldName: $this->node->fieldName()
+                nodeType: $this->node->unwrappedType(),
+                fieldName: $this->node->name()
             );
         })();
 
         $this->isWorkable = (function (): bool {
-            return $this->node->operationType() === 'query'
+            return $this->node->operation() === 'query'
                 && $this->plugins->contains($this->plugin);
         })();
 
@@ -40,7 +36,7 @@ final class ResolverResult implements Result
             if ($this->isWorkable) {
                 require_once $this->plugins->directory($this->plugin);
                 
-                return $this->plugin->callback()($this->node, $this->context);
+                return $this->plugin->callback()($this->node);
             }
 
             return null;

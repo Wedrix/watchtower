@@ -13,13 +13,9 @@ final class AuthorizedResult implements Result
 
     private readonly mixed $output;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Result $result,
         private readonly Node $node,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
@@ -30,14 +26,14 @@ final class AuthorizedResult implements Result
         $this->output = (function (): mixed {
             if ($this->isWorkable) {
                 $authorizorPlugin = new AuthorizorPlugin(
-                    nodeType: $this->node->type(),
+                    nodeType: $this->node->unwrappedType(),
                     isForCollections: $this->node->isACollection()
                 );
         
                 if ($this->plugins->contains($authorizorPlugin)) {
                     require_once $this->plugins->directory($authorizorPlugin);
         
-                    $authorizorPlugin->callback()($this->node, $this->context);
+                    $authorizorPlugin->callback()($this->node);
                 }
                 
                 return $this->result->output();

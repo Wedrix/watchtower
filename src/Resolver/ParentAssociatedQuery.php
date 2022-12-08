@@ -24,16 +24,16 @@ final class ParentAssociatedQuery implements Query
         $this->isWorkable = (function (): bool {
             return $this->query->isWorkable()
                         && !$this->node->isTopLevel()
-                        && $this->entityManager->hasEntity(name: $this->node->parentType());
+                        && $this->entityManager->hasEntity(name: $this->node->unwrappedParentType());
         })();
 
         $this->queryBuilder = (function(): QueryBuilder {
             $queryBuilder = $this->query->builder();
 
             if ($this->isWorkable) {
-                $rootEntity = $this->entityManager->findEntity(name: $this->node->type());
+                $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
-                $parentAssociatedEntity = $this->entityManager->findEntity(name: $this->node->parentType());
+                $parentAssociatedEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
 
                 $parentAssociatedEntityIdValue = (function () use ($parentAssociatedEntity): mixed {
                     $parentAssociatedEntityIdFields = $parentAssociatedEntity->idFields();
@@ -47,7 +47,7 @@ final class ParentAssociatedQuery implements Query
                     };
                 })() ?? throw new \Exception("Invalid Query. The parent node has no resolved id field(s).");
         
-                $association = $this->node->fieldName();
+                $association = $this->node->name();
         
                 $entityAlias = $queryBuilder->rootAlias();
         

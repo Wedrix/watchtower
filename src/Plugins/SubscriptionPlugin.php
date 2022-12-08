@@ -41,17 +41,13 @@ final class SubscriptionPlugin implements Plugin
             <?php
 
             declare(strict_types=1);
-            
+
             namespace {$this->namespace};
-            
+
             use Wedrix\Watchtower\Resolver\Node;
-            
-            /**
-             * @param array<string,mixed> \$context
-             */
+
             function {$this->name}(
-                Node \$node,
-                array \$context
+                Node \$node
             ): mixed
             {
             }            

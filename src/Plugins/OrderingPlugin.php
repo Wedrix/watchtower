@@ -50,13 +50,9 @@ final class OrderingPlugin implements Plugin
             use Wedrix\Watchtower\Resolver\Node;
             use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-            /**
-             * @param array<string,mixed> \$context
-             */
             function {$this->name}(
                 QueryBuilder \$queryBuilder,
-                Node \$node,
-                array \$context
+                Node \$node
             ): void
             {
             }

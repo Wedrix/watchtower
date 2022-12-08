@@ -43,14 +43,13 @@ final class Resolver
                     node: $node = new Node(
                         root: $root,
                         args: $args,
+                        context: $context,
                         info: $info
                     ),
-                    context: $context,
                     entityManager: $this->entityManager,
                     plugins: $this->plugins
                 ),
                 node: $node,
-                context: $context,
                 plugins: $this->plugins
             )
         )

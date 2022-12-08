@@ -13,13 +13,9 @@ final class MaybeFilteredQuery implements Query
 
     private readonly QueryBuilder $queryBuilder;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Query $query,
         private readonly Node $node,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
@@ -38,14 +34,14 @@ final class MaybeFilteredQuery implements Query
         
                     foreach ($filters as $filter => $_) {
                         $filterPlugin = new FilterPlugin(
-                            nodeType: $this->node->type(),
+                            nodeType: $this->node->unwrappedType(),
                             filter: $filter
                         );
         
                         if ($this->plugins->contains($filterPlugin)) {
                             require_once $this->plugins->directory($filterPlugin);
                             
-                            $filterPlugin->callback()($queryBuilder, $this->node, $this->context);
+                            $filterPlugin->callback()($queryBuilder, $this->node);
                         }
                     }
                 }

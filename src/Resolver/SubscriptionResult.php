@@ -15,23 +15,19 @@ final class SubscriptionResult implements Result
 
     private readonly mixed $output;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Node $node,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
         $this->plugin = (function (): SubscriptionPlugin {
             return new SubscriptionPlugin(
-                fieldName: $this->node->fieldName()
+                fieldName: $this->node->name()
             );
         })();
 
         $this->isWorkable = (function (): bool {
-            return $this->node->operationType() === 'subscription' 
+            return $this->node->operation() === 'subscription' 
                 && $this->node->isTopLevel()
                 && $this->plugins->contains($this->plugin);
         })();
@@ -40,7 +36,7 @@ final class SubscriptionResult implements Result
             if ($this->isWorkable) {
                 require_once $this->plugins->directory($this->plugin);
 
-                return $this->plugin->callback()($this->node, $this->context);
+                return $this->plugin->callback()($this->node);
             }
 
             return null;

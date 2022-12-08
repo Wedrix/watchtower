@@ -564,13 +564,9 @@ namespace Wedrix\Watchtower\Plugins\Filters;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-/**
- * @param array<string,mixed> $context
- */
 function apply_listings_ids_filter(
     QueryBuilder $queryBuilder,
-    Node $node,
-    array $context
+    Node $node
 ): void
 {
     $entityAlias = $queryBuilder->rootAlias();
@@ -608,13 +604,9 @@ namespace Wedrix\Watchtower\Plugins\Selectors;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-/**
- * @param array<string,mixed> $context
- */
 function apply_product_selling_price_selector(
     QueryBuilder $queryBuilder,
-    Node $node,
-    array $context
+    Node $node
 ): void
 {
     $entityAlias = $queryBuilder->rootAlias();
@@ -636,13 +628,9 @@ The rules for Selector plugins are as follows:
 	 apply_{***name of type in snake_case***}_{***name of field in snake_case***}_selector
  4. The plugin function must have the following signature: 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function function_name(
 	\Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
-	\Wedrix\Watchtower\Resolver\Node $node,
-	array $context
+	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Selectors`.
@@ -656,8 +644,6 @@ The first function parameter `$queryBuilder` represents the query builder on whi
  2. Use `$queryBuilder->reconciledAlias(string $alias)` to get an alias that's compatible with the rest of the query aliases. Use it to prevent name collisions.
 
 The second function parameter `$node` represents the particular query node being resolved in the query graph. Use it to determine the appropriate query to chain onto the builder.
-
-The third function parameter `$context` represents the context value passed to the GraphQL executor. It contains whatever values you set.
 
 
 ## Resolver Plugins
@@ -676,15 +662,11 @@ namespace Wedrix\Watchtower\Plugins\Resolvers;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-/**
- * @param array<string,mixed> $context
- */
 function resolve_currency_exchange_rate_field(
-    Node \$node,
-    array \$context
+    Node \$node
 ): mixed
 {
-	$exchangeRateResolver = $context['exchangeRateResolver']; // Assuming the service was added to the $context param
+	$exchangeRateResolver = $node->context()['exchangeRateResolver']; // Assuming the service was added to $contextValue when Executor::executeQuery() was called
 
 	return $exchangeRateResolver->getExchangeRate(
 		currencyCode: $node->root()['isoCode']
@@ -703,12 +685,8 @@ The rules for Resolver plugins are as follows:
 	 resolve_{***name of type in snake_case***}_{***name of field in snake_case***}_field
  4. The plugin function must have the following signature: 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function function_name(
-	\Wedrix\Watchtower\Resolver\Node $node,
-	array $context
+	\Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Resolvers`.
@@ -726,12 +704,8 @@ Use the utility functions `$node->type()`, `$node->isAbstractType()`, `$node->co
 When resolving an abstract type, always add a `__typename` field to the result indicating the concrete type being resolved. For example:
 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function resolve_user_field(
-    Node \$node,
-    array \$context
+    Node \$node
 ): mixed
 {
 	return [
@@ -765,13 +739,9 @@ namespace Wedrix\Watchtower\Plugins\Filters;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-/**
- * @param array<string,mixed> $context
- */
 function apply_listings_ids_filter(
     QueryBuilder $queryBuilder,
-    Node $node,
-    array $context
+    Node $node
 ): void
 {
     $entityAlias = $queryBuilder->rootAlias();
@@ -796,13 +766,9 @@ The rules for Filter plugins are as follows:
 	 apply_{***pluralized name of type in snake_case***}_{***name of the filter in snake_case***}_filter
  4. The plugin function must have the following signature: 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function function_name(
 	\Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
-	\Wedrix\Watchtower\Resolver\Node $node,
-	array $context
+	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Filters`.
@@ -866,13 +832,9 @@ namespace Wedrix\Watchtower\Plugins\Orderings;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-/**
- * @param array<string,mixed> $context
- */
 function apply_listings_newest_ordering(
     QueryBuilder $queryBuilder,
-    Node $node,
-    array $context
+    Node $node
 ): void
 {
     $entityAlias = $queryBuilder->rootAlias();
@@ -895,13 +857,9 @@ The rules for Ordering plugins are as follows:
 	 apply_{***pluralized name of type in snake_case***}_{***name of the ordering in snake_case***}_ordering
  4. The plugin function must have the following signature: 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function function_name(
 	\Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
-	\Wedrix\Watchtower\Resolver\Node $node,
-	array $context
+	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Orderings`.
@@ -989,16 +947,12 @@ namespace Wedrix\Watchtower\Plugins\Mutations;
 use App\Server\Sessions\Session;
 use Wedrix\Watchtower\Resolver\Node;
 
-/**
- * @param array<string,mixed> $context
- */
 function call_log_in_user_mutation(
-    Node $node, 
-    array $context
+    Node $node
 ): mixed
 {
-    $request = $context['request'] ?? throw new \Exception("Invalid context value! Unset request.");
-    $response = $context['response'] ?? throw new \Exception("Invalid context value! Unset response.");
+    $request = $node->context()['request'] ?? throw new \Exception("Invalid context value! Unset request.");
+    $response = $node->context()['response'] ?? throw new \Exception("Invalid context value! Unset response.");
 
     $session = new Session(
         request: $request,
@@ -1025,12 +979,8 @@ The rules for Mutation plugins are as follows:
 	 call_{***name of mutation in snake_case***}_mutation
  4. The plugin function must have the following signature: 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function function_name(
-	\Wedrix\Watchtower\Resolver\Node $node,
-	array $context
+	\Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Mutations`.
@@ -1060,12 +1010,8 @@ Subscription plugins act as connectors to your application's implementation of s
 	 call_{***name of subscription in snake_case***}_subscription
  4. The plugin function must have the following signature: 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function function_name(
-	\Wedrix\Watchtower\Resolver\Node $node,
-	array $context
+	\Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Subscriptions`.
@@ -1095,17 +1041,13 @@ use Wedrix\Watchtower\Resolver\Node;
 
 use function array\any_in_array;
 
-/**
- * @param array<string,mixed> $context
- */
 function authorize_customer_node(
-    Node $node,
-    array $context
+    Node $node
 ): void
 {
     $user = new Session(
-		request: $context['request'],
-		response: $context['response']
+		request: $node->context()['request'] ?? throw new \Exception("Invalid context value! Unset request."),
+		response: $node->context()['response'] ?? throw new \Exception("Invalid context value! Unset response.")
 	)
 	->user();
 
@@ -1131,12 +1073,8 @@ The rules for Authorization plugins are as follows:
 	 authorize_{***name of node (pluralized if for collections) in snake_case***}_node
  4. The plugin function must have the following signature: 
 ```php
-/**
- * @param array<string,mixed> $context
- */
 function function_name(
-	\Wedrix\Watchtower\Resolver\Node $node,
-	array $context
+	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Authorizors`.

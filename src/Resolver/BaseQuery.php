@@ -13,30 +13,26 @@ final class BaseQuery implements Query
 
     private readonly QueryBuilder $queryBuilder;
 
-    /**
-     * @param array<string,mixed> $context
-     */
     public function __construct(
         private readonly Node $node,
         private readonly EntityManager $entityManager,
-        private readonly array $context,
         private readonly Plugins $plugins
     )
     {
         $this->isWorkable = (function (): bool {
-            return !$this->node->isAbstractType()
-                && $this->entityManager->hasEntity(name: $this->node->type());
+            return !$this->node->isAbstract()
+                && $this->entityManager->hasEntity(name: $this->node->unwrappedType());
         })();
 
         $this->queryBuilder = (function (): QueryBuilder {
             $queryBuilder = $this->entityManager->createQueryBuilder();
 
             if ($this->isWorkable) {
-                $rootEntity = $this->entityManager->findEntity(name: $this->node->type());
+                $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
                 $queryBuilder->from(
                     from: $rootEntity->class(),
-                    alias: $queryBuilder->reconciledAlias("__{$this->node->fieldName()}")
+                    alias: $queryBuilder->reconciledAlias("__{$this->node->name()}")
                 );
 
                 /**
@@ -93,14 +89,14 @@ final class BaseQuery implements Query
         
                 foreach ($selectedFields as $fieldName) {
                     $selectorPlugin = new SelectorPlugin(
-                        nodeType: $this->node->type(),
+                        nodeType: $this->node->unwrappedType(),
                         fieldName: $fieldName
                     );
         
                     if ($this->plugins->contains($selectorPlugin)) {
                         require_once $this->plugins->directory($selectorPlugin);
 
-                        $selectorPlugin->callback()($queryBuilder, $this->node, $this->context);
+                        $selectorPlugin->callback()($queryBuilder, $this->node);
                     }
                     else {
                         $queryBuilder->addSelect("{$queryBuilder->rootAlias()}.$fieldName");

@@ -9,13 +9,13 @@ use GraphQL\Type\Definition\Type;
 
 final class Node
 {
-    private readonly string $fieldName;
+    private readonly string $name;
 
-    private readonly string $type;
+    private readonly string $unwrappedType;
 
-    private readonly string $parentType;
+    private readonly string $unwrappedParentType;
 
-    private readonly string $operationType;
+    private readonly string $operation;
 
     private readonly bool $isNullable;
 
@@ -23,9 +23,9 @@ final class Node
 
     private readonly bool $isTopLevel;
 
-    private readonly bool $isAbstractType;
+    private readonly bool $isAbstract;
 
-    private readonly bool $isLeafType;
+    private readonly bool $isALeaf;
 
     /**
      * @var array<string,mixed>
@@ -40,26 +40,28 @@ final class Node
     /**
      * @param array<string,mixed> $root
      * @param array<string,mixed> $args
+     * @param array<string,mixed> $context
      */
     public function __construct(
         private readonly array $root,
         private readonly array $args,
+        private readonly array $context,
         private readonly ResolveInfo $info
     )
     {
-        $this->fieldName = (function (): string {
+        $this->name = (function (): string {
             return $this->info->fieldName;
         })();
 
-        $this->type = (function (): string {
+        $this->unwrappedType = (function (): string {
             return str_replace(['[',']','!'], "", (string) $this->info->returnType);
         })();
 
-        $this->parentType = (function (): string {
+        $this->unwrappedParentType = (function (): string {
             return str_replace(['[',']','!'], "", (string) $this->info->parentType);
         })();
 
-        $this->operationType = (function (): string {
+        $this->operation = (function (): string {
             return $this->info->operation?->operation 
                 ?? throw new \Exception("Invalid Query. The operation is not defined.");
         })();
@@ -79,11 +81,11 @@ final class Node
             return count($this->info->path) === 1;
         })();
 
-        $this->isAbstractType = (function (): bool {
+        $this->isAbstract = (function (): bool {
             return Type::isAbstractType(Type::getNullableType($this->info->returnType));
         })();
 
-        $this->isLeafType = (function (): bool {
+        $this->isALeaf = (function (): bool {
             return Type::isLeafType(Type::getNullableType($this->info->returnType));
         })();
 
@@ -110,6 +112,62 @@ final class Node
     public function args(): array
     {
         return $this->args;
+    }
+
+    /**
+     * @return array<string,mixed>
+     */
+    public function context(): array
+    {
+        return $this->context;
+    }
+
+    public function name(): string
+    {
+        return $this->name;
+    }
+
+    public function unwrappedType(): string
+    {
+        return $this->unwrappedType;
+    }
+
+    public function unwrappedParentType(): string
+    {
+        return $this->unwrappedParentType;
+    }
+
+    /**
+     * One of 'query', 'mutation', or 'subscription'
+     */
+    public function operation(): string
+    {
+        return $this->operation;
+    }
+
+    public function isNullable(): bool
+    {
+        return $this->isNullable;
+    }
+
+    public function isACollection(): bool
+    {
+        return $this->isACollection;
+    }
+
+    public function isTopLevel(): bool
+    {
+        return $this->isTopLevel;
+    }
+
+    public function isAbstract(): bool
+    {
+        return $this->isAbstract;
+    }
+
+    public function isALeaf(): bool
+    {
+        return $this->isALeaf;
     }
     
     /**
@@ -216,53 +274,5 @@ final class Node
     public function abstractFieldsSelection(): array
     {
         return $this->abstractFieldsSelection;
-    }
-
-    public function fieldName(): string
-    {
-        return $this->fieldName;
-    }
-
-    public function type(): string
-    {
-        return $this->type;
-    }
-
-    public function parentType(): string
-    {
-        return $this->parentType;
-    }
-
-    /**
-     * One of 'query','mutation', or 'subscription'
-     */
-    public function operationType(): string
-    {
-        return $this->operationType;
-    }
-
-    public function isNullable(): bool
-    {
-        return $this->isNullable;
-    }
-
-    public function isACollection(): bool
-    {
-        return $this->isACollection;
-    }
-
-    public function isTopLevel(): bool
-    {
-        return $this->isTopLevel;
-    }
-
-    public function isAbstractType(): bool
-    {
-        return $this->isAbstractType;
-    }
-
-    public function isLeafType(): bool
-    {
-        return $this->isLeafType;
     }
 }

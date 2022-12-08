@@ -16,22 +16,22 @@ final class FieldResult implements Result
     )
     {
         $this->isWorkable = (function (): bool {
-            return $this->node->isLeafType()
+            return $this->node->isALeaf()
                         || (
                             !$this->node->isTopLevel()
                                 && $this->entityManager
                                         ->findEntity(
-                                            name: $this->node->parentType()
+                                            name: $this->node->unwrappedParentType()
                                         )
                                         ->hasEmbeddedField(
-                                            fieldName: $this->node->fieldName()
+                                            fieldName: $this->node->name()
                                         )
                         );
         })();
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {
-                $fieldName = $this->node->fieldName();
+                $fieldName = $this->node->name();
         
                 $root = $this->node->root();
         
