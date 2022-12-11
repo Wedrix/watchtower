@@ -54,9 +54,11 @@ This library is inspired by similar others created for different platforms:
 
 # Installation
 
-### For Symfony 
+## Symfony 
 
-There is an associated **Symfony Flex recipe** for this package, that generates the initial bootstrap files that allow you to instantly access a GraphQL API for your service. Kindly take note of the following changes made to your project folder before considering the install:
+This package is currently only compatible with Symfony version 6.1 and higher.  
+There is an associated Flex recipe for this package, that generates the initial bootstrap files, allowing you to instantly access a GraphQL API for your service.  
+Kindly take note of the following changes made to your project folder before considering the install:
 
  1. Adds the controller **Watchtower/Controller.php** to the **Controller** directory
  2. Registers the route **/graphql** to point to Watchtower/Controller.php
@@ -71,25 +73,29 @@ There is an associated **Symfony Flex recipe** for this package, that generates 
 	 - WatchtowerExecutor.php
 	 - WatchtowerConsole.php
  5. Adds the following directories:
- 	 - config/graphql
-	 - config/graphql/plugins
+	 - config/graphql/plugins/authorizors
+	 - config/graphql/plugins/filters
+	 - config/graphql/plugins/mutations
+	 - config/graphql/plugins/orderings
+	 - config/graphql/plugins/resolvers
+	 - config/graphql/plugins/selectors
 	 - config/graphql/scalar_type_definitions
  6. Generates the schema file in config/graphql/schema.graphql
 
 
-To install the package for Symfony with the Flex recipe enabled, 
+To install the package for with the Flex recipe enabled, 
 
 For Windows:  
 
-	composer req 'symfony/flex:^1.16'
+	composer req 'symfony/flex'
 	composer config extra.symfony.allow-contrib true
 	SET SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json
 	composer require 'wedrix/watchtower'
-	unset SYMFONY_ENDPOINT
+	SET SYMFONY_ENDPOINT=
 
 For Unix-like systems (BSD, Linux, and MacOS):  
 
-	composer req 'symfony/flex:^1.16'
+	composer req 'symfony/flex'
 	composer config extra.symfony.allow-contrib true
 	export SYMFONY_ENDPOINT=https://raw.githubusercontent.com/symfony/recipes-contrib/flex/pull-1456/index.json
 	composer require 'wedrix/watchtower'
@@ -100,9 +106,10 @@ This package does not register a bundle like most others do. Instead, it tries t
 
 We strongly recommend using the flex recipe. However, if for whatever reason you choose to not use it, you may still find the source files instructional. You can access them [here](https://github.com/symfony/recipes-contrib/pull/1456).
 
-After installing the package, your GraphQL API will be available at `/graphql.json` as defined in `App\\Controller\\Watchtower\\Controller.php`. All the associated console commands can be accessed using `php bin/console watchtower:~`.
+After installing the package, your GraphQL API will be available at `/graphql.json` as defined in `App\\Controller\\Watchtower\\Controller.php`.  
+Access the CLI commands via `php bin/console watchtower:~`.
 
-### For Other Frameworks 
+## Other Frameworks 
 
     composer require wedrix/watchtower
 
