@@ -118,28 +118,28 @@ final class Console
     }
 
     public function addFilterPlugin(
-        string $nodeType,
+        string $parentNodeType,
         string $filter
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new FilterPlugin(
-                    nodeType: $nodeType,
+                    parentNodeType: $parentNodeType,
                     filter: $filter
                 )
             );
     }
 
     public function addOrderingPlugin(
-        string $nodeType,
+        string $parentNodeType,
         string $ordering
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new OrderingPlugin(
-                    nodeType: $nodeType,
+                    parentNodeType: $parentNodeType,
                     ordering: $ordering
                 )
             );

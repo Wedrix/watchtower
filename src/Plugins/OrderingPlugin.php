@@ -22,7 +22,7 @@ final class OrderingPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $nodeType,
+        private readonly string $parentNodeType,
         private readonly string $ordering
     )
     {
@@ -31,7 +31,7 @@ final class OrderingPlugin implements Plugin
         })();
 
         $this->name = (function (): string {
-            return "apply_".tableize(pluralize($this->nodeType))
+            return "apply_".tableize(pluralize($this->parentNodeType))
                     ."_".tableize($this->ordering)."_ordering";
         })();
 

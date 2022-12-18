@@ -768,9 +768,9 @@ The rules for Filter plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `filters` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 apply_{***pluralized name of type in snake_case***}_{***name of the filter in snake_case***}_filter.php
+	 apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 apply_{***pluralized name of type in snake_case***}_{***name of the filter in snake_case***}_filter
+	 apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter
  4. The plugin function must have the following signature: 
 ```php
 function function_name(
@@ -859,9 +859,9 @@ The rules for Ordering plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `orderings` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 apply_{***pluralized name of type in snake_case***}_{***name of the ordering in snake_case***}_ordering.php
+	 apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 apply_{***pluralized name of type in snake_case***}_{***name of the ordering in snake_case***}_ordering
+	 apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering
  4. The plugin function must have the following signature: 
 ```php
 function function_name(
