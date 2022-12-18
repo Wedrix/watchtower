@@ -630,9 +630,9 @@ The rules for Selector plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `selectors` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 apply_{***name of type in snake_case***}_{***name of field in snake_case***}_selector.php
+	 apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 apply_{***name of type in snake_case***}_{***name of field in snake_case***}_selector
+	 apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector
  4. The plugin function must have the following signature: 
 ```php
 function function_name(
@@ -687,9 +687,9 @@ The rules for Resolver plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `resolvers` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 resolve_{***name of type in snake_case***}_{***name of field in snake_case***}_field.php
+	 resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 resolve_{***name of type in snake_case***}_{***name of field in snake_case***}_field
+	 resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field
  4. The plugin function must have the following signature: 
 ```php
 function function_name(
@@ -711,7 +711,7 @@ Use the utility functions `$node->type()`, `$node->isAbstractType()`, `$node->co
 When resolving an abstract type, always add a `__typename` field to the result indicating the concrete type being resolved. For example:
 
 ```php
-function resolve_user_field(
+function resolve_user(
     Node \$node
 ): mixed
 {
@@ -872,7 +872,7 @@ function function_name(
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Orderings`.
 
 
-To use orderings add them to the `orderings` parameter of the `queryParams` argument. For instance:
+To use orderings add them to the `ordering` parameter of the `queryParams` argument. For instance:
 
 ```graphql
 type Query {
@@ -880,23 +880,27 @@ type Query {
 }
 
 input ProductsQueryParams {
-	orderings: ProductsQueryOrderingsParam, # Can be any user-defined input type
+	ordering: ProductsQueryOrderingParam, # Can be any user-defined input type
 	limit: Int!,
 	page: Int!,
 }
 
-input ProductsQueryOrderingsParam {
-	closest: ProductsQueryOrderingsClosestParam, # Can also be any user-defined input type
-	oldest: ProductsQueryOrderingsOldestParam, # Another ordering
+input ProductsQueryOrderingParam {
+	closest: ProductsQueryOrderingClosestParam, # Can also be any user-defined input type
+	oldest: ProductsQueryOrderingOldestParam, # Another ordering
 }
 
-input ProductsQueryOrderingsClosestParam {
+input ProductsQueryOrderingClosestParam {
 	rank: Int!, # This parmeter is required for all orderings
-	params: ProductsQueryOrderingsClosestParamsParam! # This optional for parameterized orderings
+	params: ProductsQueryOrderingClosestParamsParam! # This optional for parameterized orderings
 }
 
-input ProductsQueryOrderingsClosestParamsParam {
+input ProductsQueryOrderingClosestParamsParam {
 	location: Coordinates!
+}
+
+input ProductsQueryOrderingOldestParam {
+	rank: Int!
 }
 
 type Product {
@@ -912,9 +916,12 @@ You can then use them in queries like so:
 query {
 	products: paginatedProducts(
 		queryParams:{
-			orderings:{
+			ordering:{
+				oldest:{
+					rank:1
+				},
 				closest:{
-					rank:1,
+					rank:2,
 					params:{
 						locaton:"40.74684111541018,-73.98518096794233"
 					}
@@ -928,7 +935,7 @@ query {
 }
 ```
 
-Kindly take note of the `rank` parameter that is required for all orderings. It's used to determine the order in which to apply multiple orderings. The highest ranking ordering is applied first, followed by next in that order.
+Kindly take note of the `rank` parameter that is required for all orderings. It's used to determine the order in which to apply multiple orderings. The highest ranking ordering is applied first, followed by the next in that order.
 
 You can also pass params to the ordering using the `params` parameter.
 

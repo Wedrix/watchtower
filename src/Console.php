@@ -146,28 +146,28 @@ final class Console
     }
 
     public function addSelectorPlugin(
-        string $nodeType,
+        string $parentNodeType,
         string $fieldName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new SelectorPlugin(
-                    nodeType: $nodeType,
+                    parentNodeType: $parentNodeType,
                     fieldName: $fieldName
                 )
             );
     }
 
     public function addResolverPlugin(
-        string $nodeType,
+        string $parentNodeType,
         string $fieldName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new ResolverPlugin(
-                    nodeType: $nodeType,
+                    parentNodeType: $parentNodeType,
                     fieldName: $fieldName
                 )
             );

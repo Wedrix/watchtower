@@ -89,7 +89,7 @@ final class BaseQuery implements Query
         
                 foreach ($selectedFields as $fieldName) {
                     $selectorPlugin = new SelectorPlugin(
-                        nodeType: $this->node->unwrappedType(),
+                        parentNodeType: $this->node->unwrappedType(),
                         fieldName: $fieldName
                     );
         

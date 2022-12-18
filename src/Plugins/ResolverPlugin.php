@@ -21,7 +21,7 @@ final class ResolverPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $nodeType,
+        private readonly string $parentNodeType,
         private readonly string $fieldName
     )
     {
@@ -30,7 +30,7 @@ final class ResolverPlugin implements Plugin
         })();
 
         $this->name = (function (): string {
-            return "resolve_".tableize($this->nodeType)
+            return "resolve_".tableize($this->parentNodeType)
                     ."_".tableize($this->fieldName)."_field";
         })();
 

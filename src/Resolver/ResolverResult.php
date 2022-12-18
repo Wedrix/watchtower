@@ -22,7 +22,7 @@ final class ResolverResult implements Result
     {
         $this->plugin = (function (): ResolverPlugin {
             return new ResolverPlugin(
-                nodeType: $this->node->unwrappedType(),
+                parentNodeType: $this->node->unwrappedParentType(),
                 fieldName: $this->node->name()
             );
         })();
