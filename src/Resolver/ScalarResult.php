@@ -18,10 +18,17 @@ final class ScalarResult implements Result
         $this->isWorkable = (function (): bool {
             return $this->node->isALeaf()
                         || (
+                            isset($this->node->root()[$this->node->name()])
+                        )
+                        || (
                             !$this->node->isTopLevel()
                                 && $this->entityManager
+                                        ->hasEntity(
+                                            name: $entityName = $this->node->unwrappedParentType()
+                                        )
+                                && $this->entityManager
                                         ->findEntity(
-                                            name: $this->node->unwrappedParentType()
+                                            name: $entityName
                                         )
                                         ->hasEmbeddedField(
                                             fieldName: $this->node->name()
