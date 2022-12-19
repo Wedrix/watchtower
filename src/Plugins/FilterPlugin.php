@@ -23,7 +23,7 @@ final class FilterPlugin implements Plugin
 
     public function __construct(
         private readonly string $parentNodeType,
-        private readonly string $filter
+        private readonly string $filterName
     )
     {
         $this->type = (function (): string {
@@ -32,7 +32,7 @@ final class FilterPlugin implements Plugin
 
         $this->name = (function (): string {
             return "apply_".tableize(pluralize($this->parentNodeType))
-                    ."_".tableize($this->filter)."_filter";
+                    ."_".tableize($this->filterName)."_filter";
         })();
 
         $this->namespace = (function (): string {

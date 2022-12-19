@@ -21,7 +21,7 @@ final class SubscriptionPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $fieldName
+        private readonly string $subscriptionName
     )
     {
         $this->type = (function (): string {
@@ -29,7 +29,7 @@ final class SubscriptionPlugin implements Plugin
         })();
 
         $this->name = (function (): string {
-            return "call_".tableize($this->fieldName)."_subscription";
+            return "call_".tableize($this->subscriptionName)."_subscription";
         })();
 
         $this->namespace = (function (): string {

@@ -119,28 +119,28 @@ final class Console
 
     public function addFilterPlugin(
         string $parentNodeType,
-        string $filter
+        string $filterName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new FilterPlugin(
                     parentNodeType: $parentNodeType,
-                    filter: $filter
+                    filterName: $filterName
                 )
             );
     }
 
     public function addOrderingPlugin(
         string $parentNodeType,
-        string $ordering
+        string $orderingName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new OrderingPlugin(
                     parentNodeType: $parentNodeType,
-                    ordering: $ordering
+                    orderingName: $orderingName
                 )
             );
     }
@@ -188,25 +188,25 @@ final class Console
     }
 
     public function addMutationPlugin(
-        string $fieldName
+        string $mutationName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new MutationPlugin(
-                    fieldName: $fieldName
+                    mutationName: $mutationName
                 )
             );
     }
 
     public function addSubscriptionPlugin(
-        string $fieldName
+        string $subscriptionName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new SubscriptionPlugin(
-                    fieldName: $fieldName
+                    subscriptionName: $subscriptionName
                 )
             );
     }

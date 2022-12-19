@@ -41,10 +41,10 @@ final class MaybeOrderedQuery implements Query
                         fn(array $a, array $b): int => $a['rank'] - $b['rank']
                     );
             
-                    foreach ($ordering as $ordering => $_) {
+                    foreach ($ordering as $orderingName => $_) {
                         $orderingPlugin = new OrderingPlugin(
                             parentNodeType: $this->node->unwrappedType(),
-                            ordering: $ordering
+                            orderingName: $orderingName
                         );
         
                         if ($this->plugins->contains($orderingPlugin)) {

@@ -32,10 +32,10 @@ final class MaybeFilteredQuery implements Query
                 if (!empty($queryParams)) {
                     $filters = $queryParams['filters'] ?? [];
         
-                    foreach ($filters as $filter => $_) {
+                    foreach ($filters as $filterName => $_) {
                         $filterPlugin = new FilterPlugin(
                             parentNodeType: $this->node->unwrappedType(),
-                            filter: $filter
+                            filterName: $filterName
                         );
         
                         if ($this->plugins->contains($filterPlugin)) {

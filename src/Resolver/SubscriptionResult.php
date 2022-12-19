@@ -22,7 +22,7 @@ final class SubscriptionResult implements Result
     {
         $this->plugin = (function (): SubscriptionPlugin {
             return new SubscriptionPlugin(
-                fieldName: $this->node->name()
+                subscriptionName: $this->node->name()
             );
         })();
 
