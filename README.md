@@ -121,7 +121,7 @@ You can test out this package using the demo application:
 2. Navigate to an appropriate directory on your filesystem
 3. Clone the repository:  
 
-		git clone https://github.com/Wedrix/watchtower_demo.git
+		git clone https://github.com/Wedrix/watchtower-demo.git
 4. Navigate to the repository directory:  
 
 		cd watchtower_demo
