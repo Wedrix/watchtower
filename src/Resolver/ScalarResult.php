@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use Wedrix\Watchtower\Plugins;
+use Wedrix\Watchtower\Plugins\ResolverPlugin;
+
 final class ScalarResult implements Result
 {
     private readonly bool $isWorkable;
@@ -12,27 +15,37 @@ final class ScalarResult implements Result
 
     public function __construct(
         private readonly Node $node,
-        private readonly EntityManager $entityManager
+        private readonly EntityManager $entityManager,
+        private readonly Plugins $plugins
     )
     {
         $this->isWorkable = (function (): bool {
-            return $this->node->isALeaf()
-                        || (
-                            isset($this->node->root()[$this->node->name()])
+            return !$this->plugins
+                        ->contains(
+                            new ResolverPlugin(
+                                parentNodeType: $this->node->unwrappedParentType(),
+                                fieldName: $this->node->name()
+                            )
                         )
-                        || (
-                            !$this->node->isTopLevel()
-                                && $this->entityManager
-                                        ->hasEntity(
-                                            name: $entityName = $this->node->unwrappedParentType()
-                                        )
-                                && $this->entityManager
-                                        ->findEntity(
-                                            name: $entityName
-                                        )
-                                        ->hasEmbeddedField(
-                                            fieldName: $this->node->name()
-                                        )
+                        && (
+                            $this->node->isALeaf()
+                                || (
+                                    isset($this->node->root()[$this->node->name()])
+                                )
+                                || (
+                                    !$this->node->isTopLevel()
+                                        && $this->entityManager
+                                                ->hasEntity(
+                                                    name: $entityName = $this->node->unwrappedParentType()
+                                                )
+                                        && $this->entityManager
+                                                ->findEntity(
+                                                    name: $entityName
+                                                )
+                                                ->hasEmbeddedField(
+                                                    fieldName: $this->node->name()
+                                                )
+                                )
                         );
         })();
 

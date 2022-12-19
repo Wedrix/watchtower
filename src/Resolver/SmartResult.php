@@ -23,7 +23,8 @@ final class SmartResult implements Result
         $this->result = (function (): Result {
             $scalarResult = new ScalarResult(
                 node: $this->node,
-                entityManager: $this->entityManager
+                entityManager: $this->entityManager,
+                plugins: $this->plugins
             );
 
             if ($scalarResult->isWorkable()) {
