@@ -16,8 +16,7 @@ final class QueryResult implements Result
     )
     {
         $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable() 
-                && $this->node->operation() === 'query';
+            return $this->query->isWorkable();
         })();
 
         $this->output = (function (): mixed {
