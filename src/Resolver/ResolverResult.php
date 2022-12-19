@@ -28,8 +28,7 @@ final class ResolverResult implements Result
         })();
 
         $this->isWorkable = (function (): bool {
-            return $this->node->operation() === 'query'
-                && $this->plugins->contains($this->plugin);
+            return $this->plugins->contains($this->plugin);
         })();
 
         $this->output = (function (): mixed {
