@@ -22,7 +22,7 @@ final class MutationResult implements Result
     {
         $this->plugin = (function (): MutationPlugin {
             return new MutationPlugin(
-                mutationName: $this->node->name()
+                fieldName: $this->node->name()
             );
         })();
 
