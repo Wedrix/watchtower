@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins;
+namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
 use function Wedrix\Watchtower\string\tableize;
 
-final class MutationPlugin implements Plugin
+final class SubscriptionPlugin implements Plugin
 {
     private readonly string $type;
 
@@ -21,19 +21,19 @@ final class MutationPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $mutationName
+        private readonly string $subscriptionName
     )
     {
         $this->type = (function (): string {
-            return 'mutation';
+            return 'subscription';
         })();
 
         $this->name = (function (): string {
-            return "call_".tableize($this->mutationName)."_mutation";
+            return "call_".tableize($this->subscriptionName)."_subscription";
         })();
 
         $this->namespace = (function (): string {
-            return __NAMESPACE__."\\Mutations";
+            return __NAMESPACE__."\\SubscriptionPlugin";
         })();
 
         $this->template = (function (): string {
@@ -50,7 +50,7 @@ final class MutationPlugin implements Plugin
                 Node \$node
             ): mixed
             {
-            }
+            }            
             EOD;
         })();
 

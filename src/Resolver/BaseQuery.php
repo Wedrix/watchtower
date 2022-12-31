@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugins\SelectorPlugin;
+use Wedrix\Watchtower\Plugin\SelectorPlugin;
 
 final class BaseQuery implements Query
 {
@@ -45,7 +45,7 @@ final class BaseQuery implements Query
             
                     $selectedEntityFields = array_filter(
                         $rootEntity->fields(), 
-                        fn (string $entityField) => in_array($entityField, $rootEntity->fields())
+                        fn (string $entityField) => in_array($entityField, $rootEntity->idFields())
                             || in_array($entityField, $requestedFields)
                             || array_reduce(
                                 $requestedFields, 

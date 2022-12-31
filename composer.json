@@ -6,9 +6,13 @@
     "autoload": {
         "psr-4": {
             "Wedrix\\Watchtower\\": "src/",
-            "Wedrix\\Watchtower\\string\\": "extensions/"
+            "Wedrix\\Watchtower\\string\\": "extensions/",
+            "Wedrix\\Watchtower\\array\\": "extensions/"
         },
-        "files": ["extensions/string.php"]
+        "files": [
+            "extensions/string.php",
+            "extensions/array.php"
+        ]
     },
     "authors": [
         {

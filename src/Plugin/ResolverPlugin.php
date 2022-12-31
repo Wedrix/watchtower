@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins;
+namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
@@ -35,7 +35,7 @@ final class ResolverPlugin implements Plugin
         })();
 
         $this->namespace = (function (): string {
-            return __NAMESPACE__."\\Resolvers";
+            return __NAMESPACE__."\\ResolverPlugin";
         })();
 
         $this->template = (function (): string {

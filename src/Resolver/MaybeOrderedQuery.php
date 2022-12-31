@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugins\OrderingPlugin;
+use Wedrix\Watchtower\Plugin\OrderingPlugin;
 
 final class MaybeOrderedQuery implements Query
 {
@@ -47,11 +47,13 @@ final class MaybeOrderedQuery implements Query
                             orderingName: $orderingName
                         );
         
-                        if ($this->plugins->contains($orderingPlugin)) {
-                            require_once $this->plugins->directory($orderingPlugin);
-        
-                            $orderingPlugin->callback()($queryBuilder, $this->node);
+                        if (!$this->plugins->contains($orderingPlugin)) {
+                            throw new \Exception("Invalid query. No ordering plugin exists for '$orderingName'.");
                         }
+
+                        require_once $this->plugins->directory($orderingPlugin);
+    
+                        $orderingPlugin->callback()($queryBuilder, $this->node);
                     }
                 }
             }

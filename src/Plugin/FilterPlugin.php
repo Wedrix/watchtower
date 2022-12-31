@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins;
+namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
@@ -36,7 +36,7 @@ final class FilterPlugin implements Plugin
         })();
 
         $this->namespace = (function (): string {
-            return __NAMESPACE__."\\Filters";
+            return __NAMESPACE__."\\FilterPlugin";
         })();
 
         $this->template = (function (): string {

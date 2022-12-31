@@ -2,22 +2,21 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\GeneratedScalarTypeDefinitions;
+namespace Wedrix\Watchtower\ScalarTypeDefinition;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
-use Wedrix\Watchtower\UngeneratedScalarTypeDefinition;
 
-final class PageScalarTypeDefinition implements ScalarTypeDefinition
+final class DateTimeScalarTypeDefinition implements ScalarTypeDefinition
 {
-    private readonly UngeneratedScalarTypeDefinition $ungeneratedScalarTypeDefinition;
+    private readonly GenericScalarTypeDefinition $scalarTypeDefinition;
 
     private readonly string $template;
 
     public function __construct()
     {
-        $this->ungeneratedScalarTypeDefinition = (function (): UngeneratedScalarTypeDefinition {
-            return new UngeneratedScalarTypeDefinition(
-                typeName: 'Page'
+        $this->scalarTypeDefinition = (function (): GenericScalarTypeDefinition {
+            return new GenericScalarTypeDefinition(
+                typeName: 'DateTime'
             );
         })();
 
@@ -26,70 +25,71 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
             <?php
 
             declare(strict_types=1);
-            
-            namespace Wedrix\Watchtower\ScalarTypeDefinitions\PageTypeDefinition;
-            
+
+            namespace Wedrix\Watchtower\ScalarTypeDefinitions\DateTimeTypeDefinition;
+
             use GraphQL\Error\Error;
-            use GraphQL\Language\AST\IntValueNode;
+            use GraphQL\Language\AST\StringValueNode;
             use GraphQL\Utils\Utils;
-            
+
             /**
              * Serializes an internal value to include in a response.
              *
-             * @param int \$value
-             * @return int
+             * @param \DateTime \$value
+             * @return string
              */
             function serialize(\$value)
             {
-                return \$value;
+                return \$value->format(\DateTime::ATOM);
             }
-            
+
             /**
              * Parses an externally provided value (query variable) to use as an input
              *
-             * @param int \$value
-             * @return int
-             * @throws Error
+             * @param string \$value
+             * @return \DateTime
              */
             function parseValue(\$value)
             {
-                if ((\$value < 1)) {
+                try {
+                    return new \DateTime(\$value);
+                }
+                catch (\Exception \$e) {
                     throw new Error(
-                        message: "Cannot represent the following value as Page: " . Utils::printSafeJson(\$value)
+                        message: "Cannot represent the following value as DateTime: " . Utils::printSafeJson(\$value),
+                        previous: \$e
                     );
                 }
-            
-                return \$value;
             }
-            
+
             /**
              * Parses an externally provided literal value (hardcoded in GraphQL query) to use as an input.
              * 
              * E.g. 
              * {
-             *   page: 1,
+             *   user(createdAt: "2021-01-24T05:16:41+00:00") 
              * }
              *
              * @param \GraphQL\Language\AST\Node \$value
              * @param array<string,mixed>|null \$variables
-             * @return int
+             * @return \DateTime
              * @throws Error
              */
             function parseLiteral(\$value, ?array \$variables = null)
             {
-                if (!\$value instanceof IntValueNode) {
+                if (!\$value instanceof StringValueNode) {
                     throw new Error(
-                        message: "Query error: Can only parse ints got: \$value->kind",
+                        message: "Query error: Can only parse strings got: \$value->kind",
                         nodes: \$value
                     );
                 }
-            
+
                 try {
-                    return parseValue((int) \$value->value);
+                    return parseValue(\$value->value);
                 }
                 catch (\Exception \$e) {
                     throw new Error(
-                        message: "Not a valid Page Type",
+                        message: "Not a valid DateTime Type", 
                         nodes: \$value,
                         previous: \$e
                     );
@@ -101,13 +101,13 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
 
     public function typeName(): string
     {
-        return $this->ungeneratedScalarTypeDefinition
+        return $this->scalarTypeDefinition
                     ->typeName();
     }
 
     public function namespace(): string
     {
-        return $this->ungeneratedScalarTypeDefinition
+        return $this->scalarTypeDefinition
                     ->namespace();
     }
 

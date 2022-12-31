@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins;
+namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
-use function Wedrix\Watchtower\string\pluralize;
 use function Wedrix\Watchtower\string\tableize;
 
-final class OrderingPlugin implements Plugin
+final class SelectorPlugin implements Plugin
 {
     private readonly string $type;
 
@@ -23,20 +22,20 @@ final class OrderingPlugin implements Plugin
 
     public function __construct(
         private readonly string $parentNodeType,
-        private readonly string $orderingName
+        private readonly string $fieldName
     )
     {
         $this->type = (function (): string {
-            return 'ordering';
+            return 'selector';
         })();
 
         $this->name = (function (): string {
-            return "apply_".tableize(pluralize($this->parentNodeType))
-                    ."_".tableize($this->orderingName)."_ordering";
+            return "apply_".tableize($this->parentNodeType)
+                    ."_".tableize($this->fieldName)."_selector";
         })();
 
         $this->namespace = (function (): string {
-            return __NAMESPACE__."\\Orderings";
+            return __NAMESPACE__."\\SelectorPlugin";
         })();
 
         $this->template = (function (): string {

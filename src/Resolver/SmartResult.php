@@ -37,7 +37,8 @@ final class SmartResult implements Result
                     entityManager: $this->entityManager,
                     plugins: $this->plugins
                 ),
-                node: $this->node
+                node: $this->node,
+                plugins: $this->plugins
             );
 
             if ($queryResult->isWorkable()) {

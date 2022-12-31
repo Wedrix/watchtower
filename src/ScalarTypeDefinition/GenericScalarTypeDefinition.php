@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower;
+namespace Wedrix\Watchtower\ScalarTypeDefinition;
+
+use Wedrix\Watchtower\ScalarTypeDefinition;
 
 use function Wedrix\Watchtower\string\classify;
 
-final class UngeneratedScalarTypeDefinition implements ScalarTypeDefinition
+final class GenericScalarTypeDefinition implements ScalarTypeDefinition
 {
     private readonly string $namespace;
 

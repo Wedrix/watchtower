@@ -45,7 +45,7 @@ final class ParentAssociatedQuery implements Query
                         1 => $root[$parentAssociatedEntityIdFields[0]],
                         default => array_map(fn (string $parentAssociatedEntityIdField) => $root[$parentAssociatedEntityIdField], $parentAssociatedEntityIdFields),
                     };
-                })() ?? throw new \Exception("Invalid Query. The parent node has no resolved id field(s).");
+                })() ?? throw new \Exception("Invalid query. The parent node has no resolved id field(s).");
         
                 $association = $this->node->name();
         

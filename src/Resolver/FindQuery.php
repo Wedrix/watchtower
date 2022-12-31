@@ -4,8 +4,12 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use function Wedrix\Watchtower\array\all_in_array;
+
 final class FindQuery implements Query
 {
+    private readonly EntityManager $entityManager;
+
     private readonly bool $isWorkable;
 
     private readonly QueryBuilder $queryBuilder;
@@ -15,8 +19,14 @@ final class FindQuery implements Query
         private readonly Node $node
     )
     {
+        $this->entityManager = (function (): EntityManager {
+            return $this->query->builder()->getEntityManager();
+        })();
+
         $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable();
+            return $this->node->isTopLevel() 
+                && $this->node->operation() === 'query'
+                && $this->query->isWorkable();
         })();
 
         $this->queryBuilder = (function (): QueryBuilder {
@@ -24,18 +34,26 @@ final class FindQuery implements Query
 
             if ($this->isWorkable) {
                 $args = $this->node->args();
-    
-                if (empty($args)) {
-                    throw new \Exception("Invalid query. At least one argument is required for this query type.");
+
+                $idFields = $this->entityManager->findEntity(name: $this->node->unwrappedType())->idFields();
+
+                if (!all_in_array($idFields, \array_keys($args))) {
+                    throw new \Exception("Invalid query! Primary key arguments are required for this kind of query.");
                 }
+
+                $idArgs = array_filter(
+                    $args,
+                    fn (string $argName) => in_array($argName, $idFields),
+                    \ARRAY_FILTER_USE_KEY
+                );
     
-                foreach ($args as $field => $value) {
-                    $valueAlias = $queryBuilder->reconciledAlias("__{$field}Value");
+                foreach ($idArgs as $idField => $idValue) {
+                    $valueAlias = $queryBuilder->reconciledAlias("__{$idField}Value");
         
                     $queryBuilder->andWhere(
                         $queryBuilder->expr()
-                                    ->eq("{$queryBuilder->rootAlias()}.$field", ":$valueAlias")
-                    )->setParameter($valueAlias, $value);
+                                    ->eq("{$queryBuilder->rootAlias()}.$idField", ":$valueAlias")
+                    )->setParameter($valueAlias, $idValue);
                 }
             }
 

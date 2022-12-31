@@ -6,16 +6,17 @@ namespace Wedrix\Watchtower;
 
 use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Utils\SchemaPrinter;
-use Wedrix\Watchtower\Plugins\AuthorizorPlugin;
-use Wedrix\Watchtower\Plugins\FilterPlugin;
-use Wedrix\Watchtower\Plugins\MutationPlugin;
-use Wedrix\Watchtower\Plugins\OrderingPlugin;
-use Wedrix\Watchtower\Plugins\ResolverPlugin;
-use Wedrix\Watchtower\Plugins\SelectorPlugin;
-use Wedrix\Watchtower\Plugins\SubscriptionPlugin;
-use Wedrix\Watchtower\GeneratedScalarTypeDefinitions\DateTimeScalarTypeDefinition;
-use Wedrix\Watchtower\GeneratedScalarTypeDefinitions\LimitScalarTypeDefinition;
-use Wedrix\Watchtower\GeneratedScalarTypeDefinitions\PageScalarTypeDefinition;
+use Wedrix\Watchtower\Plugin\AuthorizorPlugin;
+use Wedrix\Watchtower\Plugin\FilterPlugin;
+use Wedrix\Watchtower\Plugin\MutationPlugin;
+use Wedrix\Watchtower\Plugin\OrderingPlugin;
+use Wedrix\Watchtower\Plugin\ResolverPlugin;
+use Wedrix\Watchtower\Plugin\SelectorPlugin;
+use Wedrix\Watchtower\Plugin\SubscriptionPlugin;
+use Wedrix\Watchtower\ScalarTypeDefinition\DateTimeScalarTypeDefinition;
+use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
+use Wedrix\Watchtower\ScalarTypeDefinition\LimitScalarTypeDefinition;
+use Wedrix\Watchtower\ScalarTypeDefinition\PageScalarTypeDefinition;
 
 /**
  * @api
@@ -82,11 +83,11 @@ final class Console
                 new LimitScalarTypeDefinition(),
                 new PageScalarTypeDefinition()
             ] 
-            as $generatedScalarTypeDefinition
+            as $scalarTypeDefinition
         ) {
-            if (!$this->scalarTypeDefinitions->contains($generatedScalarTypeDefinition)) {
+            if (!$this->scalarTypeDefinitions->contains($scalarTypeDefinition)) {
                 $this->scalarTypeDefinitions
-                    ->add($generatedScalarTypeDefinition);
+                    ->add($scalarTypeDefinition);
             }
         }
     }
@@ -106,7 +107,7 @@ final class Console
     {
         $this->scalarTypeDefinitions
             ->add(
-                scalarTypeDefinition: new UngeneratedScalarTypeDefinition(
+                scalarTypeDefinition: new GenericScalarTypeDefinition(
                     typeName: $typeName
                 )
             );

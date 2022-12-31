@@ -4,11 +4,13 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
+use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
+
 use function Wedrix\Watchtower\string\classify;
 use function Wedrix\Watchtower\string\tableize;
 
 /**
- * @implements \IteratorAggregate<int,UngeneratedScalarTypeDefinition>
+ * @implements \IteratorAggregate<int,GenericScalarTypeDefinition>
  */
 final class ScalarTypeDefinitions implements \IteratorAggregate
 {
@@ -62,7 +64,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         foreach ($scalarTypeDefinitionsDirectories as $scalarTypeDefinitionDirectory) {
             ($dirElements = explode(\DIRECTORY_SEPARATOR, ($dirElements = explode("_type_definition.php", $scalarTypeDefinitionDirectory[0]))[0]));
 
-            yield new UngeneratedScalarTypeDefinition(
+            yield new GenericScalarTypeDefinition(
                 typeName: classify(
                     $dirElements[count($dirElements) - 1]
                 )

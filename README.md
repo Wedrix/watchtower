@@ -348,7 +348,7 @@ To facilitate speedy development, the Console component offers the convenience m
 
 ### Finding Entities
 
-To find a particular entity by id, you must add the `id` argument to the corresponding field definition in the schema file. For example, for the given schema:
+To find a particular entity, you must add the argument(s) that corresponds to the primary key(s) of that entity to the corresponding field definition in the schema file. For example, for the given schema:
 
 ```graphql
 type Query {
@@ -374,7 +374,7 @@ query {
 
 returns the result for the product with id **1**. 
 
-The type of the specified `id` argument must be non-nullable and correspond to the entity's id field. 
+Note that find queries can only be represented by top-level query fields since the resolver auto-relates sub-level fields as relations.
 
 ### Relations
 
@@ -588,7 +588,7 @@ Plugins enable features like filtering, ordering, computed fields, mutations, su
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins\Filters;
+namespace Wedrix\Watchtower\Plugin\FilterPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -628,7 +628,7 @@ Selector plugins allow you to chain select statements onto the query builder. Th
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins\Selectors;
+namespace Wedrix\Watchtower\Plugin\SelectorPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -662,7 +662,7 @@ function function_name(
 	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Selectors`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\SelectorPlugin`.
 
 
 ### Helpful Utilities
@@ -686,7 +686,7 @@ Resolver plugins allow you to resolve fields using other services from the datab
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins\Resolvers;
+namespace Wedrix\Watchtower\Plugin\ResolverPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -718,7 +718,7 @@ function function_name(
 	\Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Resolvers`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ResolverPlugin`.
 
 
 ### Valid Return Types
@@ -763,7 +763,7 @@ Filter plugins allow you to chain where conditions onto the query builder. The c
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins\Filters;
+namespace Wedrix\Watchtower\Plugin\FilterPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -800,7 +800,7 @@ function function_name(
 	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Filters`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\FilterPlugin`.
 
 
 To use filters add them to the `filters` parameter of the `queryParams` argument. For instance:
@@ -856,7 +856,7 @@ Ordering plugins allow you to chain **order by** statements onto the query build
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins\Orderings;
+namespace Wedrix\Watchtower\Plugin\OrderingPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -891,7 +891,7 @@ function function_name(
 	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Orderings`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\OrderingPlugin`.
 
 
 To use orderings add them to the `ordering` parameter of the `queryParams` argument. For instance:
@@ -978,7 +978,7 @@ Mutation plugins allow you to create mutations to reliably change state in your 
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins\Mutations;
+namespace Wedrix\Watchtower\Plugin\MutationPlugin;
 
 use App\Server\Sessions\Session;
 use Wedrix\Watchtower\Resolver\Node;
@@ -1019,7 +1019,7 @@ function function_name(
 	\Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Mutations`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\MutationPlugin`.
 
 
 ### Valid Return Types
@@ -1050,7 +1050,7 @@ function function_name(
 	\Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Subscriptions`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\SubscriptionPlugin`.
 
 
 Kindly refer to the [GraphQL spec](https://spec.graphql.org/October2021/#sec-Subscription) for the requirements of a Subscription implementation.
@@ -1070,14 +1070,16 @@ Authorization plugins allow you to create authorizations for individual node/col
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins\Authorizors;
+namespace Wedrix\Watchtower\Plugin\AuthorizorPlugin;
 
 use App\Server\Sessions\Session;
 use Wedrix\Watchtower\Resolver\Node;
+use Wedrix\Watchtower\Resolver\Result;
 
 use function array\any_in_array;
 
-function authorize_customer_node(
+function authorize_customer_result(
+	Result $result,
     Node $node
 ): void
 {
@@ -1104,16 +1106,17 @@ The rules for Authorization plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `authorizors` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 authorize_{***name of node (pluralized if for collections) in snake_case***}_node.php
+	 authorize_{***name of node (pluralized if for collections) in snake_case***}_result.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 authorize_{***name of node (pluralized if for collections) in snake_case***}_node
+	 authorize_{***name of node (pluralized if for collections) in snake_case***}_result
  4. The plugin function must have the following signature: 
 ```php
 function function_name(
+	\Wedrix\Watchtower\Resolver\Result $result,
 	\Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugins\Authorizors`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
 6. The authorization plugin function must throw an exception when the authorization fails.
 
 

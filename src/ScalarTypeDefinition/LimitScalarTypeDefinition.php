@@ -2,21 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\GeneratedScalarTypeDefinitions;
+namespace Wedrix\Watchtower\ScalarTypeDefinition;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
-use Wedrix\Watchtower\UngeneratedScalarTypeDefinition;
 
 final class LimitScalarTypeDefinition implements ScalarTypeDefinition
 {
-    private readonly UngeneratedScalarTypeDefinition $ungeneratedScalarTypeDefinition;
+    private readonly GenericScalarTypeDefinition $scalarTypeDefinition;
 
     private readonly string $template;
 
     public function __construct()
     {
-        $this->ungeneratedScalarTypeDefinition = (function (): UngeneratedScalarTypeDefinition {
-            return new UngeneratedScalarTypeDefinition(
+        $this->scalarTypeDefinition = (function (): GenericScalarTypeDefinition {
+            return new GenericScalarTypeDefinition(
                 typeName: 'Limit'
             );
         })();
@@ -101,13 +100,13 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
 
     public function typeName(): string
     {
-        return $this->ungeneratedScalarTypeDefinition
+        return $this->scalarTypeDefinition
                     ->typeName();
     }
 
     public function namespace(): string
     {
-        return $this->ungeneratedScalarTypeDefinition
+        return $this->scalarTypeDefinition
                     ->namespace();
     }
 

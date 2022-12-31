@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugins\SubscriptionPlugin;
+use Wedrix\Watchtower\Plugin\SubscriptionPlugin;
 
 final class SubscriptionResult implements Result
 {

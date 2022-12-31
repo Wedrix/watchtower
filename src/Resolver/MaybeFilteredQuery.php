@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugins\FilterPlugin;
+use Wedrix\Watchtower\Plugin\FilterPlugin;
 
 final class MaybeFilteredQuery implements Query
 {
@@ -38,11 +38,13 @@ final class MaybeFilteredQuery implements Query
                             filterName: $filterName
                         );
         
-                        if ($this->plugins->contains($filterPlugin)) {
-                            require_once $this->plugins->directory($filterPlugin);
-                            
-                            $filterPlugin->callback()($queryBuilder, $this->node);
+                        if (!$this->plugins->contains($filterPlugin)) {
+                            throw new \Exception("Invalid query. No filter plugin exists for '$filterName'.");
                         }
+
+                        require_once $this->plugins->directory($filterPlugin);
+                        
+                        $filterPlugin->callback()($queryBuilder, $this->node);
                     }
                 }
             }

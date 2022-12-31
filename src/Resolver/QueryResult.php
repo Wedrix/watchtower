@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use Wedrix\Watchtower\Plugins;
+use Wedrix\Watchtower\Plugin\ResolverPlugin;
+
 final class QueryResult implements Result
 {
     private readonly bool $isWorkable;
@@ -12,11 +15,19 @@ final class QueryResult implements Result
 
     public function __construct(
         private readonly Query $query,
-        private readonly Node $node
+        private readonly Node $node,
+        private readonly Plugins $plugins
     )
     {
         $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable();
+            return !$this->plugins
+                        ->contains(
+                            new ResolverPlugin(
+                                parentNodeType: $this->node->unwrappedParentType(),
+                                fieldName: $this->node->name()
+                            )
+                        )
+                        && $this->query->isWorkable();
         })();
 
         $this->output = (function (): mixed {

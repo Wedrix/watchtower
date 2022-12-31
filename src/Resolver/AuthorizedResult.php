@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugins\AuthorizorPlugin;
+use Wedrix\Watchtower\Plugin\AuthorizorPlugin;
 
 final class AuthorizedResult implements Result
 {
@@ -33,7 +33,7 @@ final class AuthorizedResult implements Result
                 if ($this->plugins->contains($authorizorPlugin)) {
                     require_once $this->plugins->directory($authorizorPlugin);
         
-                    $authorizorPlugin->callback()($this->node);
+                    $authorizorPlugin->callback()($this->result, $this->node);
                 }
                 
                 return $this->result->output();

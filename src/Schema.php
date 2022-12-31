@@ -22,6 +22,7 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Utils\InterfaceImplementations;
+use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
 
 final class Schema extends SchemaType
 {
@@ -49,7 +50,7 @@ final class Schema extends SchemaType
                 $astNode = $typeConfig['astNode'] ?? null;
     
                 if ($astNode instanceof ScalarTypeDefinitionNode) {
-                    $scalarTypeDefinition = new UngeneratedScalarTypeDefinition(
+                    $scalarTypeDefinition = new GenericScalarTypeDefinition(
                         typeName: $typeName = $typeConfig['name']
                     );
     

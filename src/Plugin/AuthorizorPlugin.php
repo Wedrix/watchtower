@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugins;
+namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
@@ -35,11 +35,11 @@ final class AuthorizorPlugin implements Plugin
                 $this->isForCollections
                     ? pluralize($this->nodeType)
                     : $this->nodeType
-            )."_node";
+            )."_result";
         })();
 
         $this->namespace = (function (): string {
-            return __NAMESPACE__."\\Authorizors";
+            return __NAMESPACE__."\\AuthorizorPlugin";
         })();
 
         $this->template = (function (): string {
@@ -51,8 +51,10 @@ final class AuthorizorPlugin implements Plugin
             namespace {$this->namespace};
 
             use Wedrix\Watchtower\Resolver\Node;
+            use Wedrix\Watchtower\Resolver\Result;
 
             function {$this->name}(
+                Result \$result,
                 Node \$node
             ): void
             {

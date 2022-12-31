@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugins\MutationPlugin;
+use Wedrix\Watchtower\Plugin\MutationPlugin;
 
 final class MutationResult implements Result
 {
