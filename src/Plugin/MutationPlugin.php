@@ -21,7 +21,7 @@ final class MutationPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $mutationName
+        private readonly string $fieldName
     )
     {
         $this->type = (function (): string {
@@ -29,7 +29,7 @@ final class MutationPlugin implements Plugin
         })();
 
         $this->name = (function (): string {
-            return "call_".tableize($this->mutationName)."_mutation";
+            return "call_".tableize($this->fieldName)."_mutation";
         })();
 
         $this->namespace = (function (): string {

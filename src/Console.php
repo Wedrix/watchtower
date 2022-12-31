@@ -189,25 +189,25 @@ final class Console
     }
 
     public function addMutationPlugin(
-        string $mutationName
+        string $fieldName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new MutationPlugin(
-                    mutationName: $mutationName
+                    fieldName: $fieldName
                 )
             );
     }
 
     public function addSubscriptionPlugin(
-        string $subscriptionName
+        string $fieldName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new SubscriptionPlugin(
-                    subscriptionName: $subscriptionName
+                    fieldName: $fieldName
                 )
             );
     }
