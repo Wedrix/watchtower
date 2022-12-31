@@ -26,7 +26,7 @@ final class DateTimeScalarTypeDefinition implements ScalarTypeDefinition
 
             declare(strict_types=1);
 
-            namespace Wedrix\Watchtower\ScalarTypeDefinitions\DateTimeTypeDefinition;
+            namespace Wedrix\Watchtower\ScalarTypeDefinition\DateTimeTypeDefinition;
 
             use GraphQL\Error\Error;
             use GraphQL\Language\AST\StringValueNode;

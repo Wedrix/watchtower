@@ -26,7 +26,7 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
 
             declare(strict_types=1);
             
-            namespace Wedrix\Watchtower\ScalarTypeDefinitions\PageTypeDefinition;
+            namespace Wedrix\Watchtower\ScalarTypeDefinition\PageTypeDefinition;
             
             use GraphQL\Error\Error;
             use GraphQL\Language\AST\IntValueNode;

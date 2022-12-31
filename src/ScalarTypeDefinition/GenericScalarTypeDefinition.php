@@ -19,7 +19,7 @@ final class GenericScalarTypeDefinition implements ScalarTypeDefinition
     )
     {
         $this->namespace = (function (): string {
-            return __NAMESPACE__."\\ScalarTypeDefinitions\\".classify($this->typeName)."TypeDefinition";
+            return __NAMESPACE__."\\".classify($this->typeName)."TypeDefinition";
         })();
 
         $this->template = (function (): string {

@@ -101,7 +101,7 @@ final class Console
         }
     }
 
-    public function addScalarTypeDifinition(
+    public function addScalarTypeDefinition(
         string $typeName
     ): void
     {
