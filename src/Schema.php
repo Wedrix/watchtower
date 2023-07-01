@@ -33,14 +33,16 @@ final class Schema extends SchemaType
 
     private readonly SchemaType $schema;
 
+    private readonly string $cacheFile;
+
     public function __construct(
-        private readonly string $sourceFileDirectory, 
-        private readonly string $cacheFileDirectory,
+        private readonly string $sourceFile, 
+        private readonly string $cacheDirectory,
         private readonly bool $isCached,
         private readonly ScalarTypeDefinitions $scalarTypeDefinitions
     )
     {
-        static::$_schemas[$sourceFileDirectory] ??= (function (): SchemaType {
+        static::$_schemas[$sourceFile] ??= (function (): SchemaType {
             /**
              * @param array<string,mixed> $typeConfig
              * 
@@ -88,25 +90,25 @@ final class Schema extends SchemaType
     
             $AST = (function (): DocumentNode {
                 $document = Parser::parse(
-                    source: is_string($schemaFileContents = file_get_contents($this->sourceFileDirectory)) 
+                    source: is_string($schemaFileContents = file_get_contents($this->sourceFile)) 
                                 ? $schemaFileContents 
                                 : throw new \Exception("Unable to read GraphQL schema file.")
                 );
 
                 if ($this->isCached) {
-                    if (!file_exists($this->cacheFileDirectory)) {
-                        $dirname = pathinfo($this->cacheFileDirectory)['dirname'] ?? '';
+                    if (!file_exists($this->cacheFile)) {
+                        $dirname = pathinfo($this->cacheFile)['dirname'] ?? '';
         
                         if (!is_dir($dirname)) {
                             mkdir(directory: $dirname, recursive: true);
                         }
         
-                        file_put_contents($this->cacheFileDirectory, "<?php\nreturn " . var_export(AST::toArray($document), true) . ";\n");
+                        file_put_contents($this->cacheFile, "<?php\nreturn " . var_export(AST::toArray($document), true) . ";\n");
     
                         return $document;
                     }
 
-                    $document = AST::fromArray(require $this->cacheFileDirectory);
+                    $document = AST::fromArray(require $this->cacheFile);
 
                     if (!$document instanceof DocumentNode) {
                         throw new \Exception("Invalid schema. Could not be parsed as a document node.");
@@ -119,7 +121,11 @@ final class Schema extends SchemaType
             return BuildSchema::build($AST, $typeConfigDecorator);
         })();
 
-        $this->schema = static::$_schemas[$sourceFileDirectory];
+        $this->schema = static::$_schemas[$sourceFile];
+
+        $this->cacheFile = (function (): string {
+            return $this->cacheDirectory.\DIRECTORY_SEPARATOR."{$this->sourceFile}.php";
+        })();
     }
 
     public function getTypeMap(): array

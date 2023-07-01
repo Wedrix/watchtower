@@ -27,6 +27,8 @@ final class Console
 
     private readonly ScalarTypeDefinitions $scalarTypeDefinitions;
 
+    private readonly string $schemaCacheFile;
+
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
      * @param string $schemaFileDirectory The schema file's directory.
@@ -36,10 +38,10 @@ final class Console
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $schemaFileDirectory,
-        private readonly string $schemaCacheFileDirectory,
+        private readonly string $schemaFile,
         private readonly string $pluginsDirectory,
         private readonly string $scalarTypeDefinitionsDirectory,
+        private readonly string $schemaCacheDirectory
     )
     {
         $this->plugins = (function (): Plugins {
@@ -53,16 +55,20 @@ final class Console
                 directory: $this->scalarTypeDefinitionsDirectory
             );
         })();
+
+        $this->schemaCacheFile = (function (): string {
+            return $this->schemaCacheDirectory.\DIRECTORY_SEPARATOR."{$this->schemaFile}.php";
+        })();
     }
 
     public function generateSchema(): void
     {
-        if (file_exists($this->schemaFileDirectory)) {
+        if (file_exists($this->schemaFile)) {
             throw new \Exception("A schema file already exists.");
         }
 
         file_put_contents(
-            filename: $this->schemaFileDirectory,
+            filename: $this->schemaFile,
             data: SchemaPrinter::doPrint(
                 schema: new SyncedQuerySchema(
                     entityManager: $this->entityManager
@@ -73,8 +79,8 @@ final class Console
             )
         );
 
-        if (file_exists($this->schemaCacheFileDirectory)) {
-            unlink($this->schemaCacheFileDirectory);
+        if (file_exists($this->schemaCacheFile)) {
+            unlink($this->schemaCacheFile);
         }
 
         foreach (
@@ -96,8 +102,8 @@ final class Console
     {
         // TODO: Update Schema
         
-        if (file_exists($this->schemaCacheFileDirectory)) {
-            unlink($this->schemaCacheFileDirectory);
+        if (file_exists($this->schemaCacheFile)) {
+            unlink($this->schemaCacheFile);
         }
     }
 

@@ -31,22 +31,22 @@ final class Executor
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $schemaFileDirectory,
-        private readonly string $schemaCacheFileDirectory,
-        private readonly bool $cachesTheSchema,
+        private readonly string $schemaFile,
         private readonly string $pluginsDirectory,
-        private readonly string $scalarTypeDefinitionsDirectory
+        private readonly string $scalarTypeDefinitionsDirectory,
+        private readonly bool $cachesSchema,
+        private readonly string $schemaCacheDirectory
     )
     {
         $this->schema = (function (): GraphQLTypeSchema {
-            if (!file_exists($this->schemaFileDirectory)) {
-                throw new \Exception("Invalid schema file directory. The file does not exist.");
+            if (!file_exists($this->schemaFile)) {
+                throw new \Exception("Invalid schema file. The file does not exist.");
             }
 
             return new Schema(
-                sourceFileDirectory: $this->schemaFileDirectory,
-                cacheFileDirectory: $this->schemaCacheFileDirectory,
-                isCached: $this->cachesTheSchema,
+                sourceFile: $this->schemaFile,
+                cacheDirectory: $this->schemaCacheDirectory,
+                isCached: $this->cachesSchema,
                 scalarTypeDefinitions: new ScalarTypeDefinitions(
                     directory: $this->scalarTypeDefinitionsDirectory
                 )
