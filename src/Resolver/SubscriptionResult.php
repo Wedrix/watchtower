@@ -20,17 +20,13 @@ final class SubscriptionResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->plugin = (function (): SubscriptionPlugin {
-            return new SubscriptionPlugin(
-                fieldName: $this->node->name()
-            );
-        })();
+        $this->plugin = new SubscriptionPlugin(
+            fieldName: $this->node->name()
+        );
 
-        $this->isWorkable = (function (): bool {
-            return $this->node->operation() === 'subscription' 
-                && $this->node->isTopLevel()
-                && $this->plugins->contains($this->plugin);
-        })();
+        $this->isWorkable = $this->node->operation() === 'subscription' 
+            && $this->node->isTopLevel()
+            && $this->plugins->contains($this->plugin);
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {

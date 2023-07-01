@@ -20,16 +20,12 @@ final class ResolverResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->plugin = (function (): ResolverPlugin {
-            return new ResolverPlugin(
-                parentNodeType: $this->node->unwrappedParentType(),
-                fieldName: $this->node->name()
-            );
-        })();
+        $this->plugin = new ResolverPlugin(
+            parentNodeType: $this->node->unwrappedParentType(),
+            fieldName: $this->node->name()
+        );
 
-        $this->isWorkable = (function (): bool {
-            return $this->plugins->contains($this->plugin);
-        })();
+        $this->isWorkable = $this->plugins->contains($this->plugin);
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {

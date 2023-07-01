@@ -15,9 +15,7 @@ final class MaybeDistinctQuery implements Query
         private readonly Node $node
     )
     {
-        $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable();
-        })();
+        $this->isWorkable = $this->query->isWorkable();
 
         $this->queryBuilder = (function (): QueryBuilder {
             $queryBuilder = $this->query->builder();

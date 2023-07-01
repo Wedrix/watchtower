@@ -19,16 +19,14 @@ final class QueryResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = (function (): bool {
-            return !$this->plugins
-                        ->contains(
-                            new ResolverPlugin(
-                                parentNodeType: $this->node->unwrappedParentType(),
-                                fieldName: $this->node->name()
-                            )
-                        )
-                        && $this->query->isWorkable();
-        })();
+        $this->isWorkable = !$this->plugins
+            ->contains(
+                new ResolverPlugin(
+                    parentNodeType: $this->node->unwrappedParentType(),
+                    fieldName: $this->node->name()
+                )
+            )
+            && $this->query->isWorkable();
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {

@@ -19,9 +19,7 @@ final class AuthorizedResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = (function (): bool {
-            return $this->result->isWorkable();
-        })();
+        $this->isWorkable = $this->result->isWorkable();
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {

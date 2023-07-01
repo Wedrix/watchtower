@@ -19,9 +19,7 @@ final class MaybeOrderedQuery implements Query
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable();
-        })();
+        $this->isWorkable = $this->query->isWorkable();
 
         $this->queryBuilder = (function (): QueryBuilder {
             $queryBuilder = $this->query->builder();
@@ -32,7 +30,7 @@ final class MaybeOrderedQuery implements Query
                 if (!empty($queryParams)) {
                     $ordering = $queryParams['ordering'] ?? [];
         
-                    uasort(
+                    \uasort(
                         $ordering, 
                         /**
                          * @param array{rank:int,params:null|array<string,mixed>} $a

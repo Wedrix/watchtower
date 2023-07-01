@@ -19,35 +19,33 @@ final class ScalarResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = (function (): bool {
-            return !$this->plugins
-                        ->contains(
-                            new ResolverPlugin(
-                                parentNodeType: $this->node->unwrappedParentType(),
-                                fieldName: $this->node->name()
-                            )
-                        )
-                        && (
-                            $this->node->isALeaf()
-                                || (
-                                    isset($this->node->root()[$this->node->name()])
-                                )
-                                || (
-                                    !$this->node->isTopLevel()
-                                        && $this->entityManager
-                                                ->hasEntity(
-                                                    name: $entityName = $this->node->unwrappedParentType()
-                                                )
-                                        && $this->entityManager
-                                                ->findEntity(
-                                                    name: $entityName
-                                                )
-                                                ->hasEmbeddedField(
-                                                    fieldName: $this->node->name()
-                                                )
-                                )
-                        );
-        })();
+        $this->isWorkable = !$this->plugins
+            ->contains(
+                new ResolverPlugin(
+                    parentNodeType: $this->node->unwrappedParentType(),
+                    fieldName: $this->node->name()
+                )
+            )
+            && (
+                $this->node->isALeaf()
+                    || (
+                        isset($this->node->root()[$this->node->name()])
+                    )
+                    || (
+                        !$this->node->isTopLevel()
+                            && $this->entityManager
+                                    ->hasEntity(
+                                        name: $entityName = $this->node->unwrappedParentType()
+                                    )
+                            && $this->entityManager
+                                    ->findEntity(
+                                        name: $entityName
+                                    )
+                                    ->hasEmbeddedField(
+                                        fieldName: $this->node->name()
+                                    )
+                    )
+            );
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {
@@ -55,19 +53,19 @@ final class ScalarResult implements Result
         
                 $root = $this->node->root();
         
-                if (array_key_exists($fieldName, $root)) {
+                if (\array_key_exists($fieldName, $root)) {
                     return $root[$fieldName];
                 }
         
-                $embeddedFields = array_filter(array_keys($root), function ($field) use ($fieldName) {
-                    return str_starts_with($field, "$fieldName.");
+                $embeddedFields = \array_filter(\array_keys($root), function ($field) use ($fieldName) {
+                    return \str_starts_with($field, "$fieldName.");
                 });
         
-                if (sizeof($embeddedFields) > 0) {
+                if (\sizeof($embeddedFields) > 0) {
                     $embeddedField = [];
         
                     foreach ($embeddedFields as $field) {
-                        $embeddedFieldName = substr($field, strpos($field, ".") + 1);
+                        $embeddedFieldName = \substr($field, \strpos($field, ".") + 1);
         
                         $embeddedField[$embeddedFieldName] = $root[$field];
                     }

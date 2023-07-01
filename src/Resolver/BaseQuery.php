@@ -20,10 +20,8 @@ final class BaseQuery implements Query
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = (function (): bool {
-            return !$this->node->isAbstract()
-                && $this->entityManager->hasEntity(name: $this->node->unwrappedType());
-        })();
+        $this->isWorkable = !$this->node->isAbstract()
+            && $this->entityManager->hasEntity(name: $this->node->unwrappedType());
 
         $this->queryBuilder = (function (): QueryBuilder {
             $queryBuilder = $this->entityManager->createQueryBuilder();
@@ -42,13 +40,13 @@ final class BaseQuery implements Query
                 $selectedFields = (function () use ($rootEntity): array {
                     $fieldsSelection = $this->node->concreteFieldsSelection();
             
-                    $requestedFields = array_keys($fieldsSelection);
+                    $requestedFields = \array_keys($fieldsSelection);
             
-                    $selectedEntityFields = array_filter(
+                    $selectedEntityFields = \array_filter(
                         $rootEntity->fields(), 
-                        fn (string $entityField) => in_array($entityField, $rootEntity->idFields())
-                            || in_array($entityField, $requestedFields)
-                            || array_reduce(
+                        fn (string $entityField) => \in_array($entityField, $rootEntity->idFields())
+                            || \in_array($entityField, $requestedFields)
+                            || \array_reduce(
                                 $requestedFields, 
                                 function (bool $isRequestedEmbeddedField, string $requestedField) use ($entityField, $fieldsSelection) {
                                     /**
@@ -57,14 +55,14 @@ final class BaseQuery implements Query
                                     $subFieldsSelection = $fieldsSelection[$requestedField]['fields'] ?? [];
             
                                     if (!empty($subFieldsSelection)) {
-                                        $requestedSubFields = array_keys($subFieldsSelection);
+                                        $requestedSubFields = \array_keys($subFieldsSelection);
             
-                                        $requestedEmbeddedFields = array_map(
+                                        $requestedEmbeddedFields = \array_map(
                                             fn (string $requestedSubField) => "$requestedField.$requestedSubField", 
                                             $requestedSubFields
                                         );
             
-                                        return $isRequestedEmbeddedField || in_array($entityField, $requestedEmbeddedFields);
+                                        return $isRequestedEmbeddedField || \in_array($entityField, $requestedEmbeddedFields);
                                     }
             
                                     return $isRequestedEmbeddedField;
@@ -73,19 +71,19 @@ final class BaseQuery implements Query
                             )
                     );
             
-                    $otherSelectedFields = array_filter(
+                    $otherSelectedFields = \array_filter(
                         $requestedFields, 
-                        fn (string $requestedField) => !in_array($requestedField, $rootEntity->associations()) 
-                            && !in_array($requestedField, $rootEntity->fields())
-                            && !array_reduce(
+                        fn (string $requestedField) => !\in_array($requestedField, $rootEntity->associations()) 
+                            && !\in_array($requestedField, $rootEntity->fields())
+                            && !\array_reduce(
                                 $rootEntity->fields(), 
                                 fn (bool $isEmbeddedEntityField, string $entityField) 
-                                    => $isEmbeddedEntityField || str_starts_with($entityField, "$requestedField."), 
+                                    => $isEmbeddedEntityField || \str_starts_with($entityField, "$requestedField."), 
                                 false
                             )
                     );
 
-                    $otherSelectedFieldsWithoutResolvedFields = array_filter(
+                    $otherSelectedFieldsWithoutResolvedFields = \array_filter(
                         $otherSelectedFields,
                         fn (string $otherSelectedField) => !$this->plugins->contains(
                             new ResolverPlugin(
@@ -95,7 +93,7 @@ final class BaseQuery implements Query
                         )
                     );
                     
-                    return array_merge($selectedEntityFields, $otherSelectedFieldsWithoutResolvedFields);
+                    return \array_merge($selectedEntityFields, $otherSelectedFieldsWithoutResolvedFields);
                 })();
         
                 foreach ($selectedFields as $fieldName) {

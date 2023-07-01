@@ -16,7 +16,7 @@ final class Plugins implements \IteratorAggregate
         private readonly string $directory
     )
     {
-        if (!is_dir($this->directory)) {
+        if (!\is_dir($this->directory)) {
             throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
         }
     }
@@ -25,7 +25,7 @@ final class Plugins implements \IteratorAggregate
         Plugin $plugin
     ): bool
     {
-        return file_exists(
+        return \file_exists(
             $this->directory($plugin)
         );
     }
@@ -47,7 +47,7 @@ final class Plugins implements \IteratorAggregate
             throw new \Exception("The plugin '{$plugin->name()}' already exists.");
         }
 
-        file_put_contents(
+        \file_put_contents(
             filename: $this->directory($plugin),
             data: $plugin->template(),
         );
@@ -55,17 +55,17 @@ final class Plugins implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        $pluginDirectories = new \RegexIterator(
+        $pluginFiles = new \RegexIterator(
             iterator: new \RecursiveIteratorIterator(
                 iterator: new \RecursiveDirectoryIterator($this->directory)
             ), 
             pattern: '/.+\.php/i',
-            mode: \RecursiveRegexIterator::GET_MATCH
+            mode: \RegexIterator::MATCH
         );
 
-        foreach ($pluginDirectories as $pluginDirectory) {
+        foreach ($pluginFiles as $pluginFile) {
             yield new PluginInfo(
-                pluginDirectory: $pluginDirectory[0]
+                pluginFile: $pluginFile
             );
         }
     }
@@ -78,20 +78,12 @@ final class PluginInfo
     private readonly string $type;
 
     public function __construct(
-        private readonly string $pluginDirectory
+        \SplFileInfo $pluginFile
     )
     {
-        $this->name = (function (): string {
-            $dirElements = explode(\DIRECTORY_SEPARATOR, $this->pluginDirectory);
+        $this->name = \explode('.php', $pluginFile->getBasename())[0];
 
-            return explode('.php', $dirElements[count($dirElements) - 1])[0];
-        })();
-
-        $this->type = (function (): string {
-            $dirElements = explode(\DIRECTORY_SEPARATOR, $this->pluginDirectory);
-
-            return singularize($dirElements[count($dirElements) - 2]);
-        })();
+        $this->type = singularize(\explode(\DIRECTORY_SEPARATOR, $pluginFile->getPath())[0]);
     }
 
     public function name(): string

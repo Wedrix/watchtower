@@ -36,7 +36,7 @@ final class Entity
         $this->class = (function (): string {
             $matchingRegisteredClasses = \array_filter(
                 $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
-                    ?? throw new \Exception("Invalid EntityManager. The metadata driver implementation is not set."),
+                    ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
                 fn (string $className) => \str_ends_with($className, "\\{$this->name}")
             );
 
@@ -44,21 +44,13 @@ final class Entity
                 ?? throw new \Exception("No entity with the name '{$this->name}' exists for the given entity manager instance.");
         })();
 
-        $this->metadata = (function (): ClassMetadata {
-            return $this->entityManager->getClassMetadata($this->class);
-        })();
+        $this->metadata = $this->entityManager->getClassMetadata($this->class);
 
-        $this->fields = (function (): array {
-            return $this->metadata->getFieldNames();
-        })();
+        $this->fields = $this->metadata->getFieldNames();
 
-        $this->idFields = (function (): array {
-            return $this->metadata->getIdentifierFieldNames();
-        })();
+        $this->idFields = $this->metadata->getIdentifierFieldNames();
 
-        $this->associations = (function (): array {
-            return $this->metadata->getAssociationNames();
-        })();
+        $this->associations = $this->metadata->getAssociationNames();
     }
 
     public function name(): string

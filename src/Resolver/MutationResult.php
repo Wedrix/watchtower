@@ -20,17 +20,13 @@ final class MutationResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->plugin = (function (): MutationPlugin {
-            return new MutationPlugin(
-                fieldName: $this->node->name()
-            );
-        })();
+        $this->plugin = new MutationPlugin(
+            fieldName: $this->node->name()
+        );
 
-        $this->isWorkable = (function (): bool {
-            return $this->node->operation() === 'mutation' 
-                && $this->node->isTopLevel()
-                && $this->plugins->contains($this->plugin);
-        })();
+        $this->isWorkable = $this->node->operation() === 'mutation' 
+            && $this->node->isTopLevel()
+            && $this->plugins->contains($this->plugin);
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {

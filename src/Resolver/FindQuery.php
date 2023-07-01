@@ -19,15 +19,11 @@ final class FindQuery implements Query
         private readonly Node $node
     )
     {
-        $this->entityManager = (function (): EntityManager {
-            return $this->query->builder()->getEntityManager();
-        })();
+        $this->entityManager = $this->query->builder()->getEntityManager();
 
-        $this->isWorkable = (function (): bool {
-            return $this->node->isTopLevel() 
-                && $this->node->operation() === 'query'
-                && $this->query->isWorkable();
-        })();
+        $this->isWorkable = $this->node->isTopLevel() 
+            && $this->node->operation() === 'query'
+            && $this->query->isWorkable();
 
         $this->queryBuilder = (function (): QueryBuilder {
             $queryBuilder = $this->query->builder();
@@ -41,9 +37,9 @@ final class FindQuery implements Query
                     throw new \Exception("Invalid query! Primary key arguments are required for this kind of query.");
                 }
 
-                $idArgs = array_filter(
+                $idArgs = \array_filter(
                     $args,
-                    fn (string $argName) => in_array($argName, $idFields),
+                    fn (string $argName) => \in_array($argName, $idFields),
                     \ARRAY_FILTER_USE_KEY
                 );
     

@@ -67,13 +67,9 @@ final class SmartQuery implements Query
             );
         })();
         
-        $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable();
-        })();
+        $this->isWorkable = $this->query->isWorkable();
 
-        $this->queryBuilder = (function (): QueryBuilder {
-            return $this->query->builder();
-        })();
+        $this->queryBuilder = $this->query->builder();
     }
 
     public function builder(): QueryBuilder

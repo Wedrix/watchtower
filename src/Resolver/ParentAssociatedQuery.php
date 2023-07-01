@@ -17,15 +17,11 @@ final class ParentAssociatedQuery implements Query
         private readonly Node $node
     )
     {
-        $this->entityManager = (function (): EntityManager {
-            return $this->query->builder()->getEntityManager();
-        })();
+        $this->entityManager = $this->query->builder()->getEntityManager();
 
-        $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable()
-                        && !$this->node->isTopLevel()
-                        && $this->entityManager->hasEntity(name: $this->node->unwrappedParentType());
-        })();
+        $this->isWorkable = $this->query->isWorkable()
+            && !$this->node->isTopLevel()
+            && $this->entityManager->hasEntity(name: $this->node->unwrappedParentType());
 
         $this->queryBuilder = (function(): QueryBuilder {
             $queryBuilder = $this->query->builder();
@@ -40,10 +36,10 @@ final class ParentAssociatedQuery implements Query
         
                     $root = $this->node->root();
         
-                    return match(count($parentAssociatedEntityIdFields)) {
+                    return match(\count($parentAssociatedEntityIdFields)) {
                         0 => null,
                         1 => $root[$parentAssociatedEntityIdFields[0]],
-                        default => array_map(fn (string $parentAssociatedEntityIdField) => $root[$parentAssociatedEntityIdField], $parentAssociatedEntityIdFields),
+                        default => \array_map(fn (string $parentAssociatedEntityIdField) => $root[$parentAssociatedEntityIdField], $parentAssociatedEntityIdFields),
                     };
                 })() ?? throw new \Exception("Invalid query. The parent node has no resolved id field(s).");
         

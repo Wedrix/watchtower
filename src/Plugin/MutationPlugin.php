@@ -24,39 +24,29 @@ final class MutationPlugin implements Plugin
         private readonly string $fieldName
     )
     {
-        $this->type = (function (): string {
-            return 'mutation';
-        })();
+        $this->type = 'mutation';
 
-        $this->name = (function (): string {
-            return "call_".tableize($this->fieldName)."_mutation";
-        })();
+        $this->name = 'call_'.tableize($this->fieldName).'_mutation';
 
-        $this->namespace = (function (): string {
-            return __NAMESPACE__."\\MutationPlugin";
-        })();
+        $this->namespace = __NAMESPACE__.'\\MutationPlugin';
 
-        $this->template = (function (): string {
-            return <<<EOD
-            <?php
+        $this->template = <<<EOD
+        <?php
 
-            declare(strict_types=1);
+        declare(strict_types=1);
 
-            namespace {$this->namespace};
+        namespace {$this->namespace};
 
-            use Wedrix\Watchtower\Resolver\Node;
+        use Wedrix\Watchtower\Resolver\Node;
 
-            function {$this->name}(
-                Node \$node
-            ): mixed
-            {
-            }
-            EOD;
-        })();
+        function {$this->name}(
+            Node \$node
+        ): mixed
+        {
+        }
+        EOD;
 
-        $this->callback = (function (): string {
-            return $this->namespace."\\".$this->name;
-        })();
+        $this->callback = $this->namespace.'\\'.$this->name;
     }
 
     public function name(): string
@@ -71,7 +61,7 @@ final class MutationPlugin implements Plugin
 
     public function callback(): callable
     {
-        return is_callable($this->callback)
+        return \is_callable($this->callback)
             ? $this->callback
             : throw new \Exception("Invalid callable string '{$this->callback}'.");
     }

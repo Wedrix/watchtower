@@ -6,6 +6,7 @@ namespace Wedrix\Watchtower;
 
 use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Language\AST\SchemaDefinitionNode;
+use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Type\Schema as SchemaType;
 use GraphQL\Type\Definition\AbstractType;
 use GraphQL\Type\Definition\CustomScalarType;
@@ -62,8 +63,8 @@ final class SyncedQuerySchema extends SchemaType
                         $entityFields = [];
 
                         foreach ($entity->fields() as $field) {
-                            if (str_contains($field, '.')) {
-                                [$fieldName, $embeddedFieldName] = explode('.', $field);
+                            if (\str_contains($field, '.')) {
+                                [$fieldName, $embeddedFieldName] = \explode('.', $field);
 
                                 if (isset($entityFields[$fieldName])) {
                                     $entityFields[$fieldName]['embedded_fields'][$embeddedFieldName] = $entity->fieldType($field);
@@ -81,24 +82,24 @@ final class SyncedQuerySchema extends SchemaType
                             }
                         }
 
-                        $mapScalarType = function (string $scalarType) use (&$scalars): Type|null {
-                            if (in_array($scalarType, ['smallint','integer','bigint'])) {
+                        $mapScalarType = function (string $scalarType) use (&$scalars): ScalarType|null {
+                            if (\in_array($scalarType, ['smallint','integer','bigint'])) {
                                 return Type::int();
                             }
 
-                            if (in_array($scalarType, ['decimal','float'])) {
+                            if (\in_array($scalarType, ['decimal','float'])) {
                                 return Type::float();
                             }
 
-                            if (in_array($scalarType, ['boolean'])) {
+                            if (\in_array($scalarType, ['boolean'])) {
                                 return Type::boolean();
                             }
 
-                            if (in_array($scalarType, ['string','ascii_string','text','guid'])) {
+                            if (\in_array($scalarType, ['string','ascii_string','text','guid'])) {
                                 return Type::string();
                             }
 
-                            if (in_array($scalarType, [
+                            if (\in_array($scalarType, [
                                 'date','date_immutable','datetime','datetime_immutable',
                                 'datetimetz','datetimetz_immutable','time','time_immutable'
                             ])) {
@@ -109,10 +110,10 @@ final class SyncedQuerySchema extends SchemaType
                         };
 
                         foreach ($entityFields as $fieldName => $fieldTypeOrInfo) {
-                            if (is_array($fieldTypeOrInfo) && isset($fieldTypeOrInfo['embedded_fields'])) {
+                            if (\is_array($fieldTypeOrInfo) && isset($fieldTypeOrInfo['embedded_fields'])) {
                                 $embeddedClass = $entity->embeddedFieldClass($fieldName);
 
-                                $embeddedTypeName = ($nameElements = explode("\\", $embeddedClass))[count($nameElements) - 1];
+                                $embeddedTypeName = \array_slice(\explode('\\', $embeddedClass), -1)[0];
 
                                 //TODO: Handle Non-Nullable Embeddables
                                 $types[$embeddedTypeName] ??= new ObjectType([
@@ -125,7 +126,7 @@ final class SyncedQuerySchema extends SchemaType
                                         foreach ($embeddedFieldTypes as $embeddedFieldName => $embeddedFieldType) {
                                             $fieldType = $mapScalarType($embeddedFieldType);
 
-                                            if (!is_null($fieldType)) {
+                                            if (!\is_null($fieldType)) {
                                                 if (!$entity->fieldIsNullable("$fieldName.$embeddedFieldName")) {
                                                     $fieldType = Type::nonNull($fieldType);
                                                 }
@@ -141,10 +142,10 @@ final class SyncedQuerySchema extends SchemaType
                                 $fields[$fieldName] = $types[$embeddedTypeName];
                             }
                             
-                            if (is_string($fieldTypeOrInfo)){
+                            if (\is_string($fieldTypeOrInfo)){
                                 $fieldType = $mapScalarType($fieldTypeOrInfo);
 
-                                if (!is_null($fieldType)) {
+                                if (!\is_null($fieldType)) {
                                     if (!$entity->fieldIsNullable($fieldName)) {
                                         $fieldType = Type::nonNull($fieldType);
                                     }
@@ -155,7 +156,7 @@ final class SyncedQuerySchema extends SchemaType
                         }
 
                         foreach ($entity->associations() as $associationName) {
-                            $associatedEntityName = ($nameElements = explode("\\",$entity->associationTargetEntity($associationName)))[count($nameElements) - 1];
+                            $associatedEntityName = \array_slice(\explode('\\',$entity->associationTargetEntity($associationName)), -1)[0];
 
                             $associatedEntityType = function () use (&$types, $associatedEntityName, $addEntityType): NullableType {
                                 if (!isset($types[$associatedEntityName])) {
@@ -185,7 +186,7 @@ final class SyncedQuerySchema extends SchemaType
                                             'args' => [
                                                 'queryParams' => [
                                                     'type' => function () use (&$types, $associatedEntityName): NullableType {
-                                                        return $types[pluralize($associatedEntityName)."QueryParams"];
+                                                        return $types[pluralize($associatedEntityName).'QueryParams'];
                                                     }
                                                 ]
                                             ]
@@ -198,12 +199,12 @@ final class SyncedQuerySchema extends SchemaType
             };
             
             $entityClassNames = $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
-                    ?? throw new \Exception("Invalid EntityManager. The metadata driver implementation is not set.");
+                    ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.');
 
             foreach ($entityClassNames as $entityClassName) {
                 $addEntityType(
                     new Entity(
-                        name: ($nameElements = explode("\\", $entityClassName))[count($nameElements) - 1],
+                        name: \array_slice(\explode('\\', $entityClassName), -1)[0],
                         entityManager: $this->entityManager
                     )
                 );
@@ -212,7 +213,7 @@ final class SyncedQuerySchema extends SchemaType
             $queries = [];
     
             foreach ($entityClassNames as $entityClassName) {
-                $singleQueryName = camelize($entityName = ($nameElements = explode("\\", $entityClassName))[count($nameElements) - 1]);
+                $singleQueryName = camelize($entityName = \array_slice(\explode('\\', $entityClassName), -1)[0]);
 
                 $collectionQueryName = pluralize($singleQueryName);
     
@@ -225,7 +226,7 @@ final class SyncedQuerySchema extends SchemaType
                     ]
                 ];
     
-                $types[$queryParamsTypeName = pluralize($entityName)."QueryParams"] = new InputObjectType([
+                $types[$queryParamsTypeName = pluralize($entityName).'QueryParams'] = new InputObjectType([
                     'name' => $queryParamsTypeName,
                     'fields' => [
                         'limit' => $scalars['Limit'],

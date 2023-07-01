@@ -19,9 +19,7 @@ final class MaybeFilteredQuery implements Query
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = (function (): bool {
-            return $this->query->isWorkable();
-        })();
+        $this->isWorkable = $this->query->isWorkable();
 
         $this->queryBuilder = (function (): QueryBuilder {
             $queryBuilder = $this->query->builder();

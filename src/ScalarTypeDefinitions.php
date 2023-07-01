@@ -18,7 +18,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         private readonly string $directory
     )
     {
-        if (!is_dir($this->directory)) {
+        if (!\is_dir($this->directory)) {
             throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
         }
     }
@@ -27,7 +27,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         ScalarTypeDefinition $scalarTypeDefinition
     ): bool
     {
-        return file_exists(
+        return \file_exists(
             $this->directory($scalarTypeDefinition)
         );
     }
@@ -47,7 +47,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
             throw new \Exception("The type definition for '{$scalarTypeDefinition->typeName()}' already exists.");
         }
 
-        file_put_contents(
+        \file_put_contents(
             filename: $this->directory($scalarTypeDefinition),
             data: $scalarTypeDefinition->template(),
         );
@@ -55,19 +55,17 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        $scalarTypeDefinitionsDirectories = new \RegexIterator(
+        $scalarTypeDefinitionFiles = new \RegexIterator(
             iterator: new \DirectoryIterator($this->directory),
             pattern: '/.+\.php/i',
-            mode: \RecursiveRegexIterator::GET_MATCH
+            mode: \RegexIterator::MATCH
         );
 
-        foreach ($scalarTypeDefinitionsDirectories as $scalarTypeDefinitionDirectory) {
-            ($dirElements = explode(\DIRECTORY_SEPARATOR, ($dirElements = explode("_type_definition.php", $scalarTypeDefinitionDirectory[0]))[0]));
+        foreach ($scalarTypeDefinitionFiles as $scalarTypeDefinitionFile) {
+            $typeName = classify((\explode("_type_definition.php", $scalarTypeDefinitionFile->getBasename()))[0]);
 
             yield new GenericScalarTypeDefinition(
-                typeName: classify(
-                    $dirElements[count($dirElements) - 1]
-                )
+                typeName: $typeName
             );
         }
     }

@@ -25,42 +25,32 @@ final class SelectorPlugin implements Plugin
         private readonly string $fieldName
     )
     {
-        $this->type = (function (): string {
-            return 'selector';
-        })();
+        $this->type = 'selector';
 
-        $this->name = (function (): string {
-            return "apply_".tableize($this->parentNodeType)
-                    ."_".tableize($this->fieldName)."_selector";
-        })();
+        $this->name = 'apply_'.tableize($this->parentNodeType)
+        .'_'.tableize($this->fieldName).'_selector';
 
-        $this->namespace = (function (): string {
-            return __NAMESPACE__."\\SelectorPlugin";
-        })();
+        $this->namespace = __NAMESPACE__.'\\SelectorPlugin';
 
-        $this->template = (function (): string {
-            return <<<EOD
-            <?php
+        $this->template = <<<EOD
+        <?php
 
-            declare(strict_types=1);
+        declare(strict_types=1);
 
-            namespace {$this->namespace};
+        namespace {$this->namespace};
 
-            use Wedrix\Watchtower\Resolver\Node;
-            use Wedrix\Watchtower\Resolver\QueryBuilder;
+        use Wedrix\Watchtower\Resolver\Node;
+        use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-            function {$this->name}(
-                QueryBuilder \$queryBuilder,
-                Node \$node
-            ): void
-            {
-            }
-            EOD;
-        })();
+        function {$this->name}(
+            QueryBuilder \$queryBuilder,
+            Node \$node
+        ): void
+        {
+        }
+        EOD;
 
-        $this->callback = (function (): string {
-            return $this->namespace."\\".$this->name;
-        })();
+        $this->callback = $this->namespace.'\\'.$this->name;
     }
 
     public function name(): string
@@ -75,7 +65,7 @@ final class SelectorPlugin implements Plugin
 
     public function callback(): callable
     {
-        return is_callable($this->callback)
+        return \is_callable($this->callback)
             ? $this->callback
             : throw new \Exception("Invalid callable string '{$this->callback}'.");
     }

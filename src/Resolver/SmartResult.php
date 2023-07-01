@@ -75,13 +75,9 @@ final class SmartResult implements Result
             throw new \Exception("Unable to resolve the node. None of the computed results are workable.");
         })();
 
-        $this->isWorkable = (function (): bool {
-            return $this->result->isWorkable();
-        })();
+        $this->isWorkable = $this->result->isWorkable();
 
-        $this->output = (function (): mixed {
-            return $this->isWorkable ? $this->result->output() : null;
-        })();
+        $this->output = $this->isWorkable ? $this->result->output() : null;
     }
 
     public function output(): mixed

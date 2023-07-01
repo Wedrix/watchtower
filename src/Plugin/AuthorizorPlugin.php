@@ -26,45 +26,35 @@ final class AuthorizorPlugin implements Plugin
         private readonly bool $isForCollections
     )
     {
-        $this->type = (function (): string {
-            return 'authorizor';
-        })();
+        $this->type = 'authorizor';
 
-        $this->name = (function (): string {
-            return "authorize_".tableize(
-                $this->isForCollections
-                    ? pluralize($this->nodeType)
-                    : $this->nodeType
-            )."_result";
-        })();
+        $this->name = 'authorize_'.tableize(
+            $this->isForCollections
+                ? pluralize($this->nodeType)
+                : $this->nodeType
+        ).'_result';
 
-        $this->namespace = (function (): string {
-            return __NAMESPACE__."\\AuthorizorPlugin";
-        })();
+        $this->namespace = __NAMESPACE__.'\\AuthorizorPlugin';
 
-        $this->template = (function (): string {
-            return <<<EOD
-            <?php
+        $this->template = <<<EOD
+        <?php
 
-            declare(strict_types=1);
+        declare(strict_types=1);
 
-            namespace {$this->namespace};
+        namespace {$this->namespace};
 
-            use Wedrix\Watchtower\Resolver\Node;
-            use Wedrix\Watchtower\Resolver\Result;
+        use Wedrix\Watchtower\Resolver\Node;
+        use Wedrix\Watchtower\Resolver\Result;
 
-            function {$this->name}(
-                Result \$result,
-                Node \$node
-            ): void
-            {
-            }
-            EOD;
-        })();
+        function {$this->name}(
+            Result \$result,
+            Node \$node
+        ): void
+        {
+        }
+        EOD;
 
-        $this->callback = (function (): string {
-            return $this->namespace."\\".$this->name;
-        })();
+        $this->callback = $this->namespace.'\\'.$this->name;
     }
 
     public function name(): string
@@ -79,7 +69,7 @@ final class AuthorizorPlugin implements Plugin
 
     public function callback(): callable
     {
-        return is_callable($this->callback)
+        return \is_callable($this->callback)
             ? $this->callback
             : throw new \Exception("Invalid callable string '{$this->callback}'.");
     }

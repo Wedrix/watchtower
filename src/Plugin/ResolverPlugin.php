@@ -25,40 +25,30 @@ final class ResolverPlugin implements Plugin
         private readonly string $fieldName
     )
     {
-        $this->type = (function (): string {
-            return 'resolver';
-        })();
+        $this->type = 'resolver';
 
-        $this->name = (function (): string {
-            return "resolve_".tableize($this->parentNodeType)
-                    ."_".tableize($this->fieldName)."_field";
-        })();
+        $this->name = 'resolve_'.tableize($this->parentNodeType)
+        .'_'.tableize($this->fieldName).'_field';
 
-        $this->namespace = (function (): string {
-            return __NAMESPACE__."\\ResolverPlugin";
-        })();
+        $this->namespace = __NAMESPACE__.'\\ResolverPlugin';
 
-        $this->template = (function (): string {
-            return <<<EOD
-            <?php
+        $this->template = <<<EOD
+        <?php
 
-            declare(strict_types=1);
+        declare(strict_types=1);
 
-            namespace {$this->namespace};
+        namespace {$this->namespace};
 
-            use Wedrix\Watchtower\Resolver\Node;
+        use Wedrix\Watchtower\Resolver\Node;
 
-            function {$this->name}(
-                Node \$node
-            ): mixed
-            {
-            }
-            EOD;
-        })();
+        function {$this->name}(
+            Node \$node
+        ): mixed
+        {
+        }
+        EOD;
 
-        $this->callback = (function (): string {
-            return $this->namespace."\\".$this->name;
-        })();
+        $this->callback = $this->namespace.'\\'.$this->name;
     }
 
     public function name(): string
@@ -73,7 +63,7 @@ final class ResolverPlugin implements Plugin
 
     public function callback(): callable
     {
-        return is_callable($this->callback)
+        return \is_callable($this->callback)
             ? $this->callback
             : throw new \Exception("Invalid callable string '{$this->callback}'.");
     }

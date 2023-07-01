@@ -26,42 +26,32 @@ final class FilterPlugin implements Plugin
         private readonly string $filterName
     )
     {
-        $this->type = (function (): string {
-            return 'filter';
-        })();
+        $this->type = 'filter';
 
-        $this->name = (function (): string {
-            return "apply_".tableize(pluralize($this->parentNodeType))
-                    ."_".tableize($this->filterName)."_filter";
-        })();
+        $this->name = 'apply_'.tableize(pluralize($this->parentNodeType))
+        .'_'.tableize($this->filterName).'_filter';
 
-        $this->namespace = (function (): string {
-            return __NAMESPACE__."\\FilterPlugin";
-        })();
+        $this->namespace = __NAMESPACE__."\\FilterPlugin";
 
-        $this->template = (function (): string {
-            return <<<EOD
-            <?php
+        $this->template = <<<EOD
+        <?php
 
-            declare(strict_types=1);
+        declare(strict_types=1);
 
-            namespace {$this->namespace};
+        namespace {$this->namespace};
 
-            use Wedrix\Watchtower\Resolver\Node;
-            use Wedrix\Watchtower\Resolver\QueryBuilder;
+        use Wedrix\Watchtower\Resolver\Node;
+        use Wedrix\Watchtower\Resolver\QueryBuilder;
 
-            function {$this->name}(
-                QueryBuilder \$queryBuilder,
-                Node \$node
-            ): void
-            {
-            }
-            EOD;
-        })();
+        function {$this->name}(
+            QueryBuilder \$queryBuilder,
+            Node \$node
+        ): void
+        {
+        }
+        EOD;
 
-        $this->callback = (function (): string {
-            return $this->namespace."\\".$this->name;
-        })();
+        $this->callback = $this->namespace.'\\'.$this->name;
     }
 
     public function name(): string
@@ -76,7 +66,7 @@ final class FilterPlugin implements Plugin
 
     public function callback(): callable
     {
-        return is_callable($this->callback)
+        return \is_callable($this->callback)
             ? $this->callback
             : throw new \Exception("Invalid callable string '{$this->callback}'.");
     }

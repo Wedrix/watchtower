@@ -30,11 +30,11 @@ final class EntityManager
         string $name
     ): bool
     {
-        return array_key_exists($name, $this->entities) 
+        return \array_key_exists($name, $this->entities) 
                 || !empty(
                     \array_filter(
                         $this->doctrineEntityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
-                            ?? throw new \Exception("Invalid EntityManager. The metadata driver implementation is not set."),
+                            ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
                         fn (string $className) => \str_ends_with($className, "\\$name")
                     )
                 );

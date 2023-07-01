@@ -22,12 +22,12 @@ final class Executor
 
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
-     * @param string $schemaFileDirectory The schema file's directory.
-     * @param string $schemaCacheFileDirectory The schema's generated cache file's directory.
-     * @param bool $cachesTheSchema Whether this executor caches the schema for improved perfomance.
-     *       Note that you will have to run Console::updateSchema() to reflect any changes.
+     * @param string $schemaFile The schema file.
      * @param string $pluginsDirectory The plugin functions' directory.
      * @param string $scalarTypeDefinitionsDirectory The scalar types' definitions' directory.
+     * @param bool $cachesSchema Whether this executor caches the schema for improved perfomance.
+     *       Note that you will have to run Console::updateSchema() to reflect any changes.
+     * @param string $schemaCacheDirectory The schema's generated cache file's directory.
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -38,29 +38,25 @@ final class Executor
         private readonly string $schemaCacheDirectory
     )
     {
-        $this->schema = (function (): GraphQLTypeSchema {
-            if (!file_exists($this->schemaFile)) {
-                throw new \Exception("Invalid schema file. The file does not exist.");
-            }
+        if (!\file_exists($this->schemaFile)) {
+            throw new \Exception('Invalid schema file. The file does not exist.');
+        }
 
-            return new Schema(
-                sourceFile: $this->schemaFile,
-                cacheDirectory: $this->schemaCacheDirectory,
-                isCached: $this->cachesSchema,
-                scalarTypeDefinitions: new ScalarTypeDefinitions(
-                    directory: $this->scalarTypeDefinitionsDirectory
-                )
-            );
-        })();
+        $this->schema = new Schema(
+            sourceFile: $this->schemaFile,
+            cacheDirectory: $this->schemaCacheDirectory,
+            isCached: $this->cachesSchema,
+            scalarTypeDefinitions: new ScalarTypeDefinitions(
+                directory: $this->scalarTypeDefinitionsDirectory
+            )
+        );
 
-        $this->resolver = (function (): Resolver {
-            return new Resolver(
-                entityManager: $this->entityManager,
-                plugins: new Plugins(
-                    directory: $this->pluginsDirectory
-                )
-            );
-        })();
+        $this->resolver = new Resolver(
+            entityManager: $this->entityManager,
+            plugins: new Plugins(
+                directory: $this->pluginsDirectory
+            )
+        );
     }
 
     /**

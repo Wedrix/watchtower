@@ -49,53 +49,31 @@ final class Node
         private readonly ResolveInfo $info
     )
     {
-        $this->name = (function (): string {
-            return $this->info->fieldName;
-        })();
+        $this->name = $this->info->fieldName;
 
-        $this->unwrappedType = (function (): string {
-            return str_replace(['[',']','!'], "", (string) $this->info->returnType);
-        })();
+        $this->unwrappedType = \str_replace(['[',']','!'], "", (string) $this->info->returnType);
 
-        $this->unwrappedParentType = (function (): string {
-            return str_replace(['[',']','!'], "", (string) $this->info->parentType);
-        })();
+        $this->unwrappedParentType = \str_replace(['[',']','!'], "", (string) $this->info->parentType);
 
-        $this->operation = (function (): string {
-            return $this->info->operation?->operation 
-                ?? throw new \Exception("Invalid Query. The operation is not defined.");
-        })();
+        $this->operation = $this->info->operation?->operation 
+            ?? throw new \Exception('Invalid Query. The operation is not defined.');
 
-        $this->isNullable = (function (): bool {
-            return !str_ends_with((string) $this->info->returnType, '!');
-        })();
+        $this->isNullable = !\str_ends_with((string) $this->info->returnType, '!');
 
-        $this->isACollection = (function (): bool {
-            return str_starts_with((string) $this->info->returnType, '[')
-                && (str_ends_with((string) $this->info->returnType, ']') 
-                    || str_ends_with((string) $this->info->returnType, ']!')
-                );
-        })();
+        $this->isACollection = \str_starts_with((string) $this->info->returnType, '[')
+            && (\str_ends_with((string) $this->info->returnType, ']') 
+                || \str_ends_with((string) $this->info->returnType, ']!')
+            );
 
-        $this->isTopLevel = (function (): bool {
-            return count($this->info->path) === 1;
-        })();
+        $this->isTopLevel = \count($this->info->path) === 1;
 
-        $this->isAbstract = (function (): bool {
-            return Type::isAbstractType(Type::getNullableType($this->info->returnType));
-        })();
+        $this->isAbstract = Type::isAbstractType(Type::getNullableType($this->info->returnType));
 
-        $this->isALeaf = (function (): bool {
-            return Type::isLeafType(Type::getNullableType($this->info->returnType));
-        })();
+        $this->isALeaf = Type::isLeafType(Type::getNullableType($this->info->returnType));
 
-        $this->concreteFieldsSelection = (function (): array {
-            return $this->info->lookAhead(['group-implementor-fields'])->queryPlan()['fields'] ?? [];
-        })();
+        $this->concreteFieldsSelection = $this->info->lookAhead(['group-implementor-fields'])->queryPlan()['fields'] ?? [];
 
-        $this->abstractFieldsSelection = (function (): array {
-            return $this->info->lookAhead(['group-implementor-fields'])->queryPlan()['implementors'] ?? [];
-        })();
+        $this->abstractFieldsSelection = $this->info->lookAhead(['group-implementor-fields'])->queryPlan()['implementors'] ?? [];
     }
 
     /**

@@ -29,7 +29,7 @@ final class Schema extends SchemaType
     /**
      * @var array<string,SchemaType>
      */
-    private static array $_schemas = [];
+    private static array $schemas = [];
 
     private readonly SchemaType $schema;
 
@@ -42,7 +42,9 @@ final class Schema extends SchemaType
         private readonly ScalarTypeDefinitions $scalarTypeDefinitions
     )
     {
-        static::$_schemas[$sourceFile] ??= (function (): SchemaType {
+        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR."{$this->sourceFile}.php";
+
+        $this->schema = static::$schemas[$sourceFile] ??= (function (): SchemaType {
             /**
              * @param array<string,mixed> $typeConfig
              * 
@@ -63,21 +65,21 @@ final class Schema extends SchemaType
 
                     require_once $this->scalarTypeDefinitions->directory($scalarTypeDefinition);
     
-                    $typeConfig = array_merge($typeConfig, [
-                        'serialize' => $scalarTypeDefinition->namespace()."\\serialize",
-                        'parseValue' => $scalarTypeDefinition->namespace()."\\parseValue",
-                        'parseLiteral' => $scalarTypeDefinition->namespace()."\\parseLiteral",
+                    $typeConfig = \array_merge($typeConfig, [
+                        'serialize' => $scalarTypeDefinition->namespace().'\\serialize',
+                        'parseValue' => $scalarTypeDefinition->namespace().'\\parseValue',
+                        'parseLiteral' => $scalarTypeDefinition->namespace().'\\parseLiteral',
                     ]);
                 }
 
                 if ($astNode instanceof InterfaceTypeDefinitionNode || $astNode instanceof UnionTypeDefinitionNode) {
-                    $typeConfig = array_merge($typeConfig, [
+                    $typeConfig = \array_merge($typeConfig, [
                         'resolveType' => function (array $value, array $context, ResolveInfo $resolveInfo): string {
                             $typeName = $value['__typename'] 
-                                ?? throw new \Exception("Invalid abstract type. Kindly specify '__typename' in the resolved result.");
+                                ?? throw new \Exception('Invalid abstract type. Kindly specify \'__typename\' in the resolved result.');
 
-                            if (!is_string($typeName)) {
-                                throw new \Exception("Inalid typename type. '__typename' must be a string.");
+                            if (!\is_string($typeName)) {
+                                throw new \Exception('Inalid typename type. \'__typename\' must be a string.');
                             }
 
                             return $typeName;
@@ -90,20 +92,20 @@ final class Schema extends SchemaType
     
             $AST = (function (): DocumentNode {
                 $document = Parser::parse(
-                    source: is_string($schemaFileContents = file_get_contents($this->sourceFile)) 
+                    source: \is_string($schemaFileContents = \file_get_contents($this->sourceFile)) 
                                 ? $schemaFileContents 
-                                : throw new \Exception("Unable to read GraphQL schema file.")
+                                : throw new \Exception("Unable to read the schema file '{$this->sourceFile}'.")
                 );
 
                 if ($this->isCached) {
-                    if (!file_exists($this->cacheFile)) {
-                        $dirname = pathinfo($this->cacheFile)['dirname'] ?? '';
+                    if (!\file_exists($this->cacheFile)) {
+                        $dirname = \pathinfo($this->cacheFile)['dirname'] ?? '';
         
-                        if (!is_dir($dirname)) {
-                            mkdir(directory: $dirname, recursive: true);
+                        if (!\is_dir($dirname)) {
+                            \mkdir(directory: $dirname, recursive: true);
                         }
         
-                        file_put_contents($this->cacheFile, "<?php\nreturn " . var_export(AST::toArray($document), true) . ";\n");
+                        \file_put_contents($this->cacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
     
                         return $document;
                     }
@@ -111,7 +113,7 @@ final class Schema extends SchemaType
                     $document = AST::fromArray(require $this->cacheFile);
 
                     if (!$document instanceof DocumentNode) {
-                        throw new \Exception("Invalid schema. Could not be parsed as a document node.");
+                        throw new \Exception('Invalid schema. Could not be parsed as a document node.');
                     }
                 }
 
@@ -119,12 +121,6 @@ final class Schema extends SchemaType
             })();
             
             return BuildSchema::build($AST, $typeConfigDecorator);
-        })();
-
-        $this->schema = static::$_schemas[$sourceFile];
-
-        $this->cacheFile = (function (): string {
-            return $this->cacheDirectory.\DIRECTORY_SEPARATOR."{$this->sourceFile}.php";
         })();
     }
 

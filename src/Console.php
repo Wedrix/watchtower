@@ -31,10 +31,10 @@ final class Console
 
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
-     * @param string $schemaFileDirectory The schema file's directory.
-     * @param string $schemaCacheFileDirectory The schema's generated cache file's directory.
+     * @param string $schemaFile The schema file.
      * @param string $pluginsDirectory The plugin functions' directory.
      * @param string $scalarTypeDefinitionsDirectory The scalar types' definitions' directory.
+     * @param string $schemaCacheDirectory The schema's generated cache file's directory.
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
@@ -44,30 +44,24 @@ final class Console
         private readonly string $schemaCacheDirectory
     )
     {
-        $this->plugins = (function (): Plugins {
-            return new Plugins(
-                directory: $this->pluginsDirectory
-            );
-        })();
+        $this->plugins = new Plugins(
+            directory: $this->pluginsDirectory
+        );
 
-        $this->scalarTypeDefinitions = (function (): ScalarTypeDefinitions {
-            return new ScalarTypeDefinitions(
-                directory: $this->scalarTypeDefinitionsDirectory
-            );
-        })();
+        $this->scalarTypeDefinitions = new ScalarTypeDefinitions(
+            directory: $this->scalarTypeDefinitionsDirectory
+        );
 
-        $this->schemaCacheFile = (function (): string {
-            return $this->schemaCacheDirectory.\DIRECTORY_SEPARATOR."{$this->schemaFile}.php";
-        })();
+        $this->schemaCacheFile = $this->schemaCacheDirectory.\DIRECTORY_SEPARATOR."{$this->schemaFile}.php";
     }
 
     public function generateSchema(): void
     {
-        if (file_exists($this->schemaFile)) {
-            throw new \Exception("A schema file already exists.");
+        if (\file_exists($this->schemaFile)) {
+            throw new \Exception('A schema file already exists.');
         }
 
-        file_put_contents(
+        \file_put_contents(
             filename: $this->schemaFile,
             data: SchemaPrinter::doPrint(
                 schema: new SyncedQuerySchema(
@@ -79,8 +73,8 @@ final class Console
             )
         );
 
-        if (file_exists($this->schemaCacheFile)) {
-            unlink($this->schemaCacheFile);
+        if (\file_exists($this->schemaCacheFile)) {
+            \unlink($this->schemaCacheFile);
         }
 
         foreach (
@@ -102,8 +96,8 @@ final class Console
     {
         // TODO: Update Schema
         
-        if (file_exists($this->schemaCacheFile)) {
-            unlink($this->schemaCacheFile);
+        if (\file_exists($this->schemaCacheFile)) {
+            \unlink($this->schemaCacheFile);
         }
     }
 
