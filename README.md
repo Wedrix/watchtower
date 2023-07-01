@@ -1,6 +1,5 @@
 A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for serving GraphQL from [Doctrine](https://github.com/doctrine/orm)-based frameworks like Symfony.
 
-
 # Table of Content
 
 - [Features](#features)
@@ -21,20 +20,17 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
 - [Known Issues](#known-issues)
 - [Versioning](#versioning)
 - [Contributing](#contributing)
-- [Running the Tests](#running-the-tests)
 - [Reporting Vulnerabilities](#reporting-vulnerabilities)
 - [License](#license)
 
-
 # Features
 
- - SDL first. 
- - Out-of-the-box pagination support.
- - Support for computed fields, filtering, ordering, mutations, subscriptions, authorization, and custom resolvers via user-generated plugins. 
- - Support for all type system features including enums, abstract types (i.e. Unions and Interfaces), custom scalars, and custom directives.
- - Schema generation and updation for queries, based on the project's current Doctrine models.
- - Code generation for plugins and scalar type definitions.
-
+- SDL first.
+- Out-of-the-box pagination support.
+- Support for computed fields, filtering, ordering, mutations, subscriptions, authorization, and custom resolvers via user-generated plugins.
+- Support for all type system features including enums, abstract types (i.e. Unions and Interfaces), custom scalars, and custom directives.
+- Schema generation and updation for queries, based on the project's current Doctrine models.
+- Code generation for plugins and scalar type definitions.
 
 # Motivation
 
@@ -42,16 +38,14 @@ Supporting a GraphQL API usually involves writing a lot of redundant boilerplate
 
 This library is inspired by similar others created for different platforms:
 
- - [Lighthouse](https://github.com/nuwave/lighthouse) for Laravel and Eloquent
- - [Mongoose GraphQL Server](https://github.com/DanishSiraj/mongoose-graphql-server) for Express and Mongoose
-
+- [Lighthouse](https://github.com/nuwave/lighthouse) for Laravel and Eloquent
+- [Mongoose GraphQL Server](https://github.com/DanishSiraj/mongoose-graphql-server) for Express and Mongoose
 
 # Requirements
 
- - php >= v8.1
- - doctrine/orm >= v2.8
- - graphql-php >= 14.4
-
+- php >= v8.1
+- doctrine/orm >= v2.8
+- graphql-php >= 14.4
 
 # Installation
 
@@ -65,20 +59,19 @@ You can test out this package using the demo application:
 2. Navigate to an appropriate directory on your filesystem
 3. Clone the repository:  
 
-		git clone https://github.com/Wedrix/watchtower-demo.git
+  git clone https://github.com/Wedrix/watchtower-demo.git
 4. Navigate to the repository directory:  
 
-		cd watchtower_demo
+  cd watchtower_demo
 5. Install the packages:  
 
-		composer install
+  composer install
 4. Start the symfony server:  
 
-		symfony server:start
-5. Install an appropriate GraphQL client. 
-	For example, [ChromeiQL](https://chrome.google.com/webstore/detail/chromeiql/fkkiamalmpiidkljmicmjfbieiclmeij).
-6. The API is accessible at http://localhost:8000/en/graphql.json
-
+  symfony server:start
+5. Install an appropriate GraphQL client.
+ For example, [ChromeiQL](https://chrome.google.com/webstore/detail/chromeiql/fkkiamalmpiidkljmicmjfbieiclmeij).
+6. The API is accessible at <http://localhost:8000/en/graphql.json>
 
 # Usage
 
@@ -109,52 +102,52 @@ $app->addRoutingMiddleware();
 $errorMiddleware = $app->addErrorMiddleware(true, true, true);
 
 $app->post(
-	'/graphql.json', 
-	function (Request $request, Response $response, $args) {
-		/**
-		* Instantiating the executor.
-		* Pass the entity manager and other config options using DI or 
-		* configuration objects. 
-		**/
-		$executor = new Executor(
-			entityManager: new EntityManager(), // Either as a Singleton or from some DI container
-			schemaFileDirectory: __DIR__ . '/resources/graphql/schema.graphql',
-			schemaCacheFileDirectory: __DIR__ . '/var/cache/schema.graphql',
-			cachesTheSchema: true, // Should be false in dev environment
-			pluginsDirectory: __DIR__ . '/resources/graphql/plugins',
-			scalarTypeDefinitionsDirectory: __DIR__. '/resources/graphql/scalar_type_definitions'
-		);
-			
-		$response->getBody()
-			->write(
-				is_string(
-					$responseBody = json_encode(
-						/**
-						* Call executeQuery() on the request to 
-						* generate the GraphQL response.
-						**/
-						$executor->executeQuery(
-							source: ($input = (array) $request->getParsedBody())['query'] ?? '',
-							rootValue: [],
-							contextValue: [
-								'request' => $request, 
-								'response' => $response, 
-								'args' => $args
-							],
-							variableValues: $input['variables'] ?? null,
-							operationName: $input['operationName'] ?? null,
-							validationRules: null
-						)
-						->toArray(
-							debug: DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag:INCLUDE_TRACE
-						)
-					)
-				) 
-				? $responseBody
-				: throw new \Exception("Unable to encode GraphQL result")
-			);
+ '/graphql.json', 
+ function (Request $request, Response $response, $args) {
+  /**
+  * Instantiating the executor.
+  * Pass the entity manager and other config options using DI or 
+  * configuration objects. 
+  **/
+  $executor = new Executor(
+   entityManager: new EntityManager(), // Either as a Singleton or from some DI container
+   schemaFile: __DIR__ . '/resources/graphql/schema.graphql',
+   pluginsDirectory: __DIR__ . '/resources/graphql/plugins',
+   scalarTypeDefinitionsDirectory: __DIR__. '/resources/graphql/scalar_type_definitions',
+   cachesSchema: true, // Should be false in dev environment
+   schemaCacheDirectory: __DIR__ . '/var/cache'
+  );
+   
+  $response->getBody()
+   ->write(
+    is_string(
+     $responseBody = json_encode(
+      /**
+      * Call executeQuery() on the request to 
+      * generate the GraphQL response.
+      **/
+      $executor->executeQuery(
+       source: ($input = (array) $request->getParsedBody())['query'] ?? '',
+       rootValue: [],
+       contextValue: [
+        'request' => $request, 
+        'response' => $response, 
+        'args' => $args
+       ],
+       variableValues: $input['variables'] ?? null,
+       operationName: $input['operationName'] ?? null,
+       validationRules: null
+      )
+      ->toArray(
+       debug: DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag:INCLUDE_TRACE
+      )
+     )
+    ) 
+    ? $responseBody
+    : throw new \Exception("Unable to encode GraphQL result")
+   );
 
-		return $response->withHeader('Content-Type', 'application/json; charset=utf-8');
+  return $response->withHeader('Content-Type', 'application/json; charset=utf-8');
 });
 
 $app->run();
@@ -162,13 +155,11 @@ $app->run();
 
 The Console component on the other hand, should be used in a cli-tool to offer convenience services like code generation during development. Check out the [Symfony Flex recipe](https://github.com/symfony/recipes-contrib/tree/main/wedrix/watchtower/1.0/Command) for an example usage in Symfony.
 
-
 # Schema
 
-This library relies on a schema file written in the Schema Definition Language (SDL) to describe the service's type system. For a quick primer on the SDL, check out [this](https://wehavefaces.net/graphql-shorthand-notation-cheatsheet-17cd715861b6) article. 
+This library relies on a schema file written in the Schema Definition Language (SDL) to describe the service's type system. For a quick primer on the SDL, check out [this](https://wehavefaces.net/graphql-shorthand-notation-cheatsheet-17cd715861b6) article.
 
 The library supports the complete GraphQL type system through the SDL and is able to auto-resolve Doctrine entities and relations, even collections, out-of-the-box. However, some extra steps are needed for certain features to be fully functional.
-
 
 ## Custom Scalars
 
@@ -180,7 +171,7 @@ Scalar Type Definitions are auto-loaded files containing the respective function
 
  1. A Scalar Type Definition must be contained within its own script file.
  2. The script file must follow the following naming format:  
-	 {***the scalar type name in snake_case***}_type_definition.php
+  {***the scalar type name in snake_case***}_type_definition.php
  3. The script file must be contained within the directory specified for the `scalarTypeDefinitionsDirectory` parameter of both the Executor and Console components.
  4. The respective functions `serialize()`, `parseValue()`, and `parseLiteral()` must have the following function signatures:
 
@@ -189,7 +180,7 @@ Scalar Type Definitions are auto-loaded files containing the respective function
  * Serializes an internal value to include in a response.
  */
 function serialize(
-	mixed $value
+ mixed $value
 ): string // You can replace 'mixed' with a more specific type 
 {
 }
@@ -198,7 +189,7 @@ function serialize(
  * Parses an externally provided value (query variable) to use as an input
  */
 function parseValue(
-	string $value
+ string $value
 ): mixed // You can replace 'mixed' with a more specific type
 {
 }
@@ -209,15 +200,15 @@ function parseValue(
  * @param array<string,mixed>|null $variables
  */
 function parseLiteral(
-	\GraphQL\Language\AST\Node $value, 
-	?array $variables = null
+ \GraphQL\Language\AST\Node $value, 
+ ?array $variables = null
 ): mixed // You can replace 'mixed with a more specific type
 {
 }
 ```
 
 5. The respective functions `serialize()`, `parseValue()`, and `parseLiteral()` must be namespaced following this format:
-	 `Wedrix\Watchtower\ScalarTypeDefinition\{the scalar type name in PascalCase}TypeDefinition`
+  `Wedrix\Watchtower\ScalarTypeDefinition\{the scalar type name in PascalCase}TypeDefinition`
 
 The below code snippet is an example Scalar Type Definition for a custom DateTime scalar type:
 
@@ -236,14 +227,14 @@ use GraphQL\Language\AST\StringValueNode;
 use GraphQL\Utils\Utils;
 
 function serialize(
-	\DateTime $value
+ \DateTime $value
 ): string
 {
     return $value->format(\DateTime::ATOM);
 }
 
 function parseValue(
-	string $value
+ string $value
 ): \DateTime
 {
     try {
@@ -261,8 +252,8 @@ function parseValue(
  * @param array<string,mixed>|null $variables
  */
 function parseLiteral(
-	Node $value, 
-	?array $variables = null
+ Node $value, 
+ ?array $variables = null
 ): \DateTime
 {
     if (!$value instanceof StringValueNode) {
@@ -287,7 +278,6 @@ function parseLiteral(
 
 To facilitate speedy development, the Console component offers the convenience method `addScalarTypeDefinition()`, which may be used to auto-generate the necessary boilerplate.
 
-
 ## Querying
 
 ### Finding Entities
@@ -296,13 +286,13 @@ To find a particular entity, you must add the argument(s) that corresponds to th
 
 ```graphql
 type Query {
-	product(id: ID!): Product!
+ product(id: ID!): Product!
 }
 
 type Product {
-	id: ID!,
-	name: String!,
-	listings: [Listing!]!
+ id: ID!,
+ name: String!,
+ listings: [Listing!]!
 }
 ```
 
@@ -310,13 +300,13 @@ the query:
 
 ```graphql
 query {
-	product(id: 1) {
-		name
-	}
+ product(id: 1) {
+  name
+ }
 }
 ```
 
-returns the result for the product with id **1**. 
+returns the result for the product with id **1**.
 
 Note that find queries can only be represented by top-level query fields since the resolver auto-relates sub-level fields as relations.
 
@@ -326,31 +316,31 @@ This library is also able to resolve the relations of your models. For instance,
 
 ```graphql
 type Query {
-	product(id: ID!): Product!
+ product(id: ID!): Product!
 }
 
 type Product {
-	id: ID!,
-	name: String!,
-	bestSeller: Listing,
-	listings: [Listing!]!
+ id: ID!,
+ name: String!,
+ bestSeller: Listing,
+ listings: [Listing!]!
 }
 
 type Listing {
-	id: ID!,
-	sellingPrice: Float!
+ id: ID!,
+ sellingPrice: Float!
 }
-``` 
+```
 
 the query:
 
 ```graphql
 query {
-	product(id: 1) {
-		name,
-		bestSeller,
-		listings
-	}
+ product(id: 1) {
+  name,
+  bestSeller,
+  listings
+ }
 }
 ```
 
@@ -362,24 +352,24 @@ By default, the complete result-set for a collection relation is returned. To en
 
 ```graphql
 type Query {
-	product(id: ID!): Product!
+ product(id: ID!): Product!
 }
 
 type Product {
-	id: ID!,
-	name: String!,
-	bestSeller: Listing,
-	listings(queryParams: ListingsQueryParams!): [Listing!]!
+ id: ID!,
+ name: String!,
+ bestSeller: Listing,
+ listings(queryParams: ListingsQueryParams!): [Listing!]!
 }
 
 type Listing {
-	id: ID!,
-	sellingPrice: Float!
+ id: ID!,
+ sellingPrice: Float!
 }
 
 input ListingsQueryParams {
-	limit: Int, # items per page
-	page: Int, # page
+ limit: Int, # items per page
+ page: Int, # page
 }
 ```
 
@@ -389,19 +379,19 @@ The type specified for the `queryParams` argument does not matter. The only requ
 
 ```graphql
 type Query {
-	products: [Product!]!,
-	paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+ products: [Product!]!,
+ paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 type Product {
-	id: ID!,
-	name: String!,
-	bestSeller: Listing
+ id: ID!,
+ name: String!,
+ bestSeller: Listing
 }
 
 input ProductsQueryParams {
-	limit: Int!, # items per page
-	page: Int!, # page
+ limit: Int!, # items per page
+ page: Int!, # page
 }
 ```
 
@@ -409,9 +399,9 @@ the query:
 
 ```graphql
 query {
-	products {
-		name
-	}
+ products {
+  name
+ }
 }
 ```
 
@@ -419,9 +409,9 @@ returns the names of all products, whereas:
 
 ```graphql
 query {
-	paginatedProducts(queryParams: {page: 1, limit: 5}) {
-		name
-	}
+ paginatedProducts(queryParams: {page: 1, limit: 5}) {
+  name
+ }
 }
 ```
 
@@ -433,9 +423,9 @@ This package also supports aliases. For instance:
 
 ```graphql
 query {
-	queryAlias: paginatedProducts(queryParams: {page: 1, limit: 3}) {
-		nameAlias: name
-	}
+ queryAlias: paginatedProducts(queryParams: {page: 1, limit: 3}) {
+  nameAlias: name
+ }
 }
 ```
 
@@ -467,55 +457,53 @@ To return distinct results, add the `distinct` parameter to the `queryParams` ar
 
 ```graphql
 type Query {
-	paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+ paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 input ProductsQueryParams {
-	distinct: Boolean, # Must be boolean
-	limit: Int!,
-	page: Int!,
+ distinct: Boolean, # Must be boolean
+ limit: Int!,
+ page: Int!,
 }
 
 type Product {
-	id: ID!,
-	name: String!,
-	bestSeller: Listing
+ id: ID!,
+ name: String!,
+ bestSeller: Listing
 }
 ```
 
-
 ## Generating the Schema
 
-The console component comes with the helper method `generateSchema()` which may be used to generate the initial schema file based on the project's Doctrine models. 
+The console component comes with the helper method `generateSchema()` which may be used to generate the initial schema file based on the project's Doctrine models.
 
 Kindly take note of the following when using the schema generator:
 
  1. The generator only creates a schema for Query operation. It does not create any Mutations or Subscriptions. Those must be added manually.
  2. The generator is able to only resolve the following Doctrine types:
-	 - All [interger types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
-	 - All [decimal types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#decimal-types) - resolve to GraphQL's `Float` type.
-	 - All [string types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#string-types) - resolve to GraphQL's `String` type.
-	 - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to a custom `Date` type that extends the `String` type.
- 3. The generator skips all fields having scalar types different from the above types. You must add those manually, with their corresponding Scalar Type Definitions.
- 4. The generator only resolves actual fields that correspond to database columns. All other fields must be added manually, as either computed or resolved fields. 
- 5. The generator is not able to properly ascertain the nullability of embedded types and relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
 
+    - All [interger types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
+    - All [decimal types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#decimal-types) - resolve to GraphQL's `Float` type.
+    - All [string types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#string-types) - resolve to GraphQL's `String` type.
+    - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to a custom `Date` type that extends the `String` type.
+
+ 3. The generator skips all fields having scalar types different from the above types. You must add those manually, with their corresponding Scalar Type Definitions.
+ 4. The generator only resolves actual fields that correspond to database columns. All other fields must be added manually, as either computed or resolved fields.
+ 5. The generator is not able to properly ascertain the nullability of embedded types and relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
 
 ## Updating the Schema
 
 The console component comes with the helper method `updateSchema()` which may be used to update queries in the schema file to match the project's Doctrine models. Updates are merged with the original schema and do not overwrite schema definitions for scalars, mutations, subscriptions, directives etc.
 
-
 ## Using Multiple Schemas
 
 Using multiple schemas is as simple as instantiating different objects of the Executor and Console components, with the different schema files' configurations. You can then use them with the appropriate controllers, routes, cli-scripts etc.
-
 
 # Plugins
 
 Plugins are special auto-loaded functions you define that allow you to add custom logic to the resolver. Since they are auto-loaded, plugins must follow certain conventions for correct package discovery and use:
 
- 1. A plugin must be contained within its own script file. 
+ 1. A plugin must be contained within its own script file.
  2. The script file name must correspond with the plugin's name.  
  Example: `function apply_listings_ids_filter(...){...}` should correspond with `apply_listings_ids_filter.php`.
  3. The script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the folder specified for the particular plugin type (see [subsequent sections](#computed-fields) for more details).
@@ -553,13 +541,11 @@ function apply_listings_ids_filter(
 }
 ```
 
-The Console component offers the following convenience methods for generating plugin files: `addFilterPlugin()`, `addOrderingPlugin()`, `addSelectorPlugin()`, `addResolverPlugin()`, `addAuthorizorPlugin()`, `addMutationPlugin()`, and `addSubscriptionPlugin()`. 
-
+The Console component offers the following convenience methods for generating plugin files: `addFilterPlugin()`, `addOrderingPlugin()`, `addSelectorPlugin()`, `addResolverPlugin()`, `addAuthorizorPlugin()`, `addMutationPlugin()`, and `addSubscriptionPlugin()`.
 
 # Computed Fields
 
 Sometimes your API may include fields that do not correspond to actual columns in the database. For instance, you may have a *Product* entity, that persists the *markedPrice* and *discount* fields but computes the *sellingPrice* field on the fly using both of those persisted fields. To resolve such fields, you may either use Selector or Resolver plugins.
-
 
 ## Selector Plugins
 
@@ -596,28 +582,28 @@ The rules for Selector plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `selectors` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector.php
+  apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector
- 4. The plugin function must have the following signature: 
+  apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector
+ 4. The plugin function must have the following signature:
+
 ```php
 function function_name(
-	\Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
-	\Wedrix\Watchtower\Resolver\Node $node
+ \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+ \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\SelectorPlugin`.
 
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\SelectorPlugin`.
 
 ### Helpful Utilities
 
 The first function parameter `$queryBuilder` represents the query builder on which you can chain your own queries to resolve the computed field. It extends the interface for `\Doctrine\ORM\QueryBuilder` with these added functions to help you build the query:
- 
+
  1. Use `$queryBuilder->rootAlias()` to get the query's root entity alias.
  2. Use `$queryBuilder->reconciledAlias(string $alias)` to get an alias that's compatible with the rest of the query aliases. Use it to prevent name collisions.
 
 The second function parameter `$node` represents the particular query node being resolved in the query graph. Use it to determine the appropriate query to chain onto the builder.
-
 
 ## Resolver Plugins
 
@@ -639,11 +625,11 @@ function resolve_currency_exchange_rate_field(
     Node \$node
 ): mixed
 {
-	$exchangeRateResolver = $node->context()['exchangeRateResolver']; // Assuming the service was added to $contextValue when Executor::executeQuery() was called
+ $exchangeRateResolver = $node->context()['exchangeRateResolver']; // Assuming the service was added to $contextValue when Executor::executeQuery() was called
 
-	return $exchangeRateResolver->getExchangeRate(
-		currencyCode: $node->root()['isoCode']
-	);
+ return $exchangeRateResolver->getExchangeRate(
+  currencyCode: $node->root()['isoCode']
+ );
 }
 ```
 
@@ -653,22 +639,22 @@ The rules for Resolver plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `resolvers` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field.php
+  resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field
- 4. The plugin function must have the following signature: 
+  resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field
+ 4. The plugin function must have the following signature:
+
 ```php
 function function_name(
-	\Wedrix\Watchtower\Resolver\Node $node
+ \Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ResolverPlugin`.
 
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ResolverPlugin`.
 
 ### Valid Return Types
 
 Kindly note that values returned from a resolver function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float,` `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list.
-
 
 ## Resolving Abstract Types
 
@@ -681,22 +667,20 @@ function resolve_user(
     Node \$node
 ): mixed
 {
-	return [
-		'__typename' => 'Customer', // This indicates the concrete type, i.e., Customer
-		'name' => 'Sylvester',
-		'age' => '20 yrs',
-		'total_spent' => '40000' // This probably could only be applicable to the Customer type
-	];
+ return [
+  '__typename' => 'Customer', // This indicates the concrete type, i.e., Customer
+  'name' => 'Sylvester',
+  'age' => '20 yrs',
+  'total_spent' => '40000' // This probably could only be applicable to the Customer type
+ ];
 }
 ```
 
 Abstract types may be used with other operation types like Mutations and Subscriptions.
 
-
 # Filtering
 
 This library allows you to filter queries by chaining where conditions onto the builder. You can filter queries by entity attributes or relations - whatever is permissible by the builder. Filter Plugins are used to implement filters.
-
 
 ## Filter Plugins
 
@@ -734,41 +718,42 @@ The rules for Filter plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `filters` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter.php
+  apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter
- 4. The plugin function must have the following signature: 
+  apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter
+ 4. The plugin function must have the following signature:
+
 ```php
 function function_name(
-	\Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
-	\Wedrix\Watchtower\Resolver\Node $node
+ \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+ \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\FilterPlugin`.
 
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\FilterPlugin`.
 
 To use filters add them to the `filters` parameter of the `queryParams` argument. For instance:
 
 ```graphql
 type Query {
-	paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+ paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 input ProductsQueryParams {
-	filters: ProductsQueryFiltersParam, # Can be any user-defined input type
-	limit: Int!,
-	page: Int!,
+ filters: ProductsQueryFiltersParam, # Can be any user-defined input type
+ limit: Int!,
+ page: Int!,
 }
 
 input ProductsQueryFiltersParam {
-	ids: [String!],
-	isStocked: Boolean, # Another filter
+ ids: [String!],
+ isStocked: Boolean, # Another filter
 }
 
 type Product {
-	id: ID!,
-	name: String!,
-	bestSeller: Listing
+ id: ID!,
+ name: String!,
+ bestSeller: Listing
 }
 ```
 
@@ -776,20 +761,18 @@ You can then use them in queries like so:
 
 ```graphql
 query {
-	products: paginatedProducts(queryParams:{filters:{ids:[1,2,3]}}) {
-		name
-		bestSeller
-	}
+ products: paginatedProducts(queryParams:{filters:{ids:[1,2,3]}}) {
+  name
+  bestSeller
+ }
 }
 ```
 
 Kindly refer to the **Helpful Utilities** sections under **Selector Plugins** for helpful methods, using the builder.
 
-
 # Ordering
 
 This library allows you to order queries by chaining **order by** statements onto the builder. It also supports multiple ordering, where one ordering is applied after another to reorder matching elements. To implement orderings, use Ordering Plugins.
-
 
 ## Ordering Plugins
 
@@ -825,54 +808,55 @@ The rules for Ordering plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `orderings` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering.php
+  apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering
- 4. The plugin function must have the following signature: 
+  apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering
+ 4. The plugin function must have the following signature:
+
 ```php
 function function_name(
-	\Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
-	\Wedrix\Watchtower\Resolver\Node $node
+ \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+ \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\OrderingPlugin`.
 
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\OrderingPlugin`.
 
 To use orderings add them to the `ordering` parameter of the `queryParams` argument. For instance:
 
 ```graphql
 type Query {
-	paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+ paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 input ProductsQueryParams {
-	ordering: ProductsQueryOrderingParam, # Can be any user-defined input type
-	limit: Int!,
-	page: Int!,
+ ordering: ProductsQueryOrderingParam, # Can be any user-defined input type
+ limit: Int!,
+ page: Int!,
 }
 
 input ProductsQueryOrderingParam {
-	closest: ProductsQueryOrderingClosestParam, # Can also be any user-defined input type
-	oldest: ProductsQueryOrderingOldestParam, # Another ordering
+ closest: ProductsQueryOrderingClosestParam, # Can also be any user-defined input type
+ oldest: ProductsQueryOrderingOldestParam, # Another ordering
 }
 
 input ProductsQueryOrderingClosestParam {
-	rank: Int!, # This parmeter is required for all orderings
-	params: ProductsQueryOrderingClosestParamsParam! # This optional for parameterized orderings
+ rank: Int!, # This parmeter is required for all orderings
+ params: ProductsQueryOrderingClosestParamsParam! # This optional for parameterized orderings
 }
 
 input ProductsQueryOrderingClosestParamsParam {
-	location: Coordinates!
+ location: Coordinates!
 }
 
 input ProductsQueryOrderingOldestParam {
-	rank: Int!
+ rank: Int!
 }
 
 type Product {
-	id: ID!,
-	name: String!,
-	bestSeller: Listing
+ id: ID!,
+ name: String!,
+ bestSeller: Listing
 }
 ```
 
@@ -880,24 +864,24 @@ You can then use them in queries like so:
 
 ```graphql
 query {
-	products: paginatedProducts(
-		queryParams:{
-			ordering:{
-				oldest:{
-					rank:1
-				},
-				closest:{
-					rank:2,
-					params:{
-						locaton:"40.74684111541018,-73.98518096794233"
-					}
-				}
-			}
-		}
-	) {
-		name
-		bestSeller
-	}
+ products: paginatedProducts(
+  queryParams:{
+   ordering:{
+    oldest:{
+     rank:1
+    },
+    closest:{
+     rank:2,
+     params:{
+      locaton:"40.74684111541018,-73.98518096794233"
+     }
+    }
+   }
+  }
+ ) {
+  name
+  bestSeller
+ }
 }
 ```
 
@@ -907,11 +891,9 @@ You can also pass params to the ordering using the `params` parameter.
 
 Kindly refer to the **Helpful Utilities** sections under **Selector Plugins** for helpful methods, using the builder.
 
-
 # Mutations
 
 **Mutation** is a different operation type used to reliably change state in your application. Unlike queries, mutations are guaranteed to run in sequence, preventing any potential race conditions. However, just like queries, they can also return a data graph. This library supports mutations through Mutation Plugins.
-
 
 ## Mutation Plugins
 
@@ -954,56 +936,53 @@ The rules for Mutation plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `mutations` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 call_{***name of mutation in snake_case***}_mutation.php
+  call_{***name of mutation in snake_case***}_mutation.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 call_{***name of mutation in snake_case***}_mutation
- 4. The plugin function must have the following signature: 
+  call_{***name of mutation in snake_case***}_mutation
+ 4. The plugin function must have the following signature:
+
 ```php
 function function_name(
-	\Wedrix\Watchtower\Resolver\Node $node
+ \Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\MutationPlugin`.
 
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\MutationPlugin`.
 
 ### Valid Return Types
 
-Like with Resolver plugin functions, values returned from a mutation function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float,` `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list. 
-
+Like with Resolver plugin functions, values returned from a mutation function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float,` `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list.
 
 # Subscriptions
 
 **Subscription** is another GraphQL operation type that is used to subscribe to a stream of events from the server. Unlike queries and mutations, subscriptions send many results over an extended period of time. Thus, they require different plumbing from the normal HTTP request flow. This makes their implementation heavily reliant on architectural choices that are beyond the scope of this library. Nevertheless, the library supports subscriptions through Subscription Plugins that act as connectors to the underlying application's implementation for transport, message brokering, etc.
 
-
 ## Subscription Plugins
 
 Subscription plugins act as connectors to your application's implementation of subscriptions.  The rules for creating Subscription Plugins are as follows:
-
 
 ### Rules
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `subscriptions` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 call_{***name of subscription in snake_case***}_subscription.php
+  call_{***name of subscription in snake_case***}_subscription.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 call_{***name of subscription in snake_case***}_subscription
- 4. The plugin function must have the following signature: 
+  call_{***name of subscription in snake_case***}_subscription
+ 4. The plugin function must have the following signature:
+
 ```php
 function function_name(
-	\Wedrix\Watchtower\Resolver\Node $node
+ \Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
+
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\SubscriptionPlugin`.
 
-
 Kindly refer to the [GraphQL spec](https://spec.graphql.org/October2021/#sec-Subscription) for the requirements of a Subscription implementation.
-
 
 # Authorization
 
 Authorization allows you to you to approve results. This library handles authorization based on user-defined rules for individual node/collection types. These rules apply to all operation type results, including, Queries, Mutations, and Subscriptions. You write an authorization once and can be guaranteed that it will apply to all results. This library supports authorization through Authorization Plugins.
-
 
 ## Authorization Plugins
 
@@ -1023,15 +1002,15 @@ use Wedrix\Watchtower\Resolver\Result;
 use function array\any_in_array;
 
 function authorize_customer_result(
-	Result $result,
+ Result $result,
     Node $node
 ): void
 {
     $user = new Session(
-		request: $node->context()['request'] ?? throw new \Exception("Invalid context value! Unset request."),
-		response: $node->context()['response'] ?? throw new \Exception("Invalid context value! Unset response.")
-	)
-	->user();
+  request: $node->context()['request'] ?? throw new \Exception("Invalid context value! Unset request."),
+  response: $node->context()['response'] ?? throw new \Exception("Invalid context value! Unset response.")
+ )
+ ->user();
 
     if (
         any_in_array(
@@ -1050,24 +1029,24 @@ The rules for Authorization plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `authorizors` sub-folder.
  2. The script file's name must follow the following naming format:  
-	 authorize_{***name of node (pluralized if for collections) in snake_case***}_result.php
+  authorize_{***name of node (pluralized if for collections) in snake_case***}_result.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-	 authorize_{***name of node (pluralized if for collections) in snake_case***}_result
- 4. The plugin function must have the following signature: 
+  authorize_{***name of node (pluralized if for collections) in snake_case***}_result
+ 4. The plugin function must have the following signature:
+
 ```php
 function function_name(
-	\Wedrix\Watchtower\Resolver\Result $result,
-	\Wedrix\Watchtower\Resolver\Node $node
+ \Wedrix\Watchtower\Resolver\Result $result,
+ \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
+
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
 6. The authorization plugin function must throw an exception when the authorization fails.
-
 
 # Security
 
 Kindly follow the [graphql-php manual](https://webonyx.github.io/graphql-php/security/) for directions on securing your GraphQL API. Most of the library's security APIs are compatible with this library since they are mostly static, allowing for external configuration.
-
 
 # Known Issues
 
@@ -1077,26 +1056,22 @@ This section details some of the known issues relating to this library's usage a
 
 This library is susceptible to the [N + 1 problem](https://techdozo.dev/spring-for-graphql-how-to-solve-the-n1-problem/). However, for most use-cases, this shouldn't pose too much of a problem with current database solutions. You may however start to face performance issues when using Resolver Plugins to make external API calls. For such use-cases, we recommend using an async-capable HTTP client paired with a query batching solution like [Dataloader](https://github.com/overblog/dataloader-php) to mitigate network latency bottlenecks.
 
-
 ## Case Sensitivity & Naming
 
 GraphQL names are case-sensitive as detailed by the [spec](https://spec.graphql.org/October2021/#sec-Names). However, since [PHP names are case-insensitive](https://www.php.net/manual/en/language.namespaces.rationale.php), we cannot follow this spec requirement. Kindly note that using case-sensitive names with this library may lead to erratic undefined behaviour.
-
 
 ## Aliasing Parameterized Fields
 
 There is currently an [open issue](https://github.com/webonyx/graphql-php/issues/1072) in graphql-php that prevents this library from properly resolving a parameterized field passed different arguments. This should probably be fixed in the next major release of graphql-php. Until then, kindly take note of this issue when using aliases.  
 
-
 # Versioning
 
-This project follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html). 
+This project follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.html).
 
 The intended public API elements are marked with the `@api` PHPDoc tag, and are guaranteed to be stable within minor version changes. All other elements are
 not part of this backwards compatibility promise and may change between minor or patch versions.
 
 Check [here](https://github.com/Wedrix/watchtower/releases) for all published releases.
-
 
 # Contributing
 
@@ -1104,15 +1079,13 @@ For new features or contributions that propose significant breaking changes, kin
 
 For smaller contributions involving bug fixes and patches:
 
--   Fork the project.
--   Make your changes.
--   Create a Pull Request.
-
+- Fork the project.
+- Make your changes.
+- Create a Pull Request.
 
 # Reporting Vulnerabilities
 
 In case you discover a security vulnerability, kindly send an e-mail to the maintainer via [wedamja@gmail.com](mailto:wedamja@gmail.com). Security vulnerabilities will be promptly addressed.
-
 
 # License
 
