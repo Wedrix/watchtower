@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use function Wedrix\Watchtower\string\pluralize;
-use function Wedrix\Watchtower\string\singularize;
+use function Wedrix\Watchtower\pluralize;
+use function Wedrix\Watchtower\singularize;
 
 /**
  * @implements \IteratorAggregate<int,PluginInfo>

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use function Wedrix\Watchtower\array\all_in_array;
+use function Wedrix\Watchtower\all_in_array;
 
 final class FindQuery implements Query
 {

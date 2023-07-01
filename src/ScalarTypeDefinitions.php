@@ -6,8 +6,8 @@ namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
 
-use function Wedrix\Watchtower\string\classify;
-use function Wedrix\Watchtower\string\tableize;
+use function Wedrix\Watchtower\classify;
+use function Wedrix\Watchtower\tableize;
 
 /**
  * @implements \IteratorAggregate<int,GenericScalarTypeDefinition>

@@ -6,7 +6,7 @@ namespace Wedrix\Watchtower\ScalarTypeDefinition;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
 
-use function Wedrix\Watchtower\string\classify;
+use function Wedrix\Watchtower\classify;
 
 final class GenericScalarTypeDefinition implements ScalarTypeDefinition
 {

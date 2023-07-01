@@ -6,7 +6,7 @@ namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
-use function Wedrix\Watchtower\string\tableize;
+use function Wedrix\Watchtower\tableize;
 
 final class MutationPlugin implements Plugin
 {

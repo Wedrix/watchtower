@@ -18,8 +18,8 @@ use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Utils\InterfaceImplementations;
 
-use function Wedrix\Watchtower\string\camelize;
-use function Wedrix\Watchtower\string\pluralize;
+use function Wedrix\Watchtower\camelize;
+use function Wedrix\Watchtower\pluralize;
 
 final class SyncedQuerySchema extends SchemaType
 {

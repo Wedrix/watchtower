@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\array;
+namespace Wedrix\Watchtower;
 
 /**
  * @param array<int|string,mixed> $needles
