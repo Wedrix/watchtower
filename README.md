@@ -51,31 +51,17 @@ This library is inspired by similar others created for different platforms:
 
     composer require wedrix/watchtower
 
-# Demo Application  
+## Symfony
 
-You can test out this package using the demo application:
+The documentation for the Symfony bundle is avaiable [here](https://github.com/Wedrix/watchtower-symfony-bundle). Kindly view it for the appropriate installation steps for Symfony.
 
-1. Install [Symfony CLI](https://symfony.com/doc/current/setup.html)
-2. Navigate to an appropriate directory on your filesystem
-3. Clone the repository:  
+## Demo Application  
 
-  git clone https://github.com/Wedrix/watchtower-demo.git
-4. Navigate to the repository directory:  
-
-  cd watchtower_demo
-5. Install the packages:  
-
-  composer install
-4. Start the symfony server:  
-
-  symfony server:start
-5. Install an appropriate GraphQL client.
- For example, [ChromeiQL](https://chrome.google.com/webstore/detail/chromeiql/fkkiamalmpiidkljmicmjfbieiclmeij).
-6. The API is accessible at <http://localhost:8000/en/graphql.json>
+The demo application, written for Symfony, allows you to test out the various features of this package. The documentation is available [here](https://github.com/Wedrix/watchtower-symfony-demo-application).
 
 # Usage
 
-This library has two main components:
+This library is composed of two main components:
 
  1. The Executor component `Wedrix\Watchtower\Executor`, responsible for auto-resolving queries.
  2. The Console component `Wedrix\Watchtower\Console`, responsible for code generation, schema management, and plugin management.
@@ -153,11 +139,11 @@ $app->post(
 $app->run();
 ```
 
-The Console component on the other hand, should be used in a cli-tool to offer convenience services like code generation during development. Check out the [Symfony Flex recipe](https://github.com/symfony/recipes-contrib/tree/main/wedrix/watchtower/1.0/Command) for an example usage in Symfony.
+The Console component on the other hand, should be used in a cli tool to offer convenience services like code generation during development. Check out the [Symfony bundle](https://github.com/Wedrix/watchtower-symfony-bundle) for an example usage.
 
 # Schema
 
-This library relies on a schema file written in the Schema Definition Language (SDL) to describe the service's type system. For a quick primer on the SDL, check out [this](https://wehavefaces.net/graphql-shorthand-notation-cheatsheet-17cd715861b6) article.
+This library relies on a schema file written in the Schema Definition Language (SDL) to describe the service's type system. For a quick primer on the SDL, check out [this](https://wehavefaces.net/graphql-shorthand-notation-cheatsheet-17cd715861b6) article by Hafiz Ismail.
 
 The library supports the complete GraphQL type system through the SDL and is able to auto-resolve Doctrine entities and relations, even collections, out-of-the-box. However, some extra steps are needed for certain features to be fully functional.
 
