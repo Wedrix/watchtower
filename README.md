@@ -465,17 +465,18 @@ The console component comes with the helper method `generateSchema()` which may 
 
 Kindly take note of the following when using the schema generator:
 
- 1. The generator only creates a schema for Query operation. It does not create any Mutations or Subscriptions. Those must be added manually.
- 2. The generator is able to only resolve the following Doctrine types:
+ 1. The generator only generates Query operations. It does not generate any Mutation or Subscription operations - those must be added in manually.
+ 2. The generator auto-generates the scalar type definitions for the custom types: `DateTime`, `Page`, and `Limit` if they do not already exist.
+ 3. The generator is able to only resolve the following Doctrine types:
 
     - All [interger types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
     - All [decimal types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#decimal-types) - resolve to GraphQL's `Float` type.
     - All [string types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#string-types) - resolve to GraphQL's `String` type.
-    - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to a custom `Date` type that extends the `String` type.
+    - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to the custom `DateTime` type (auto-generated if it doesn't already exist).
 
- 3. The generator skips all fields having scalar types different from the above types. You must add those manually, with their corresponding Scalar Type Definitions.
- 4. The generator only resolves actual fields that correspond to database columns. All other fields must be added manually, as either computed or resolved fields.
- 5. The generator is not able to properly ascertain the nullability of embedded types and relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
+ 4. The generator skips all fields having scalar types different from the above-mentioned types. You must manually add those in, with their corresponding Scalar Type Definitions.
+ 5. The generator only resolves actual fields that correspond to database columns. All other fields must be added in manually, as either Computed or Resolved fields.
+ 6. The generator is not able to properly ascertain the nullability of Embedded Types and Relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
 
 ## Updating the Schema
 
