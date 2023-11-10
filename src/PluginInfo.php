@@ -16,7 +16,7 @@ final class PluginInfo
     {
         $this->name = \explode('.php', $pluginFile->getBasename())[0];
 
-        $this->type = singularize(\explode(\DIRECTORY_SEPARATOR, $pluginFile->getPath())[0]);
+        $this->type = singularize(\array_slice(\explode(\DIRECTORY_SEPARATOR, $pluginFile->getPath()), -1)[0]);
     }
 
     public function name(): string
