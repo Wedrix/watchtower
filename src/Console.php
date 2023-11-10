@@ -64,9 +64,9 @@ final class Console
 
         $this->schemaCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
 
-        $this->schemaTypeDefinitionsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'_type_definitions.php';
+        $this->schemaTypeDefinitionsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
 
-        $this->pluginsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'_plugins.php';
+        $this->pluginsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
     }
 
     public function scalarTypeDefinitions(): ScalarTypeDefinitions

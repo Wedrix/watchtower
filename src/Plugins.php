@@ -9,10 +9,7 @@ namespace Wedrix\Watchtower;
  */
 final class Plugins implements \IteratorAggregate
 {
-    /**
-     * @var array<string>
-     */
-    private readonly array $cachedFiles;
+    private readonly string $cacheFile;
 
     public function __construct(
         private readonly string $directory,
@@ -24,17 +21,19 @@ final class Plugins implements \IteratorAggregate
             throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
         }
 
-        if ($this->optimize) {
-            $this->cachedFiles = require $this->cacheDirectory.\DIRECTORY_SEPARATOR."_plugins.php";
-        }
+        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
     }
 
     public function contains(
         Plugin $plugin
     ): bool
     {
+        static $filesCache;
+
         if ($this->optimize) {
-            return \in_array($this->filePath($plugin), $this->cachedFiles);
+            $filesCache ??= require $this->cacheFile;
+
+            return \in_array($this->filePath($plugin), $filesCache);
         }
 
         return \file_exists(

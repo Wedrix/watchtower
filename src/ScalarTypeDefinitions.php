@@ -11,10 +11,7 @@ use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
  */
 final class ScalarTypeDefinitions implements \IteratorAggregate
 {
-    /**
-     * @var array<string>
-     */
-    private readonly array $cachedFiles;
+    private readonly string $cacheFile;
 
     public function __construct(
         private readonly string $directory,
@@ -26,17 +23,19 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
             throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
         }
 
-        if ($this->optimize) {
-            $this->cachedFiles = require $this->cacheDirectory.\DIRECTORY_SEPARATOR."_type_definitions.php";
-        }
+        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
     }
 
     public function contains(
         ScalarTypeDefinition $scalarTypeDefinition
     ): bool
     {
+        static $filesCache;
+
         if ($this->optimize) {
-            return \in_array($this->filePath($scalarTypeDefinition), $this->cachedFiles);
+            $filesCache ??= require $this->cacheFile;
+
+            return \in_array($this->filePath($scalarTypeDefinition), $filesCache);
         }
 
         return \file_exists(
