@@ -29,7 +29,7 @@ final class AuthorizedResult implements Result
                 );
         
                 if ($this->plugins->contains($authorizorPlugin)) {
-                    require_once $this->plugins->directory($authorizorPlugin);
+                    require_once $this->plugins->filePath($authorizorPlugin);
         
                     $authorizorPlugin->callback()($this->result, $this->node);
                 }

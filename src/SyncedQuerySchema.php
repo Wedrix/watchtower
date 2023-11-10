@@ -330,18 +330,6 @@ final class SyncedQuerySchema extends SchemaType
                     ->getImplementations($abstractType);
     }
 
-    /**
-     * @inheritdoc
-     */
-    public function isPossibleType(
-        AbstractType $abstractType, 
-        ObjectType $possibleType
-    ): bool
-    {
-        return $this->schema
-                    ->isPossibleType($abstractType, $possibleType);
-    }
-
     public function isSubType(
         AbstractType $abstractType, 
         ImplementingType $maybeSubType

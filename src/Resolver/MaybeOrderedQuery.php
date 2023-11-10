@@ -49,7 +49,7 @@ final class MaybeOrderedQuery implements Query
                             throw new \Exception("Invalid query. No ordering plugin exists for '$orderingName'.");
                         }
 
-                        require_once $this->plugins->directory($orderingPlugin);
+                        require_once $this->plugins->filePath($orderingPlugin);
     
                         $orderingPlugin->callback()($queryBuilder, $this->node);
                     }

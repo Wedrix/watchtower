@@ -6,20 +6,28 @@ namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
 
-use function Wedrix\Watchtower\classify;
-use function Wedrix\Watchtower\tableize;
-
 /**
  * @implements \IteratorAggregate<int,GenericScalarTypeDefinition>
  */
 final class ScalarTypeDefinitions implements \IteratorAggregate
 {
+    /**
+     * @var array<string>
+     */
+    private readonly array $cachedFiles;
+
     public function __construct(
-        private readonly string $directory
+        private readonly string $directory,
+        private readonly string $cacheDirectory,
+        private readonly bool $optimize
     )
     {
         if (!\is_dir($this->directory)) {
             throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
+        }
+
+        if ($this->optimize) {
+            $this->cachedFiles = require $this->cacheDirectory.\DIRECTORY_SEPARATOR."_type_definitions.php";
         }
     }
 
@@ -27,12 +35,16 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         ScalarTypeDefinition $scalarTypeDefinition
     ): bool
     {
+        if ($this->optimize) {
+            return \in_array($this->filePath($scalarTypeDefinition), $this->cachedFiles);
+        }
+
         return \file_exists(
-            $this->directory($scalarTypeDefinition)
+            $this->filePath($scalarTypeDefinition)
         );
     }
 
-    public function directory(
+    public function filePath(
         ScalarTypeDefinition $scalarTypeDefinition
     ): string
     {
@@ -48,7 +60,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         }
 
         \file_put_contents(
-            filename: $this->directory($scalarTypeDefinition),
+            filename: $this->filePath($scalarTypeDefinition),
             data: $scalarTypeDefinition->template(),
         );
     }

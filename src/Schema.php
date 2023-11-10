@@ -18,7 +18,6 @@ use GraphQL\Type\Definition\AbstractType;
 use GraphQL\Type\Definition\Directive;
 use GraphQL\Type\Definition\ImplementingType;
 use GraphQL\Type\Definition\InterfaceType;
-use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Utils\InterfaceImplementations;
@@ -38,11 +37,11 @@ final class Schema extends SchemaType
     public function __construct(
         private readonly string $sourceFile, 
         private readonly string $cacheDirectory,
-        private readonly bool $isCached,
+        private readonly bool $optimize,
         private readonly ScalarTypeDefinitions $scalarTypeDefinitions
     )
     {
-        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR."{$this->sourceFile}.php";
+        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
 
         $this->schema = static::$schemas[$sourceFile] ??= (function (): SchemaType {
             /**
@@ -60,10 +59,10 @@ final class Schema extends SchemaType
     
                     if (!$this->scalarTypeDefinitions->contains($scalarTypeDefinition)) {
                         throw new \LogicException("The type definition for '$typeName' does not exist.
-                            Kindly create it in '{$this->scalarTypeDefinitions->directory($scalarTypeDefinition)}'.");
+                            Kindly create it in '{$this->scalarTypeDefinitions->filePath($scalarTypeDefinition)}'.");
                     }
 
-                    require_once $this->scalarTypeDefinitions->directory($scalarTypeDefinition);
+                    require_once $this->scalarTypeDefinitions->filePath($scalarTypeDefinition);
     
                     $typeConfig = \array_merge($typeConfig, [
                         'serialize' => $scalarTypeDefinition->namespace().'\\serialize',
@@ -91,33 +90,21 @@ final class Schema extends SchemaType
             };
     
             $AST = (function (): DocumentNode {
-                $document = Parser::parse(
-                    source: \is_string($schemaFileContents = \file_get_contents($this->sourceFile)) 
-                                ? $schemaFileContents 
-                                : throw new \Exception("Unable to read the schema file '{$this->sourceFile}'.")
-                );
-
-                if ($this->isCached) {
-                    if (!\file_exists($this->cacheFile)) {
-                        $dirname = \pathinfo($this->cacheFile)['dirname'] ?? '';
-        
-                        if (!\is_dir($dirname)) {
-                            \mkdir(directory: $dirname, recursive: true);
-                        }
-        
-                        \file_put_contents($this->cacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
-    
-                        return $document;
-                    }
-
+                if ($this->optimize) {
                     $document = AST::fromArray(require $this->cacheFile);
 
                     if (!$document instanceof DocumentNode) {
                         throw new \Exception('Invalid schema. Could not be parsed as a document node.');
                     }
-                }
 
-                return $document;
+                    return $document;
+                }
+                
+                return Parser::parse(
+                    source: \is_string($schemaFileContents = \file_get_contents($this->sourceFile)) 
+                                ? $schemaFileContents 
+                                : throw new \Exception("Unable to read the schema file '{$this->sourceFile}'.")
+                );
             })();
             
             return BuildSchema::build($AST, $typeConfigDecorator);
@@ -198,18 +185,6 @@ final class Schema extends SchemaType
     {
         return $this->schema
                     ->getImplementations($abstractType);
-    }
-
-    /**
-     * @inheritdoc
-     */
-    public function isPossibleType(
-        AbstractType $abstractType, 
-        ObjectType $possibleType
-    ): bool
-    {
-        return $this->schema
-                    ->isPossibleType($abstractType, $possibleType);
     }
 
     public function isSubType(

@@ -40,7 +40,7 @@ final class MaybeFilteredQuery implements Query
                             throw new \Exception("Invalid query. No filter plugin exists for '$filterName'.");
                         }
 
-                        require_once $this->plugins->directory($filterPlugin);
+                        require_once $this->plugins->filePath($filterPlugin);
                         
                         $filterPlugin->callback()($queryBuilder, $this->node);
                     }

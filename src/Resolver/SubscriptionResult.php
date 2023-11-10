@@ -30,7 +30,7 @@ final class SubscriptionResult implements Result
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {
-                require_once $this->plugins->directory($this->plugin);
+                require_once $this->plugins->filePath($this->plugin);
 
                 return $this->plugin->callback()($this->node);
             }

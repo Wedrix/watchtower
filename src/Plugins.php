@@ -4,20 +4,28 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use function Wedrix\Watchtower\pluralize;
-use function Wedrix\Watchtower\singularize;
-
 /**
  * @implements \IteratorAggregate<int,PluginInfo>
  */
 final class Plugins implements \IteratorAggregate
 {
+    /**
+     * @var array<string>
+     */
+    private readonly array $cachedFiles;
+
     public function __construct(
-        private readonly string $directory
+        private readonly string $directory,
+        private readonly string $cacheDirectory,
+        private readonly bool $optimize
     )
     {
         if (!\is_dir($this->directory)) {
             throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
+        }
+
+        if ($this->optimize) {
+            $this->cachedFiles = require $this->cacheDirectory.\DIRECTORY_SEPARATOR."_plugins.php";
         }
     }
 
@@ -25,13 +33,17 @@ final class Plugins implements \IteratorAggregate
         Plugin $plugin
     ): bool
     {
+        if ($this->optimize) {
+            return \in_array($this->filePath($plugin), $this->cachedFiles);
+        }
+
         return \file_exists(
-            $this->directory($plugin)
+            $this->filePath($plugin)
         );
     }
 
-    public function directory(
-        Plugin $plugin
+    public function filePath(
+        Plugin|PluginInfo $plugin
     ): string
     {
         return $this->directory.\DIRECTORY_SEPARATOR
@@ -48,7 +60,7 @@ final class Plugins implements \IteratorAggregate
         }
 
         \file_put_contents(
-            filename: $this->directory($plugin),
+            filename: $this->filePath($plugin),
             data: $plugin->template(),
         );
     }
@@ -68,31 +80,5 @@ final class Plugins implements \IteratorAggregate
                 pluginFile: $pluginFile
             );
         }
-    }
-}
-
-final class PluginInfo
-{
-    private readonly string $name;
-
-    private readonly string $type;
-
-    public function __construct(
-        \SplFileInfo $pluginFile
-    )
-    {
-        $this->name = \explode('.php', $pluginFile->getBasename())[0];
-
-        $this->type = singularize(\explode(\DIRECTORY_SEPARATOR, $pluginFile->getPath())[0]);
-    }
-
-    public function name(): string
-    {
-        return $this->name;
-    }
-
-    public function type(): string
-    {
-        return $this->type;
     }
 }

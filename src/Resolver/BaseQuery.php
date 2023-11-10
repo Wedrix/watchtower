@@ -103,7 +103,7 @@ final class BaseQuery implements Query
                     );
         
                     if ($this->plugins->contains($selectorPlugin)) {
-                        require_once $this->plugins->directory($selectorPlugin);
+                        require_once $this->plugins->filePath($selectorPlugin);
 
                         $selectorPlugin->callback()($queryBuilder, $this->node);
                     }

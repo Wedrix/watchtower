@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower;
 
 use Doctrine\ORM\EntityManagerInterface;
+use GraphQL\Language\Parser;
+use GraphQL\Utils\AST;
 use GraphQL\Utils\SchemaPrinter;
 use Wedrix\Watchtower\Plugin\AuthorizorPlugin;
 use Wedrix\Watchtower\Plugin\FilterPlugin;
@@ -29,30 +31,52 @@ final class Console
 
     private readonly string $schemaCacheFile;
 
+    private readonly string $schemaTypeDefinitionsCacheFile;
+
+    private readonly string $pluginsCacheFile;
+
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
      * @param string $schemaFile The schema file.
      * @param string $pluginsDirectory The plugin functions' directory.
      * @param string $scalarTypeDefinitionsDirectory The scalar types' definitions' directory.
-     * @param string $schemaCacheDirectory The schema's generated cache file's directory.
+     * @param string $cacheDirectory The directory for storing cache files.
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly string $schemaFile,
         private readonly string $pluginsDirectory,
         private readonly string $scalarTypeDefinitionsDirectory,
-        private readonly string $schemaCacheDirectory
+        private readonly string $cacheDirectory
     )
     {
         $this->plugins = new Plugins(
-            directory: $this->pluginsDirectory
+            directory: $this->pluginsDirectory,
+            cacheDirectory: $this->cacheDirectory,
+            optimize: true
         );
 
         $this->scalarTypeDefinitions = new ScalarTypeDefinitions(
-            directory: $this->scalarTypeDefinitionsDirectory
+            directory: $this->scalarTypeDefinitionsDirectory,
+            cacheDirectory: $this->cacheDirectory,
+            optimize: true
         );
 
-        $this->schemaCacheFile = $this->schemaCacheDirectory.\DIRECTORY_SEPARATOR."{$this->schemaFile}.php";
+        $this->schemaCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
+
+        $this->schemaTypeDefinitionsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'_type_definitions.php';
+
+        $this->pluginsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'_plugins.php';
+    }
+
+    public function scalarTypeDefinitions(): ScalarTypeDefinitions
+    {
+        return $this->scalarTypeDefinitions;
+    }
+
+    public function plugins(): Plugins
+    {
+        return $this->plugins;
     }
 
     public function generateSchema(): void
@@ -111,11 +135,6 @@ final class Console
                     typeName: $typeName
                 )
             );
-    }
-
-    public function scalarTypeDefinitions(): ScalarTypeDefinitions
-    {
-        return $this->scalarTypeDefinitions;
     }
 
     public function addFilterPlugin(
@@ -212,8 +231,75 @@ final class Console
             );
     }
 
-    public function plugins(): Plugins
+    public function generateCache(): void
     {
-        return $this->plugins;
+        // Update Schema cache
+        {
+            if (\file_exists($this->schemaCacheFile)) {
+                \unlink($this->schemaCacheFile);
+            }
+
+            $document = Parser::parse(
+                source: \is_string($schemaFileContents = \file_get_contents($this->schemaFile)) 
+                            ? $schemaFileContents 
+                            : throw new \Exception("Unable to read the schema file '{$this->schemaFile}'.")
+            );
+
+            $dirname = \pathinfo($this->schemaCacheFile)['dirname'] ?? '';
+
+            if (!\is_dir($dirname)) {
+                \mkdir(directory: $dirname, recursive: true);
+            }
+
+            \file_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
+        }
+
+        // Update Scalar Type Definitions cache
+        {
+            if (\file_exists($this->schemaTypeDefinitionsCacheFile)) {
+                \unlink($this->schemaTypeDefinitionsCacheFile);
+            }
+
+            $scalarTypeDefinitions = \var_export(
+                value: \array_map(
+                    fn(ScalarTypeDefinition $scalarTypeDefinition) => $this->scalarTypeDefinitions->filePath($scalarTypeDefinition),
+                    \iterator_to_array($this->scalarTypeDefinitions)
+                ),
+                return: true
+            );
+
+            \file_put_contents(
+                $this->schemaTypeDefinitionsCacheFile,
+                <<<EOD
+                <?php
+
+                return $scalarTypeDefinitions;
+                EOD
+            );
+        }
+
+        // Update Plugins cache
+        {
+            if (\file_exists($this->pluginsCacheFile)) {
+                \unlink($this->pluginsCacheFile);
+            }
+
+            $plugins = \var_export(
+                value: \array_map(
+                    fn(PluginInfo $pluginInfo) => $this->plugins->filePath($pluginInfo),
+                    \iterator_to_array($this->plugins)
+                ),
+                return: true
+            );
+
+            \file_put_contents(
+                $this->pluginsCacheFile,
+                <<<EOD
+                <?php
+
+                return $plugins;
+                EOD
+            );
+        }
     }
 }

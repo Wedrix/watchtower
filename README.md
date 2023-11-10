@@ -16,6 +16,7 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
 - [Mutations](#mutations)
 - [Subscriptions](#subscriptions)
 - [Authorization](#authorization)
+- [Optimization](#optimization)
 - [Security](#security)
 - [Known Issues](#known-issues)
 - [Versioning](#versioning)
@@ -96,12 +97,12 @@ $app->post(
   * configuration objects. 
   **/
   $executor = new Executor(
-   entityManager: new EntityManager(), // Either as a Singleton or from some DI container
+   entityManager: $entityManager, // Either as a Singleton or from some DI container
    schemaFile: __DIR__ . '/resources/graphql/schema.graphql',
    pluginsDirectory: __DIR__ . '/resources/graphql/plugins',
    scalarTypeDefinitionsDirectory: __DIR__. '/resources/graphql/scalar_type_definitions',
-   cachesSchema: true, // Should be false in dev environment
-   schemaCacheDirectory: __DIR__ . '/var/cache'
+   optimize: true, // Should be false in dev environment
+   cacheDirectory: __DIR__ . '/var/cache'
   );
    
   $response->getBody()
@@ -268,7 +269,7 @@ To facilitate speedy development, the Console component offers the convenience m
 
 ### Finding Entities
 
-To find a particular entity, you must add the argument(s) that corresponds to the primary key(s) of that entity to the corresponding field definition in the schema file. For example, for the given schema:
+To find a particular entity, you must pass the argument(s) that correspond to one of its unique keys to the corresponding field in the document. For example, for the given schema:
 
 ```graphql
 type Query {
@@ -334,7 +335,7 @@ resolves the product with id **1**, its best seller, and all the corresponding l
 
 ### Pagination
 
-By default, the complete result-set for a collection relation is returned. To enable pagination for a particular relation, all you have to do is add the `queryParams` input parameter to the corresponding field definition in the schema file. For example:
+By default, the complete result-set for a collection relation is returned. To enable pagination for a particular relation, all you have to do is pass the `queryParams` argument to the corresponding field in the document. For example:
 
 ```graphql
 type Query {
@@ -1030,6 +1031,12 @@ function function_name(
 
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
 6. The authorization plugin function must throw an exception when the authorization fails.
+
+# Optimization
+
+To optimize the executor for production, pass `true` as the argument for the `optimize` parameter of the Executor and generate the cache before-hand using the `Console::generateCache()` method.  
+Running in 'optimize' mode, the Executor only relies on the cache as the authoritative souce for the Schema file, Plugin files, and the Scalar Type Definition files.  
+Note that the cache is never updated at runtime so it must be generated before-hand and kept up to date with changes in the source using Console::generateCache().  
 
 # Security
 

@@ -4,12 +4,8 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use function Wedrix\Watchtower\all_in_array;
-
 final class FindQuery implements Query
 {
-    private readonly EntityManager $entityManager;
-
     private readonly bool $isWorkable;
 
     private readonly QueryBuilder $queryBuilder;
@@ -19,8 +15,6 @@ final class FindQuery implements Query
         private readonly Node $node
     )
     {
-        $this->entityManager = $this->query->builder()->getEntityManager();
-
         $this->isWorkable = $this->node->isTopLevel() 
             && $this->node->operation() === 'query'
             && $this->query->isWorkable();
@@ -29,21 +23,7 @@ final class FindQuery implements Query
             $queryBuilder = $this->query->builder();
 
             if ($this->isWorkable) {
-                $args = $this->node->args();
-
-                $idFields = $this->entityManager->findEntity(name: $this->node->unwrappedType())->idFields();
-
-                if (!all_in_array($idFields, \array_keys($args))) {
-                    throw new \Exception("Invalid query! Primary key arguments are required for this kind of query.");
-                }
-
-                $idArgs = \array_filter(
-                    $args,
-                    fn (string $argName) => \in_array($argName, $idFields),
-                    \ARRAY_FILTER_USE_KEY
-                );
-    
-                foreach ($idArgs as $idField => $idValue) {
+                foreach ($this->node->args() as $idField => $idValue) {
                     $valueAlias = $queryBuilder->reconciledAlias("__{$idField}Value");
         
                     $queryBuilder->andWhere(

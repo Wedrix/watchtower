@@ -25,17 +25,17 @@ final class Executor
      * @param string $schemaFile The schema file.
      * @param string $pluginsDirectory The plugin functions' directory.
      * @param string $scalarTypeDefinitionsDirectory The scalar types' definitions' directory.
-     * @param bool $cachesSchema Whether this executor caches the schema for improved perfomance.
-     *       Note that you will have to run Console::updateSchema() to reflect any changes.
-     * @param string $schemaCacheDirectory The schema's generated cache file's directory.
+     * @param bool $optimize Use the cache for improved perfomance. 
+     *      Note: You must run Console::generateCache() to create the cache with the latest changes.
+     * @param string $cacheDirectory The directory for storing cache files.
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly string $schemaFile,
         private readonly string $pluginsDirectory,
         private readonly string $scalarTypeDefinitionsDirectory,
-        private readonly bool $cachesSchema,
-        private readonly string $schemaCacheDirectory
+        private readonly bool $optimize,
+        private readonly string $cacheDirectory
     )
     {
         if (!\file_exists($this->schemaFile)) {
@@ -44,17 +44,21 @@ final class Executor
 
         $this->schema = new Schema(
             sourceFile: $this->schemaFile,
-            cacheDirectory: $this->schemaCacheDirectory,
-            isCached: $this->cachesSchema,
+            cacheDirectory: $this->cacheDirectory,
+            optimize: $this->optimize,
             scalarTypeDefinitions: new ScalarTypeDefinitions(
-                directory: $this->scalarTypeDefinitionsDirectory
+                directory: $this->scalarTypeDefinitionsDirectory,
+                cacheDirectory: $this->cacheDirectory,
+                optimize: $this->optimize
             )
         );
 
         $this->resolver = new Resolver(
             entityManager: $this->entityManager,
             plugins: new Plugins(
-                directory: $this->pluginsDirectory
+                directory: $this->pluginsDirectory,
+                cacheDirectory: $this->cacheDirectory,
+                optimize: $this->optimize
             )
         );
     }
