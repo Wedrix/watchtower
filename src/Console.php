@@ -53,13 +53,13 @@ final class Console
         $this->plugins = new Plugins(
             directory: $this->pluginsDirectory,
             cacheDirectory: $this->cacheDirectory,
-            optimize: true
+            optimize: false
         );
 
         $this->scalarTypeDefinitions = new ScalarTypeDefinitions(
             directory: $this->scalarTypeDefinitionsDirectory,
             cacheDirectory: $this->cacheDirectory,
-            optimize: true
+            optimize: false
         );
 
         $this->schemaCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
