@@ -54,7 +54,7 @@ final class Plugins implements \IteratorAggregate
             throw new \Exception("The plugin '{$plugin->name()}' already exists.");
         }
 
-        \file_put_contents(
+        file_force_put_contents(
             filename: $this->filePath($plugin),
             data: $plugin->template(),
         );

@@ -54,7 +54,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
             throw new \Exception("The type definition for '{$scalarTypeDefinition->typeName()}' already exists.");
         }
 
-        \file_put_contents(
+        file_force_put_contents(
             filename: $this->filePath($scalarTypeDefinition),
             data: $scalarTypeDefinition->template(),
         );

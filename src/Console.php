@@ -85,7 +85,7 @@ final class Console
             throw new \Exception('A schema file already exists.');
         }
 
-        \file_put_contents(
+        file_force_put_contents(
             filename: $this->schemaFile,
             data: SchemaPrinter::doPrint(
                 schema: new SyncedQuerySchema(
@@ -251,7 +251,7 @@ final class Console
                 \mkdir(directory: $dirname, recursive: true);
             }
 
-            \file_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
+            file_force_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
         }
 
         // Update Scalar Type Definitions cache
@@ -268,7 +268,7 @@ final class Console
                 return: true
             );
 
-            \file_put_contents(
+            file_force_put_contents(
                 $this->schemaTypeDefinitionsCacheFile,
                 <<<EOD
                 <?php
@@ -292,7 +292,7 @@ final class Console
                 return: true
             );
 
-            \file_put_contents(
+            file_force_put_contents(
                 $this->pluginsCacheFile,
                 <<<EOD
                 <?php
