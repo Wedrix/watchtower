@@ -19,10 +19,6 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         private readonly bool $optimize
     )
     {
-        if (!\is_dir($this->directory)) {
-            throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
-        }
-
         $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
     }
 
@@ -66,6 +62,10 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
+        if (!\file_exists($this->directory)) {
+            return new \EmptyIterator();
+        }
+        
         $scalarTypeDefinitionFiles = new \RegexIterator(
             iterator: new \DirectoryIterator($this->directory),
             pattern: '/.+\.php/i',

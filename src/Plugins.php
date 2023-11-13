@@ -17,10 +17,6 @@ final class Plugins implements \IteratorAggregate
         private readonly bool $optimize
     )
     {
-        if (!\is_dir($this->directory)) {
-            throw new \Exception("Invalid plugins directory '{$this->directory}'. Kindly ensure it exists or create it.");
-        }
-
         $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
     }
 
@@ -66,6 +62,10 @@ final class Plugins implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
+        if (!\file_exists($this->directory)) {
+            return new \EmptyIterator();
+        }
+
         $pluginFiles = new \RegexIterator(
             iterator: new \RecursiveIteratorIterator(
                 iterator: new \RecursiveDirectoryIterator($this->directory)
