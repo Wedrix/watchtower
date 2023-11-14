@@ -52,12 +52,12 @@ final class Executor
 
         if ($this->optimize) {
             if (!\file_exists($this->schemaCacheFile)) {
-                throw new \Exception('Schema cache not found! Kindly generate the cache first.');
+                throw new \Exception('The schema cache does not exist! Kindly generate it first.');
             }
         }
         else {
             if (!\file_exists($this->schemaFile)) {
-                throw new \Exception('Schema file not found! Kindly generate the schema first.');
+                throw new \Exception('The schema file does not exist! Kindly generate it first.');
             }
         }
 

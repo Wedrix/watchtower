@@ -234,35 +234,38 @@ final class Console
 
     public function generateCache(): void
     {
-        // Update Schema cache
+        // Clear previous cache
         {
             if (\file_exists($this->schemaCacheFile)) {
                 \unlink($this->schemaCacheFile);
             }
 
-            if (\file_exists($this->schemaFile)) {
-                $document = Parser::parse(
-                    source: \is_string($schemaFileContents = \file_get_contents($this->schemaFile)) 
-                                ? $schemaFileContents 
-                                : throw new \Exception("Unable to read the schema file '{$this->schemaFile}'.")
-                );
-    
-                $dirname = \pathinfo($this->schemaCacheFile)['dirname'] ?? '';
-    
-                if (!\is_dir($dirname)) {
-                    \mkdir(directory: $dirname, recursive: true);
-                }
-    
-                file_force_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
-            }
-        }
-
-        // Update Scalar Type Definitions cache
-        {
             if (\file_exists($this->schemaTypeDefinitionsCacheFile)) {
                 \unlink($this->schemaTypeDefinitionsCacheFile);
             }
 
+            if (\file_exists($this->pluginsCacheFile)) {
+                \unlink($this->pluginsCacheFile);
+            }
+        }
+
+        // Generate Schema cache
+        {
+            if (!\file_exists($this->schemaFile)) {
+                throw new \Exception('The schema file does not exist. Nothing to generate!');
+            }
+
+            $document = Parser::parse(
+                source: \is_string($schemaFileContents = \file_get_contents($this->schemaFile)) 
+                            ? $schemaFileContents 
+                            : throw new \Exception("Unable to read the schema file '{$this->schemaFile}'.")
+            );
+
+            file_force_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
+        }
+
+        // Generate Scalar Type Definitions cache
+        {
             if (\count($scalarTypeDefinitions = \iterator_to_array($this->scalarTypeDefinitions)) > 0) {
                 $scalarTypeDefinitions = \var_export(
                     value: \array_map(
@@ -283,12 +286,8 @@ final class Console
             }
         }
 
-        // Update Plugins cache
+        // Generate Plugins cache
         {
-            if (\file_exists($this->pluginsCacheFile)) {
-                \unlink($this->pluginsCacheFile);
-            }
-
             if (\count($plugins = \iterator_to_array($this->plugins)) > 0) {
                 $plugins = \var_export(
                     value: \array_map(
