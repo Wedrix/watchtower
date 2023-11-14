@@ -32,17 +32,13 @@ final class Schema extends SchemaType
 
     private readonly SchemaType $schema;
 
-    private readonly string $cacheFile;
-
     public function __construct(
         private readonly string $sourceFile, 
-        private readonly string $cacheDirectory,
+        private readonly ScalarTypeDefinitions $scalarTypeDefinitions,
         private readonly bool $optimize,
-        private readonly ScalarTypeDefinitions $scalarTypeDefinitions
+        private readonly string $cacheFile
     )
     {
-        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
-
         $this->schema = static::$schemas[$sourceFile] ??= (function (): SchemaType {
             /**
              * @param array<string,mixed> $typeConfig

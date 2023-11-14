@@ -20,6 +20,12 @@ final class Executor
 
     private readonly Resolver $resolver;
 
+    private readonly string $schemaCacheFile;
+
+    private readonly string $schemaTypeDefinitionsCacheFile;
+
+    private readonly string $pluginsCacheFile;
+
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
      * @param string $schemaFile The schema file.
@@ -38,27 +44,40 @@ final class Executor
         private readonly string $cacheDirectory
     )
     {
-        if (!\file_exists($this->schemaFile)) {
-            throw new \Exception('Invalid schema file. The file does not exist.');
+        $this->schemaCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
+
+        $this->schemaTypeDefinitionsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
+
+        $this->pluginsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
+
+        if ($this->optimize) {
+            if (!\file_exists($this->schemaCacheFile)) {
+                throw new \Exception('Schema cache not found! Kindly generate the cache first.');
+            }
+        }
+        else {
+            if (!\file_exists($this->schemaFile)) {
+                throw new \Exception('Schema file not found! Kindly generate the schema first.');
+            }
         }
 
         $this->schema = new Schema(
             sourceFile: $this->schemaFile,
-            cacheDirectory: $this->cacheDirectory,
-            optimize: $this->optimize,
             scalarTypeDefinitions: new ScalarTypeDefinitions(
                 directory: $this->scalarTypeDefinitionsDirectory,
-                cacheDirectory: $this->cacheDirectory,
-                optimize: $this->optimize
-            )
+                optimize: $this->optimize,
+                cacheFile: $this->schemaTypeDefinitionsCacheFile
+            ),
+            optimize: $this->optimize,
+            cacheFile: $this->schemaCacheFile
         );
 
         $this->resolver = new Resolver(
             entityManager: $this->entityManager,
             plugins: new Plugins(
                 directory: $this->pluginsDirectory,
-                cacheDirectory: $this->cacheDirectory,
-                optimize: $this->optimize
+                optimize: $this->optimize,
+                cacheFile: $this->pluginsCacheFile
             )
         );
     }

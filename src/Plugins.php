@@ -9,16 +9,11 @@ namespace Wedrix\Watchtower;
  */
 final class Plugins implements \IteratorAggregate
 {
-    private readonly string $cacheFile;
-
     public function __construct(
         private readonly string $directory,
-        private readonly string $cacheDirectory,
-        private readonly bool $optimize
-    )
-    {
-        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
-    }
+        private readonly bool $optimize,
+        private readonly string $cacheFile
+    ){}
 
     public function contains(
         Plugin $plugin

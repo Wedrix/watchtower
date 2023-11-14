@@ -11,16 +11,11 @@ use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
  */
 final class ScalarTypeDefinitions implements \IteratorAggregate
 {
-    private readonly string $cacheFile;
-
     public function __construct(
         private readonly string $directory,
-        private readonly string $cacheDirectory,
-        private readonly bool $optimize
-    )
-    {
-        $this->cacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
-    }
+        private readonly bool $optimize,
+        private readonly string $cacheFile
+    ){}
 
     public function contains(
         ScalarTypeDefinition $scalarTypeDefinition

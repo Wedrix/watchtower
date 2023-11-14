@@ -50,23 +50,24 @@ final class Console
         private readonly string $cacheDirectory
     )
     {
-        $this->plugins = new Plugins(
-            directory: $this->pluginsDirectory,
-            cacheDirectory: $this->cacheDirectory,
-            optimize: false
-        );
-
-        $this->scalarTypeDefinitions = new ScalarTypeDefinitions(
-            directory: $this->scalarTypeDefinitionsDirectory,
-            cacheDirectory: $this->cacheDirectory,
-            optimize: false
-        );
 
         $this->schemaCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
 
         $this->schemaTypeDefinitionsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
 
         $this->pluginsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
+
+        $this->plugins = new Plugins(
+            directory: $this->pluginsDirectory,
+            optimize: false,
+            cacheFile: $this->pluginsCacheFile
+        );
+
+        $this->scalarTypeDefinitions = new ScalarTypeDefinitions(
+            directory: $this->scalarTypeDefinitionsDirectory,
+            optimize: false,
+            cacheFile: $this->schemaTypeDefinitionsCacheFile
+        );
     }
 
     public function scalarTypeDefinitions(): ScalarTypeDefinitions
@@ -239,19 +240,21 @@ final class Console
                 \unlink($this->schemaCacheFile);
             }
 
-            $document = Parser::parse(
-                source: \is_string($schemaFileContents = \file_get_contents($this->schemaFile)) 
-                            ? $schemaFileContents 
-                            : throw new \Exception("Unable to read the schema file '{$this->schemaFile}'.")
-            );
-
-            $dirname = \pathinfo($this->schemaCacheFile)['dirname'] ?? '';
-
-            if (!\is_dir($dirname)) {
-                \mkdir(directory: $dirname, recursive: true);
+            if (\file_exists($this->schemaFile)) {
+                $document = Parser::parse(
+                    source: \is_string($schemaFileContents = \file_get_contents($this->schemaFile)) 
+                                ? $schemaFileContents 
+                                : throw new \Exception("Unable to read the schema file '{$this->schemaFile}'.")
+                );
+    
+                $dirname = \pathinfo($this->schemaCacheFile)['dirname'] ?? '';
+    
+                if (!\is_dir($dirname)) {
+                    \mkdir(directory: $dirname, recursive: true);
+                }
+    
+                file_force_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
             }
-
-            file_force_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
         }
 
         // Update Scalar Type Definitions cache
@@ -260,22 +263,24 @@ final class Console
                 \unlink($this->schemaTypeDefinitionsCacheFile);
             }
 
-            $scalarTypeDefinitions = \var_export(
-                value: \array_map(
-                    fn(ScalarTypeDefinition $scalarTypeDefinition) => $this->scalarTypeDefinitions->filePath($scalarTypeDefinition),
-                    \iterator_to_array($this->scalarTypeDefinitions)
-                ),
-                return: true
-            );
-
-            file_force_put_contents(
-                $this->schemaTypeDefinitionsCacheFile,
-                <<<EOD
-                <?php
-
-                return $scalarTypeDefinitions;
-                EOD
-            );
+            if (\count($scalarTypeDefinitions = \iterator_to_array($this->scalarTypeDefinitions)) > 0) {
+                $scalarTypeDefinitions = \var_export(
+                    value: \array_map(
+                        fn(ScalarTypeDefinition $scalarTypeDefinition) => $this->scalarTypeDefinitions->filePath($scalarTypeDefinition),
+                        $scalarTypeDefinitions
+                    ),
+                    return: true
+                );
+    
+                file_force_put_contents(
+                    $this->schemaTypeDefinitionsCacheFile,
+                    <<<EOD
+                    <?php
+    
+                    return $scalarTypeDefinitions;
+                    EOD
+                );
+            }
         }
 
         // Update Plugins cache
@@ -284,22 +289,24 @@ final class Console
                 \unlink($this->pluginsCacheFile);
             }
 
-            $plugins = \var_export(
-                value: \array_map(
-                    fn(PluginInfo $pluginInfo) => $this->plugins->filePath($pluginInfo),
-                    \iterator_to_array($this->plugins)
-                ),
-                return: true
-            );
-
-            file_force_put_contents(
-                $this->pluginsCacheFile,
-                <<<EOD
-                <?php
-
-                return $plugins;
-                EOD
-            );
+            if (\count($plugins = \iterator_to_array($this->plugins)) > 0) {
+                $plugins = \var_export(
+                    value: \array_map(
+                        fn(PluginInfo $pluginInfo) => $this->plugins->filePath($pluginInfo),
+                        $plugins
+                    ),
+                    return: true
+                );
+    
+                file_force_put_contents(
+                    $this->pluginsCacheFile,
+                    <<<EOD
+                    <?php
+    
+                    return $plugins;
+                    EOD
+                );
+            }
         }
     }
 }
