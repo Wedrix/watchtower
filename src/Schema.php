@@ -33,13 +33,13 @@ final class Schema extends SchemaType
     private readonly SchemaType $schema;
 
     public function __construct(
-        private readonly string $sourceFile, 
+        private readonly FilePath $sourceFile, 
         private readonly ScalarTypeDefinitions $scalarTypeDefinitions,
-        private readonly bool $optimize,
-        private readonly string $cacheFile
+        private readonly DirectoryPath $cacheDirectory,
+        private readonly bool $optimize
     )
     {
-        $this->schema = static::$schemas[$sourceFile] ??= (function (): SchemaType {
+        $this->schema = static::$schemas[(string) $sourceFile] ??= (function (): SchemaType {
             /**
              * @param array<string,mixed> $typeConfig
              * 
@@ -87,7 +87,7 @@ final class Schema extends SchemaType
     
             $AST = (function (): DocumentNode {
                 if ($this->optimize) {
-                    $document = AST::fromArray(require $this->cacheFile);
+                    $document = AST::fromArray(require (string) $this->cacheDirectory.'/'.\pathinfo((string) $this->sourceFile,\PATHINFO_BASENAME));
 
                     if (!$document instanceof DocumentNode) {
                         throw new \Exception('Invalid schema. Could not be parsed as a document node.');
@@ -97,7 +97,7 @@ final class Schema extends SchemaType
                 }
                 
                 return Parser::parse(
-                    source: \is_string($schemaFileContents = \file_get_contents($this->sourceFile)) 
+                    source: \is_string($schemaFileContents = \file_get_contents((string) $this->sourceFile)) 
                                 ? $schemaFileContents 
                                 : throw new \Exception("Unable to read the schema file '{$this->sourceFile}'.")
                 );

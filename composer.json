@@ -9,8 +9,7 @@
         },
         "files": [
             "src/string_extensions.php",
-            "src/array_extensions.php",
-            "src/file_extensions.php"
+            "src/array_extensions.php"
         ]
     },
     "authors": [

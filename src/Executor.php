@@ -20,11 +20,13 @@ final class Executor
 
     private readonly Resolver $resolver;
 
-    private readonly string $schemaCacheFile;
+    private readonly FilePath $schemaFile;
 
-    private readonly string $schemaTypeDefinitionsCacheFile;
+    private readonly DirectoryPath $pluginsDirectory;
 
-    private readonly string $pluginsCacheFile;
+    private readonly DirectoryPath $scalarTypeDefinitionsDirectory;
+
+    private readonly DirectoryPath $cacheDirectory;
 
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
@@ -37,47 +39,38 @@ final class Executor
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $schemaFile,
-        private readonly string $pluginsDirectory,
-        private readonly string $scalarTypeDefinitionsDirectory,
-        private readonly bool $optimize,
-        private readonly string $cacheDirectory
+        string $schemaFile,
+        string $pluginsDirectory,
+        string $scalarTypeDefinitionsDirectory,
+        string $cacheDirectory,
+        private readonly bool $optimize
     )
     {
-        $this->schemaCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
+        $this->schemaFile = FilePath::{$schemaFile}();
 
-        $this->schemaTypeDefinitionsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
+        $this->pluginsDirectory = DirectoryPath::{$pluginsDirectory}();
 
-        $this->pluginsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
+        $this->scalarTypeDefinitionsDirectory = DirectoryPath::{$scalarTypeDefinitionsDirectory}();
 
-        if ($this->optimize) {
-            if (!\file_exists($this->schemaCacheFile)) {
-                throw new \Exception('The schema cache does not exist! Kindly generate it first.');
-            }
-        }
-        else {
-            if (!\file_exists($this->schemaFile)) {
-                throw new \Exception('The schema file does not exist! Kindly generate it first.');
-            }
-        }
+        $this->cacheDirectory = DirectoryPath::{$cacheDirectory}();
 
         $this->schema = new Schema(
             sourceFile: $this->schemaFile,
             scalarTypeDefinitions: new ScalarTypeDefinitions(
                 directory: $this->scalarTypeDefinitionsDirectory,
-                optimize: $this->optimize,
-                cacheFile: $this->schemaTypeDefinitionsCacheFile
+                cacheDirectory: $this->cacheDirectory,
+                optimize: $this->optimize
             ),
-            optimize: $this->optimize,
-            cacheFile: $this->schemaCacheFile
+            cacheDirectory: $this->cacheDirectory,
+            optimize: $this->optimize
         );
 
         $this->resolver = new Resolver(
             entityManager: $this->entityManager,
             plugins: new Plugins(
                 directory: $this->pluginsDirectory,
-                optimize: $this->optimize,
-                cacheFile: $this->pluginsCacheFile
+                cacheDirectory: $this->cacheDirectory,
+                optimize: $this->optimize
             )
         );
     }

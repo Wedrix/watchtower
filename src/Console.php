@@ -29,11 +29,15 @@ final class Console
 
     private readonly ScalarTypeDefinitions $scalarTypeDefinitions;
 
-    private readonly string $schemaCacheFile;
+    private readonly DirectoryPath $schemaFileDirectory;
 
-    private readonly string $schemaTypeDefinitionsCacheFile;
+    private readonly FileName $schemaFileName;
 
-    private readonly string $pluginsCacheFile;
+    private readonly DirectoryPath $pluginsDirectory;
+
+    private readonly DirectoryPath $scalarTypeDefinitionsDirectory;
+
+    private readonly DirectoryPath $cacheDirectory;
 
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
@@ -44,29 +48,33 @@ final class Console
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly string $schemaFile,
-        private readonly string $pluginsDirectory,
-        private readonly string $scalarTypeDefinitionsDirectory,
-        private readonly string $cacheDirectory
+        string $schemaFileDirectory,
+        string $schemaFileName,
+        string $pluginsDirectory,
+        string $scalarTypeDefinitionsDirectory,
+        string $cacheDirectory
     )
     {
+        $this->schemaFileDirectory = DirectoryPath::{$schemaFileDirectory}();
 
-        $this->schemaCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'schema.php';
+        $this->schemaFileName = FileName::{$schemaFileName}();
 
-        $this->schemaTypeDefinitionsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'scalar_type_definitions.php';
+        $this->pluginsDirectory = DirectoryPath::{$pluginsDirectory}();
 
-        $this->pluginsCacheFile = $this->cacheDirectory.\DIRECTORY_SEPARATOR.'plugins.php';
+        $this->scalarTypeDefinitionsDirectory = DirectoryPath::{$scalarTypeDefinitionsDirectory}();
+
+        $this->cacheDirectory = DirectoryPath::{$cacheDirectory}();
 
         $this->plugins = new Plugins(
             directory: $this->pluginsDirectory,
-            optimize: false,
-            cacheFile: $this->pluginsCacheFile
+            cacheDirectory: $this->cacheDirectory,
+            optimize: false
         );
 
         $this->scalarTypeDefinitions = new ScalarTypeDefinitions(
             directory: $this->scalarTypeDefinitionsDirectory,
-            optimize: false,
-            cacheFile: $this->schemaTypeDefinitionsCacheFile
+            cacheDirectory: $this->cacheDirectory,
+            optimize: false
         );
     }
 
@@ -82,12 +90,12 @@ final class Console
 
     public function generateSchema(): void
     {
-        if (\file_exists($this->schemaFile)) {
-            throw new \Exception('A schema file already exists.');
+        if (\file_exists($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
+            throw new \Exception('The schema file already exists.');
         }
 
-        file_force_put_contents(
-            filename: $this->schemaFile,
+        file_put_contents(
+            filename: $schemaFile,
             data: SchemaPrinter::doPrint(
                 schema: new SyncedQuerySchema(
                     entityManager: $this->entityManager
@@ -98,10 +106,6 @@ final class Console
             )
         );
 
-        if (\file_exists($this->schemaCacheFile)) {
-            \unlink($this->schemaCacheFile);
-        }
-
         foreach (
             [
                 new DateTimeScalarTypeDefinition(),
@@ -111,8 +115,7 @@ final class Console
             as $scalarTypeDefinition
         ) {
             if (!$this->scalarTypeDefinitions->contains($scalarTypeDefinition)) {
-                $this->scalarTypeDefinitions
-                    ->add($scalarTypeDefinition);
+                $this->scalarTypeDefinitions->add($scalarTypeDefinition);
             }
         }
     }
@@ -121,8 +124,8 @@ final class Console
     {
         // TODO: Update Schema
         
-        if (\file_exists($this->schemaCacheFile)) {
-            \unlink($this->schemaCacheFile);
+        if (\file_exists($schemaCacheFile = $this->cacheDirectory.'/'.$this->schemaFileName)) {
+            \unlink($schemaCacheFile);
         }
     }
 
@@ -236,32 +239,32 @@ final class Console
     {
         // Clear previous cache
         {
-            if (\file_exists($this->schemaCacheFile)) {
-                \unlink($this->schemaCacheFile);
+            if (\file_exists($schemaCacheFile = $this->cacheDirectory.'/'.$this->schemaFileName)) {
+                \unlink($schemaCacheFile);
             }
 
-            if (\file_exists($this->schemaTypeDefinitionsCacheFile)) {
-                \unlink($this->schemaTypeDefinitionsCacheFile);
+            if (\file_exists($schemaTypeDefinitionsCacheFile = $this->cacheDirectory.'/scalar_type_definitions.php')) {
+                \unlink($schemaTypeDefinitionsCacheFile);
             }
 
-            if (\file_exists($this->pluginsCacheFile)) {
-                \unlink($this->pluginsCacheFile);
+            if (\file_exists($pluginsCacheFile = $this->cacheDirectory.'/plugins.php')) {
+                \unlink($pluginsCacheFile);
             }
         }
 
         // Generate Schema cache
         {
-            if (!\file_exists($this->schemaFile)) {
+            if (!\file_exists($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
                 throw new \Exception('The schema file does not exist. Nothing to generate!');
             }
 
             $document = Parser::parse(
-                source: \is_string($schemaFileContents = \file_get_contents($this->schemaFile)) 
+                source: \is_string($schemaFileContents = \file_get_contents($schemaFile)) 
                             ? $schemaFileContents 
-                            : throw new \Exception("Unable to read the schema file '{$this->schemaFile}'.")
+                            : throw new \Exception("Unable to read the schema file '$schemaFile'.")
             );
 
-            file_force_put_contents($this->schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
+            file_put_contents($schemaCacheFile, "<?php\nreturn " . \var_export(AST::toArray($document), true) . ";\n");
         }
 
         // Generate Scalar Type Definitions cache
@@ -275,8 +278,8 @@ final class Console
                     return: true
                 );
     
-                file_force_put_contents(
-                    $this->schemaTypeDefinitionsCacheFile,
+                file_put_contents(
+                    $schemaTypeDefinitionsCacheFile,
                     <<<EOD
                     <?php
     
@@ -297,8 +300,8 @@ final class Console
                     return: true
                 );
     
-                file_force_put_contents(
-                    $this->pluginsCacheFile,
+                file_put_contents(
+                    $pluginsCacheFile,
                     <<<EOD
                     <?php
     

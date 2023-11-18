@@ -10,9 +10,9 @@ namespace Wedrix\Watchtower;
 final class Plugins implements \IteratorAggregate
 {
     public function __construct(
-        private readonly string $directory,
-        private readonly bool $optimize,
-        private readonly string $cacheFile
+        private readonly DirectoryPath $directory,
+        private readonly DirectoryPath $cacheDirectory,
+        private readonly bool $optimize
     ){}
 
     public function contains(
@@ -22,7 +22,7 @@ final class Plugins implements \IteratorAggregate
         static $filesCache;
 
         if ($this->optimize) {
-            $filesCache ??= require $this->cacheFile;
+            $filesCache ??= require $this->cacheDirectory.'/plugins.php';
 
             return \in_array($this->filePath($plugin), $filesCache);
         }
@@ -36,9 +36,7 @@ final class Plugins implements \IteratorAggregate
         Plugin|PluginInfo $plugin
     ): string
     {
-        return $this->directory.\DIRECTORY_SEPARATOR
-                .pluralize($plugin->type()).\DIRECTORY_SEPARATOR
-                .$plugin->name().".php";
+        return $this->directory.'/'.pluralize($plugin->type()).'/'.$plugin->name().'.php';
     }
 
     public function add(
@@ -49,7 +47,7 @@ final class Plugins implements \IteratorAggregate
             throw new \Exception("The plugin '{$plugin->name()}' already exists.");
         }
 
-        file_force_put_contents(
+        file_put_contents(
             filename: $this->filePath($plugin),
             data: $plugin->template(),
         );
@@ -57,13 +55,13 @@ final class Plugins implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        if (!\file_exists($this->directory)) {
+        if (!\file_exists((string) $this->directory)) {
             return new \EmptyIterator();
         }
 
         $pluginFiles = new \RegexIterator(
             iterator: new \RecursiveIteratorIterator(
-                iterator: new \RecursiveDirectoryIterator($this->directory)
+                iterator: new \RecursiveDirectoryIterator((string) $this->directory)
             ), 
             pattern: '/.+\.php/i',
             mode: \RegexIterator::MATCH

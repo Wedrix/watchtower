@@ -12,9 +12,9 @@ use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
 final class ScalarTypeDefinitions implements \IteratorAggregate
 {
     public function __construct(
-        private readonly string $directory,
-        private readonly bool $optimize,
-        private readonly string $cacheFile
+        private readonly DirectoryPath $directory,
+        private readonly DirectoryPath $cacheDirectory,
+        private readonly bool $optimize
     ){}
 
     public function contains(
@@ -24,7 +24,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         static $filesCache;
 
         if ($this->optimize) {
-            $filesCache ??= require $this->cacheFile;
+            $filesCache ??= require $this->cacheDirectory.'/scalar_type_definitions.php';
 
             return \in_array($this->filePath($scalarTypeDefinition), $filesCache);
         }
@@ -38,7 +38,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
         ScalarTypeDefinition $scalarTypeDefinition
     ): string
     {
-        return $this->directory.\DIRECTORY_SEPARATOR.tableize($scalarTypeDefinition->typeName())."_type_definition.php";
+        return $this->directory.'/'.tableize($scalarTypeDefinition->typeName()).'_type_definition.php';
     }
 
     public function add(
@@ -49,7 +49,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
             throw new \Exception("The type definition for '{$scalarTypeDefinition->typeName()}' already exists.");
         }
 
-        file_force_put_contents(
+        file_put_contents(
             filename: $this->filePath($scalarTypeDefinition),
             data: $scalarTypeDefinition->template(),
         );
@@ -57,18 +57,14 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        if (!\file_exists($this->directory)) {
-            return new \EmptyIterator();
-        }
-        
         $scalarTypeDefinitionFiles = new \RegexIterator(
-            iterator: new \DirectoryIterator($this->directory),
+            iterator: new \DirectoryIterator((string) $this->directory),
             pattern: '/.+\.php/i',
             mode: \RegexIterator::MATCH
         );
 
         foreach ($scalarTypeDefinitionFiles as $scalarTypeDefinitionFile) {
-            $typeName = classify((\explode("_type_definition.php", $scalarTypeDefinitionFile->getBasename()))[0]);
+            $typeName = classify((\explode('_type_definition.php', $scalarTypeDefinitionFile->getBasename()))[0]);
 
             yield new GenericScalarTypeDefinition(
                 typeName: $typeName
