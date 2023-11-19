@@ -20,14 +20,6 @@ final class Executor
 
     private readonly Resolver $resolver;
 
-    private readonly FilePath $schemaFile;
-
-    private readonly DirectoryPath $pluginsDirectory;
-
-    private readonly DirectoryPath $scalarTypeDefinitionsDirectory;
-
-    private readonly DirectoryPath $cacheDirectory;
-
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
      * @param string $schemaFile The schema file.
@@ -39,21 +31,13 @@ final class Executor
      */
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        string $schemaFile,
-        string $pluginsDirectory,
-        string $scalarTypeDefinitionsDirectory,
-        string $cacheDirectory,
+        private readonly string $schemaFile,
+        private readonly string $pluginsDirectory,
+        private readonly string $scalarTypeDefinitionsDirectory,
+        private readonly string $cacheDirectory,
         private readonly bool $optimize
     )
     {
-        $this->schemaFile = FilePath::{$schemaFile}();
-
-        $this->pluginsDirectory = DirectoryPath::{$pluginsDirectory}();
-
-        $this->scalarTypeDefinitionsDirectory = DirectoryPath::{$scalarTypeDefinitionsDirectory}();
-
-        $this->cacheDirectory = DirectoryPath::{$cacheDirectory}();
-
         $this->schema = new Schema(
             sourceFile: $this->schemaFile,
             scalarTypeDefinitions: new ScalarTypeDefinitions(

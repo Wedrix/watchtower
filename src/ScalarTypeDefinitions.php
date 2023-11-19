@@ -12,8 +12,8 @@ use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
 final class ScalarTypeDefinitions implements \IteratorAggregate
 {
     public function __construct(
-        private readonly DirectoryPath $directory,
-        private readonly DirectoryPath $cacheDirectory,
+        private readonly string $directory,
+        private readonly string $cacheDirectory,
         private readonly bool $optimize
     ){}
 
@@ -29,7 +29,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
             return \in_array($this->filePath($scalarTypeDefinition), $filesCache);
         }
 
-        return \file_exists(
+        return \is_file(
             $this->filePath($scalarTypeDefinition)
         );
     }
@@ -49,7 +49,7 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
             throw new \Exception("The type definition for '{$scalarTypeDefinition->typeName()}' already exists.");
         }
 
-        file_put_contents(
+        file_force_put_contents(
             filename: $this->filePath($scalarTypeDefinition),
             data: $scalarTypeDefinition->template(),
         );
@@ -57,8 +57,12 @@ final class ScalarTypeDefinitions implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
+        if (!\is_dir($this->directory)) {
+            return new \EmptyIterator();
+        }
+
         $scalarTypeDefinitionFiles = new \RegexIterator(
-            iterator: new \DirectoryIterator((string) $this->directory),
+            iterator: new \DirectoryIterator($this->directory),
             pattern: '/.+\.php/i',
             mode: \RegexIterator::MATCH
         );

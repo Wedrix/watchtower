@@ -10,8 +10,8 @@ namespace Wedrix\Watchtower;
 final class Plugins implements \IteratorAggregate
 {
     public function __construct(
-        private readonly DirectoryPath $directory,
-        private readonly DirectoryPath $cacheDirectory,
+        private readonly string $directory,
+        private readonly string $cacheDirectory,
         private readonly bool $optimize
     ){}
 
@@ -27,7 +27,7 @@ final class Plugins implements \IteratorAggregate
             return \in_array($this->filePath($plugin), $filesCache);
         }
 
-        return \file_exists(
+        return \is_file(
             $this->filePath($plugin)
         );
     }
@@ -47,7 +47,7 @@ final class Plugins implements \IteratorAggregate
             throw new \Exception("The plugin '{$plugin->name()}' already exists.");
         }
 
-        file_put_contents(
+        file_force_put_contents(
             filename: $this->filePath($plugin),
             data: $plugin->template(),
         );
@@ -55,13 +55,13 @@ final class Plugins implements \IteratorAggregate
 
     public function getIterator(): \Traversable
     {
-        if (!\file_exists((string) $this->directory)) {
+        if (!\is_dir($this->directory)) {
             return new \EmptyIterator();
         }
 
         $pluginFiles = new \RegexIterator(
             iterator: new \RecursiveIteratorIterator(
-                iterator: new \RecursiveDirectoryIterator((string) $this->directory)
+                iterator: new \RecursiveDirectoryIterator($this->directory)
             ), 
             pattern: '/.+\.php/i',
             mode: \RegexIterator::MATCH
