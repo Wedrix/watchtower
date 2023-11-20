@@ -72,7 +72,7 @@ final class Console
     public function generateSchema(): void
     {
         if (\is_file($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
-            throw new \Exception("The schema '$schemaFile' already exists. Kindly remove it first to proceed.");
+            throw new \Exception("The schema '$schemaFile' already exists. Kindly either update it using the console command or delete the file to proceed regenerating it.");
         }
 
         file_force_put_contents(
