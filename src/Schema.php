@@ -42,7 +42,7 @@ final class Schema extends SchemaType
     )
     {
         if (!\is_file($this->sourceFile)) {
-            throw new \Exception("The schema '{$this->sourceFile}' does not exist. Kindly create it first to proceed.");
+            throw new \Exception("The schema '{$this->sourceFile}' does not exist. Kindly generate it first to proceed.");
         }
 
         $this->cacheFile = $this->cacheDirectory.'/'.\pathinfo($this->sourceFile,\PATHINFO_BASENAME);

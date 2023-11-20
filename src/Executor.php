@@ -39,7 +39,7 @@ final class Executor
     )
     {
         if (!\is_file($this->schemaFile)) {
-            throw new \Exception("The schema '{$this->schemaFile}' does not exist. Kindly create it first to proceed.");
+            throw new \Exception("The schema '{$this->schemaFile}' does not exist. Kindly generate it first to proceed.");
         }
 
         $this->schema = new Schema(
