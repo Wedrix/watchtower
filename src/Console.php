@@ -72,7 +72,7 @@ final class Console
     public function generateSchema(): void
     {
         if (\is_file($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
-            throw new \Exception('The schema file already exists.');
+            throw new \Exception("The schema '$schemaFile' already exists. Kindly remove it to proceed.");
         }
 
         file_force_put_contents(
@@ -236,7 +236,7 @@ final class Console
         // Generate Schema cache
         {
             if (!\is_file($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
-                throw new \Exception('The schema file does not exist. Nothing to generate!');
+                throw new \Exception("The schema '$schemaFile' does not exist. Kindly create it first to proceed.");
             }
 
             $document = Parser::parse(

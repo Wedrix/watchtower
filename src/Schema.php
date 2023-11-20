@@ -42,14 +42,14 @@ final class Schema extends SchemaType
     )
     {
         if (!\is_file($this->sourceFile)) {
-            throw new \Exception("The schema file '{$this->sourceFile}' does not exist. Kindly create or generate it first.");
+            throw new \Exception("The schema '{$this->sourceFile}' does not exist. Kindly create it first to proceed.");
         }
 
         $this->cacheFile = $this->cacheDirectory.'/'.\pathinfo($this->sourceFile,\PATHINFO_BASENAME);
 
         if ($this->optimize) {
             if (!\is_file($this->cacheFile)) {
-                throw new \Exception("The cache file '{$this->cacheFile}' does not exist. Kindly generate it first to run in optimized mode.");
+                throw new \Exception("The cache '{$this->cacheFile}' does not exist. Kindly generate it first to proceed.");
             }
         }
 
