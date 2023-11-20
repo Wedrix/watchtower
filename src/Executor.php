@@ -38,6 +38,10 @@ final class Executor
         private readonly bool $optimize
     )
     {
+        if (!\is_file($this->schemaFile)) {
+            throw new \Exception("The schema file '{$this->schemaFile}' doesn't exist. Kindly create or generate it first.");
+        }
+
         $this->schema = new Schema(
             sourceFile: $this->schemaFile,
             scalarTypeDefinitions: new ScalarTypeDefinitions(

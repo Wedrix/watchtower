@@ -30,6 +30,8 @@ final class Schema extends SchemaType
      */
     private static array $schemas = [];
 
+    private readonly string $cacheFile;
+
     private readonly SchemaType $schema;
 
     public function __construct(
@@ -39,6 +41,18 @@ final class Schema extends SchemaType
         private readonly bool $optimize
     )
     {
+        if (!\is_file($this->sourceFile)) {
+            throw new \Exception("The schema file '{$this->sourceFile}' does not exist. Kindly create or generate it first.");
+        }
+
+        $this->cacheFile = $this->cacheDirectory.'/'.\pathinfo($this->sourceFile,\PATHINFO_BASENAME);
+
+        if ($this->optimize) {
+            if (!\is_file($this->cacheFile)) {
+                throw new \Exception("The cache file '{$this->cacheFile}' does not exist. Kindly generate it first to run in optimized mode.");
+            }
+        }
+
         $this->schema = static::$schemas[$sourceFile] ??= (function (): SchemaType {
             /**
              * @param array<string,mixed> $typeConfig
@@ -87,7 +101,7 @@ final class Schema extends SchemaType
     
             $AST = (function (): DocumentNode {
                 if ($this->optimize) {
-                    $document = AST::fromArray(require $this->cacheDirectory.'/'.\pathinfo($this->sourceFile,\PATHINFO_BASENAME));
+                    $document = AST::fromArray(require $this->cacheFile);
 
                     if (!$document instanceof DocumentNode) {
                         throw new \Exception('Invalid schema. Could not be parsed as a document node.');
