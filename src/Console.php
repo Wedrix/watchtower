@@ -31,7 +31,8 @@ final class Console
 
     /**
      * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
-     * @param string $schemaFile The schema file.
+     * @param string $schemaFileDirectory The directory of the schema file.
+     * @param string $schemaFileName The name of the schema file.
      * @param string $pluginsDirectory The plugin functions' directory.
      * @param string $scalarTypeDefinitionsDirectory The scalar types' definitions' directory.
      * @param string $cacheDirectory The directory for storing cache files.
