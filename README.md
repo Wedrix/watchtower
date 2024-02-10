@@ -9,6 +9,7 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
 - [Demo Application](#demo-application)
 - [Usage](#usage)
 - [Schema](#schema)
+- [Querying](#querying)
 - [Plugins](#plugins)
 - [Computed Fields](#computed-fields)
 - [Filtering](#filtering)
@@ -265,9 +266,36 @@ function parseLiteral(
 
 To facilitate speedy development, the Console component offers the convenience method `addScalarTypeDefinition()`, which may be used to auto-generate the necessary boilerplate.
 
-## Querying
+## Generating the Schema
 
-### Finding Entities
+The console component comes with the helper method `generateSchema()` which may be used to generate the initial schema file based on the project's Doctrine models.
+
+Kindly take note of the following when using the schema generator:
+
+ 1. The generator only generates Query operations. It does not generate any Mutation or Subscription operations - those must be added in manually.
+ 2. The generator auto-generates the scalar type definitions for the custom types: `DateTime`, `Page`, and `Limit` if they do not already exist.
+ 3. The generator is able to only resolve the following Doctrine types:
+
+    - All [interger types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
+    - All [decimal types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#decimal-types) - resolve to GraphQL's `Float` type.
+    - All [string types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#string-types) - resolve to GraphQL's `String` type.
+    - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to the custom `DateTime` type (auto-generated if it doesn't already exist).
+
+ 4. The generator skips all fields having scalar types different from the above-mentioned types. You must manually add those in, with their corresponding Scalar Type Definitions.
+ 5. The generator only resolves actual fields that correspond to database columns. All other fields must be added in manually, as either Computed or Resolved fields.
+ 6. The generator is not able to properly ascertain the nullability of Embedded Types and Relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
+
+## Updating the Schema
+
+The console component comes with the helper method `updateSchema()` which may be used to update queries in the schema file to match the project's Doctrine models. Updates are merged with the original schema and do not overwrite schema definitions for scalars, mutations, subscriptions, directives etc.
+
+## Using Multiple Schemas
+
+Using multiple schemas is as simple as instantiating different objects of the Executor and Console components, with the different schema files' configurations. You can then use them with the appropriate controllers, routes, cli-scripts etc.
+
+# Querying
+
+## Finding Entities
 
 To find a particular entity, you must pass the argument(s) that correspond to any of its unique keys to the corresponding field in the document. For example, for the given schema:
 
@@ -340,7 +368,7 @@ Notice that in the previous example, the unique key for ProductLine is a compoun
 
 Note that Find Queries can only be represented by top-level query fields since the resolver auto-relates sub-level fields as relations.
 
-### Relations
+## Relations
 
 This library is also able to resolve the relations of your models. For instance, given the following schema definition:
 
@@ -376,7 +404,7 @@ query {
 
 resolves the product with id **1**, its best seller, and all the corresponding listings as described by the `bestSeller` and `listings` associations of the Product entity. For more details on Doctrine relations check out [the documentation](https://www.doctrine-project.org/projects/doctrine-orm/en/2.13/reference/association-mapping.html).
 
-### Pagination
+## Pagination
 
 By default, the complete result-set for a collection relation is returned. To enable pagination for a particular relation, all you have to do is pass the `queryParams` argument to the corresponding field in the document. For example:
 
@@ -481,7 +509,7 @@ returns:
 
 To facilitate speedy development, the Console component offers convenience methods to [generate](#generating-the-schema) and [update](#updating-the-schema) the schema file based on the project's Doctrine models.
 
-### Distinct Queries
+## Distinct Queries
 
 To return distinct results, add the `distinct` parameter to the `queryParams` argument. For example:
 
@@ -502,33 +530,6 @@ type Product {
     bestSeller: Listing
 }
 ```
-
-## Generating the Schema
-
-The console component comes with the helper method `generateSchema()` which may be used to generate the initial schema file based on the project's Doctrine models.
-
-Kindly take note of the following when using the schema generator:
-
- 1. The generator only generates Query operations. It does not generate any Mutation or Subscription operations - those must be added in manually.
- 2. The generator auto-generates the scalar type definitions for the custom types: `DateTime`, `Page`, and `Limit` if they do not already exist.
- 3. The generator is able to only resolve the following Doctrine types:
-
-    - All [interger types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
-    - All [decimal types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#decimal-types) - resolve to GraphQL's `Float` type.
-    - All [string types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#string-types) - resolve to GraphQL's `String` type.
-    - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to the custom `DateTime` type (auto-generated if it doesn't already exist).
-
- 4. The generator skips all fields having scalar types different from the above-mentioned types. You must manually add those in, with their corresponding Scalar Type Definitions.
- 5. The generator only resolves actual fields that correspond to database columns. All other fields must be added in manually, as either Computed or Resolved fields.
- 6. The generator is not able to properly ascertain the nullability of Embedded Types and Relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
-
-## Updating the Schema
-
-The console component comes with the helper method `updateSchema()` which may be used to update queries in the schema file to match the project's Doctrine models. Updates are merged with the original schema and do not overwrite schema definitions for scalars, mutations, subscriptions, directives etc.
-
-## Using Multiple Schemas
-
-Using multiple schemas is as simple as instantiating different objects of the Executor and Console components, with the different schema files' configurations. You can then use them with the appropriate controllers, routes, cli-scripts etc.
 
 # Plugins
 
