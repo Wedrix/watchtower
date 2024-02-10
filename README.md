@@ -299,7 +299,7 @@ also, for the given schema:
 
 ```graphql
 type Query {
-    productLine(product: ID!, Order: ID!): ProductLine!
+    productLine(product: ID!, order: ID!): ProductLine!
 }
 
 type ProductLine {
