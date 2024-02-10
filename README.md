@@ -336,9 +336,9 @@ query {
 
 returns the result for the productLine with product id **1** and order id **1**.  
 
-Notice that in the previous example, the unique key for ProductLine is a compound key consisting of the associations `product` and `user`. You could also use any combination of fields/associations that together make a valid unique key.
+Notice that in the previous example, the unique key for ProductLine is a compound key consisting of the associations `product` and `user`. You may use any combination of fields/associations, that together make a valid unique key, as Find Query parameters.
 
-Note that find queries can only be represented by top-level query fields since the resolver auto-relates sub-level fields as relations.
+Note that Find Queries can only be represented by top-level query fields since the resolver auto-relates sub-level fields as relations.
 
 ### Relations
 
