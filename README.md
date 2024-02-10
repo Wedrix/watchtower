@@ -269,17 +269,17 @@ To facilitate speedy development, the Console component offers the convenience m
 
 ### Finding Entities
 
-To find a particular entity, you must pass the argument(s) that correspond to one of its unique keys to the corresponding field in the document. For example, for the given schema:
+To find a particular entity, you must pass the argument(s) that correspond to any of its unique keys to the corresponding field in the document. For example, for the given schema:
 
 ```graphql
 type Query {
- product(id: ID!): Product!
+    product(id: ID!): Product!
 }
 
 type Product {
- id: ID!,
- name: String!,
- listings: [Listing!]!
+    id: ID!
+    name: String!
+    listings: [Listing!]!
 }
 ```
 
@@ -287,13 +287,56 @@ the query:
 
 ```graphql
 query {
- product(id: 1) {
-  name
- }
+    product(id: 1) {
+        name
+    }
 }
 ```
 
 returns the result for the product with id **1**.
+
+also, for the given schema:
+
+```graphql
+type Query {
+    productLine(product: ID!, Order: ID!): ProductLine!
+}
+
+type ProductLine {
+    product: Product!
+    order: Order!
+    quantity: Int!
+}
+
+type Product {
+ id: ID!
+ name: String!
+}
+
+type Order {
+ id: ID!
+}
+```
+
+the query:
+
+```graphql
+query {
+    productLine(product: 1, order: 1) {
+        product {
+            name
+        }
+        order {
+            id
+        }
+        quantity
+    }
+}
+```
+
+returns the result for the productLine with product id **1** and order id **1**.  
+
+Notice that in the previous example, the unique key for ProductLine is a compound key consisting of the associations `product` and `user`. You could also use any combination of fields/associations that together make a valid unique key.
 
 Note that find queries can only be represented by top-level query fields since the resolver auto-relates sub-level fields as relations.
 
@@ -303,19 +346,19 @@ This library is also able to resolve the relations of your models. For instance,
 
 ```graphql
 type Query {
- product(id: ID!): Product!
+    product(id: ID!): Product!
 }
 
 type Product {
- id: ID!,
- name: String!,
- bestSeller: Listing,
- listings: [Listing!]!
+    id: ID!
+    name: String!
+    bestSeller: Listing
+    listings: [Listing!]!
 }
 
 type Listing {
- id: ID!,
- sellingPrice: Float!
+    id: ID!
+    sellingPrice: Float!
 }
 ```
 
@@ -323,11 +366,11 @@ the query:
 
 ```graphql
 query {
- product(id: 1) {
-  name,
-  bestSeller,
-  listings
- }
+    product(id: 1) {
+        name
+        bestSeller
+        listings
+    }
 }
 ```
 
@@ -339,24 +382,24 @@ By default, the complete result-set for a collection relation is returned. To en
 
 ```graphql
 type Query {
- product(id: ID!): Product!
+    product(id: ID!): Product!
 }
 
 type Product {
- id: ID!,
- name: String!,
- bestSeller: Listing,
- listings(queryParams: ListingsQueryParams!): [Listing!]!
+    id: ID!
+    name: String!
+    bestSeller: Listing
+    listings(queryParams: ListingsQueryParams!): [Listing!]!
 }
 
 type Listing {
- id: ID!,
- sellingPrice: Float!
+    id: ID!
+    sellingPrice: Float!
 }
 
 input ListingsQueryParams {
- limit: Int, # items per page
- page: Int, # page
+    limit: Int # items per page
+    page: Int # page
 }
 ```
 
@@ -366,19 +409,19 @@ The type specified for the `queryParams` argument does not matter. The only requ
 
 ```graphql
 type Query {
- products: [Product!]!,
- paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+    products: [Product!]!
+    paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 type Product {
- id: ID!,
- name: String!,
- bestSeller: Listing
+    id: ID!
+    name: String!
+    bestSeller: Listing
 }
 
 input ProductsQueryParams {
- limit: Int!, # items per page
- page: Int!, # page
+    limit: Int! # items per page
+    page: Int! # page
 }
 ```
 
@@ -386,9 +429,9 @@ the query:
 
 ```graphql
 query {
- products {
-  name
- }
+    products {
+        name
+    }
 }
 ```
 
@@ -396,9 +439,9 @@ returns the names of all products, whereas:
 
 ```graphql
 query {
- paginatedProducts(queryParams: {page: 1, limit: 5}) {
-  name
- }
+    paginatedProducts(queryParams: {page: 1, limit: 5}) {
+        name
+    }
 }
 ```
 
@@ -410,9 +453,9 @@ This package also supports aliases. For instance:
 
 ```graphql
 query {
- queryAlias: paginatedProducts(queryParams: {page: 1, limit: 3}) {
-  nameAlias: name
- }
+    queryAlias: paginatedProducts(queryParams: {page: 1, limit: 3}) {
+        nameAlias: name
+    }
 }
 ```
 
@@ -444,19 +487,19 @@ To return distinct results, add the `distinct` parameter to the `queryParams` ar
 
 ```graphql
 type Query {
- paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+    paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 input ProductsQueryParams {
- distinct: Boolean, # Must be boolean
- limit: Int!,
- page: Int!,
+    distinct: Boolean # Must be boolean
+    limit: Int!
+    page: Int!
 }
 
 type Product {
- id: ID!,
- name: String!,
- bestSeller: Listing
+    id: ID!
+    name: String!
+    bestSeller: Listing
 }
 ```
 
@@ -724,24 +767,24 @@ To use filters add them to the `filters` parameter of the `queryParams` argument
 
 ```graphql
 type Query {
- paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+    paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 input ProductsQueryParams {
- filters: ProductsQueryFiltersParam, # Can be any user-defined input type
- limit: Int!,
- page: Int!,
+    filters: ProductsQueryFiltersParam # Can be any user-defined input type
+    limit: Int!
+    page: Int!
 }
 
 input ProductsQueryFiltersParam {
- ids: [String!],
- isStocked: Boolean, # Another filter
+    ids: [String!]
+    isStocked: Boolean # Another filter
 }
 
 type Product {
- id: ID!,
- name: String!,
- bestSeller: Listing
+    id: ID!
+    name: String!
+    bestSeller: Listing
 }
 ```
 
@@ -749,10 +792,10 @@ You can then use them in queries like so:
 
 ```graphql
 query {
- products: paginatedProducts(queryParams:{filters:{ids:[1,2,3]}}) {
-  name
-  bestSeller
- }
+    products: paginatedProducts(queryParams:{filters:{ids:[1,2,3]}}) {
+        name
+        bestSeller
+    }
 }
 ```
 
@@ -814,37 +857,37 @@ To use orderings add them to the `ordering` parameter of the `queryParams` argum
 
 ```graphql
 type Query {
- paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
+    paginatedProducts(queryParams: ProductsQueryParams!): [Product!]!
 }
 
 input ProductsQueryParams {
- ordering: ProductsQueryOrderingParam, # Can be any user-defined input type
- limit: Int!,
- page: Int!,
+    ordering: ProductsQueryOrderingParam # Can be any user-defined input type
+    limit: Int!
+    page: Int!
 }
 
 input ProductsQueryOrderingParam {
- closest: ProductsQueryOrderingClosestParam, # Can also be any user-defined input type
- oldest: ProductsQueryOrderingOldestParam, # Another ordering
+    closest: ProductsQueryOrderingClosestParam # Can also be any user-defined input type
+    oldest: ProductsQueryOrderingOldestParam # Another ordering
 }
 
 input ProductsQueryOrderingClosestParam {
- rank: Int!, # This parmeter is required for all orderings
- params: ProductsQueryOrderingClosestParamsParam! # This optional for parameterized orderings
+    rank: Int! # This parmeter is required for all orderings
+    params: ProductsQueryOrderingClosestParamsParam! # This optional for parameterized orderings
 }
 
 input ProductsQueryOrderingClosestParamsParam {
- location: Coordinates!
+    location: Coordinates!
 }
 
 input ProductsQueryOrderingOldestParam {
- rank: Int!
+    rank: Int!
 }
 
 type Product {
- id: ID!,
- name: String!,
- bestSeller: Listing
+    id: ID!
+    name: String!
+    bestSeller: Listing
 }
 ```
 
@@ -852,24 +895,24 @@ You can then use them in queries like so:
 
 ```graphql
 query {
- products: paginatedProducts(
-  queryParams:{
-   ordering:{
-    oldest:{
-     rank:1
-    },
-    closest:{
-     rank:2,
-     params:{
-      locaton:"40.74684111541018,-73.98518096794233"
-     }
+    products: paginatedProducts(
+        queryParams:{
+            ordering:{
+                oldest:{
+                    rank:1
+                },
+                closest:{
+                    rank:2,
+                    params:{
+                        locaton:"40.74684111541018,-73.98518096794233"
+                    }
+                }
+            }
+        }
+    ) {
+        name
+        bestSeller
     }
-   }
-  }
- ) {
-  name
-  bestSeller
- }
 }
 ```
 
