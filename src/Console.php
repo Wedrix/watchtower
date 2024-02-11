@@ -23,7 +23,7 @@ use Wedrix\Watchtower\ScalarTypeDefinition\PageScalarTypeDefinition;
 /**
  * @api
  */
-final class Console
+class Console
 {
     private readonly Plugins $plugins;
 

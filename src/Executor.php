@@ -14,7 +14,7 @@ use GraphQL\Validator\Rules\ValidationRule;
 /**
  * @api
  */
-final class Executor
+class Executor
 {
     private readonly GraphQLTypeSchema $schema;
 
