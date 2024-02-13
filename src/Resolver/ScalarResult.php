@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Wedrix\Watchtower\Plugins;
-
 final class ScalarResult implements Result
 {
     private readonly bool $isWorkable;
@@ -14,13 +12,11 @@ final class ScalarResult implements Result
 
     public function __construct(
         private readonly Node $node,
-        private readonly EntityManager $entityManager,
-        private readonly Plugins $plugins
+        private readonly EntityManager $entityManager
     )
     {
         $this->isWorkable = (
             (isset($this->node->root()[$this->node->name()]))
-            || (!$this->node->isTopLevel() && $this->node->isALeaf())
             || (
                 !$this->node->isTopLevel()
                     && $this->entityManager
