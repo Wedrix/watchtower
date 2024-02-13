@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugin\ResolverPlugin;
 
 final class ScalarResult implements Result
 {
@@ -19,33 +18,24 @@ final class ScalarResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = !$this->plugins
-            ->contains(
-                new ResolverPlugin(
-                    parentNodeType: $this->node->unwrappedParentType(),
-                    fieldName: $this->node->name()
-                )
+        $this->isWorkable = (
+            (isset($this->node->root()[$this->node->name()]))
+            || (!$this->node->isTopLevel() && $this->node->isALeaf())
+            || (
+                !$this->node->isTopLevel()
+                    && $this->entityManager
+                            ->hasEntity(
+                                name: $entityName = $this->node->unwrappedParentType()
+                            )
+                    && $this->entityManager
+                            ->findEntity(
+                                name: $entityName
+                            )
+                            ->hasEmbeddedField(
+                                fieldName: $this->node->name()
+                            )
             )
-            && (
-                $this->node->isALeaf()
-                    || (
-                        isset($this->node->root()[$this->node->name()])
-                    )
-                    || (
-                        !$this->node->isTopLevel()
-                            && $this->entityManager
-                                    ->hasEntity(
-                                        name: $entityName = $this->node->unwrappedParentType()
-                                    )
-                            && $this->entityManager
-                                    ->findEntity(
-                                        name: $entityName
-                                    )
-                                    ->hasEmbeddedField(
-                                        fieldName: $this->node->name()
-                                    )
-                    )
-            );
+        );
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {
