@@ -27,66 +27,55 @@ final class ParentAssociatedQuery implements Query
             $queryBuilder = $this->query->builder();
 
             if ($this->isWorkable) {
-                $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
+                $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
 
-                $parentAssociatedEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
+                $parentIds = \array_reduce(
+                    $parentEntity->idFields(),
+                    function(array $parentIdValue, string $parentIdField) use($parentEntity): array {
+                        $rootKey = \in_array($parentIdField, $parentEntity->associations()) ? "__associated_$parentIdField" : $parentIdField;
 
-                $parentAssociatedEntityIdValue = (function () use ($parentAssociatedEntity): mixed {
-                    $parentAssociatedEntityIdFields = $parentAssociatedEntity->idFields();
-        
-                    $root = $this->node->root();
-        
-                    return match(\count($parentAssociatedEntityIdFields)) {
-                        0 => null,
-                        1 => $root[$parentAssociatedEntityIdFields[0]],
-                        default => \array_map(fn (string $parentAssociatedEntityIdField) => $root[$parentAssociatedEntityIdField], $parentAssociatedEntityIdFields),
-                    };
-                })() ?? throw new \Exception("Invalid query. The parent node has no resolved id field(s).");
-        
+                        $parentIdValue[$parentIdField] = $this->node->root()[$rootKey];
+
+                        return $parentIdValue;
+                    },
+                    []
+                );
+                
                 $association = $this->node->name();
         
-                $entityAlias = $queryBuilder->rootAlias();
+                $rootEntityAlias = $queryBuilder->rootAlias();
         
-                $parentAlias = $queryBuilder->reconciledAlias('__parent');
+                $parentEntityAlias = '__parent';
         
-                $parentAssociatedEntityIdParameterAlias = $queryBuilder->reconciledAlias('__parentAssociatedEntityIdValue');
-        
-                if ($parentAssociatedEntity->associationIsInverside($association)) {
-                    $association = $parentAssociatedEntity->associationMappedByTargetField($association);
-        
-                    if ($rootEntity->associationIsSingleValued($association)) {
-                        $queryBuilder->join("$entityAlias.$association", $association);
-        
+                if ($parentEntity->associationIsInverseSide($association)) {
+                    $association = $parentEntity->associationMappedByTargetField($association);
+
+                    foreach ($parentIds as $idName => $idValue) {
                         $queryBuilder->andWhere(
                             $queryBuilder->expr()
-                                        ->eq($association, ":$parentAssociatedEntityIdParameterAlias")
-                        );
-                    }
-                    else {
-                        $queryBuilder->andWhere(
-                            $queryBuilder->expr()
-                                        ->isMemberOf(":$parentAssociatedEntityIdParameterAlias", "$entityAlias.$association")
+                                        ->eq("IDENTITY($rootEntityAlias.$association,'$idName')", $idValue)
                         );
                     }
                 }
                 else {
                     $subquery = $this->entityManager
                                     ->createQueryBuilder()
-                                    ->from($parentAssociatedEntity->class(), $parentAlias)
-                                    ->join("$parentAlias.$association", $association)
-                                    ->where(
-                                        $queryBuilder->expr()
-                                                    ->eq($parentAlias, ":$parentAssociatedEntityIdParameterAlias")
-                                    )
+                                    ->from($parentEntity->class(), $parentEntityAlias)
+                                    ->join("$parentEntityAlias.$association", $association)
                                     ->select($association);
+
+                    foreach ($parentIds as $idName => $idValue) {
+                        $subquery->andWhere(
+                            $queryBuilder->expr()
+                                        ->eq("$parentEntityAlias.$idName", $idValue)
+                        );
+                    }
         
                     $queryBuilder->andWhere(
                         $queryBuilder->expr()
-                                    ->in($entityAlias, $subquery->getDQL())
+                                    ->in($rootEntityAlias, $subquery->getDQL())
                     );
                 }
-        
-                $queryBuilder->setParameter($parentAssociatedEntityIdParameterAlias, $parentAssociatedEntityIdValue);
             }
     
             return $queryBuilder;

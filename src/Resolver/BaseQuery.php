@@ -23,7 +23,7 @@ final class BaseQuery implements Query
         $this->isWorkable = !$this->node->isAbstract()
             && $this->entityManager->hasEntity(name: $this->node->unwrappedType());
 
-        $this->queryBuilder = (function (): QueryBuilder {
+        $this->queryBuilder = (function(): QueryBuilder {
             $queryBuilder = $this->entityManager->createQueryBuilder();
 
             if ($this->isWorkable) {
@@ -31,24 +31,24 @@ final class BaseQuery implements Query
 
                 $queryBuilder->from(
                     from: $rootEntity->class(),
-                    alias: $queryBuilder->reconciledAlias("__{$this->node->name()}")
+                    alias: '__root'
                 );
 
                 /**
                  * @var array<string>
                  */
-                $selectedFields = (function () use ($rootEntity): array {
+                $selectedFields = (function() use ($rootEntity): array {
                     $fieldsSelection = $this->node->concreteFieldsSelection();
             
                     $requestedFields = \array_keys($fieldsSelection);
             
                     $selectedEntityFields = \array_filter(
                         $rootEntity->fields(), 
-                        fn (string $entityField) => \in_array($entityField, $rootEntity->idFields())
+                        static fn(string $entityField) => \in_array($entityField, $rootEntity->idFields())
                             || \in_array($entityField, $requestedFields)
                             || \array_reduce(
                                 $requestedFields, 
-                                function (bool $isRequestedEmbeddedField, string $requestedField) use ($entityField, $fieldsSelection) {
+                                static function(bool $isRequestedEmbeddedField, string $requestedField) use ($entityField, $fieldsSelection) {
                                     /**
                                      * @var array<string,mixed>
                                      */
@@ -58,7 +58,7 @@ final class BaseQuery implements Query
                                         $requestedSubFields = \array_keys($subFieldsSelection);
             
                                         $requestedEmbeddedFields = \array_map(
-                                            fn (string $requestedSubField) => "$requestedField.$requestedSubField", 
+                                            static fn(string $requestedSubField) => "$requestedField.$requestedSubField", 
                                             $requestedSubFields
                                         );
             
@@ -73,19 +73,18 @@ final class BaseQuery implements Query
             
                     $otherSelectedFields = \array_filter(
                         $requestedFields, 
-                        fn (string $requestedField) => !\in_array($requestedField, $rootEntity->associations()) 
+                        static fn(string $requestedField) => !\in_array($requestedField, $rootEntity->associations()) 
                             && !\in_array($requestedField, $rootEntity->fields())
                             && !\array_reduce(
                                 $rootEntity->fields(), 
-                                fn (bool $isEmbeddedEntityField, string $entityField) 
-                                    => $isEmbeddedEntityField || \str_starts_with($entityField, "$requestedField."), 
+                                static fn(bool $isEmbeddedEntityField, string $entityField) => $isEmbeddedEntityField || \str_starts_with($entityField, "$requestedField."), 
                                 false
                             )
                     );
 
                     $otherSelectedFieldsWithoutResolvedFields = \array_filter(
                         $otherSelectedFields,
-                        fn (string $otherSelectedField) => !$this->plugins->contains(
+                        fn(string $otherSelectedField) => !$this->plugins->contains(
                             new ResolverPlugin(
                                 parentNodeType: $this->node->unwrappedType(),
                                 fieldName: $otherSelectedField
@@ -110,6 +109,15 @@ final class BaseQuery implements Query
                     else {
                         $queryBuilder->addSelect("{$queryBuilder->rootAlias()}.$fieldName");
                     }
+                }
+
+                $identifierAssociationFields = \array_filter(
+                    $rootEntity->idFields(),
+                    static fn(string $idField) => \in_array($idField, $rootEntity->associations())
+                );
+
+                foreach ($identifierAssociationFields as $identifierAssociationField) {
+                    $queryBuilder->addSelect("IDENTITY({$queryBuilder->rootAlias()}.$identifierAssociationField) AS __associated_$identifierAssociationField");
                 }
             }
     

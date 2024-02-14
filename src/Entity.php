@@ -122,7 +122,7 @@ final class Entity
         return $this->metadata->embeddedClasses[$fieldName]['class'];
     }
 
-    public function associationIsInverside(
+    public function associationIsInverseSide(
         string $associationName
     ): bool
     {
