@@ -61,8 +61,8 @@ final class ParentAssociatedQuery implements Query
                     $subquery = $this->entityManager
                                     ->createQueryBuilder()
                                     ->from($parentEntity->class(), $parentEntityAlias)
-                                    ->join("$parentEntityAlias.$association", $association)
-                                    ->select($association);
+                                    ->join("$parentEntityAlias.$association", "__associated_$association")
+                                    ->select("__associated_$association");
 
                     foreach ($parentIds as $idName => $idValue) {
                         $subquery->andWhere(
