@@ -24,12 +24,13 @@ final class FindQuery implements Query
 
             if ($this->isWorkable) {
                 foreach ($this->node->args() as $idField => $idValue) {
-                    $valueAlias = $queryBuilder->reconciledAlias("__{$idField}Value");
+                    $idValueAlias = $queryBuilder->reconciledAlias($idField);
         
                     $queryBuilder->andWhere(
                         $queryBuilder->expr()
-                                    ->eq("{$queryBuilder->rootAlias()}.$idField", ":$valueAlias")
-                    )->setParameter($valueAlias, $idValue);
+                                    ->eq("{$queryBuilder->rootAlias()}.$idField", ":$idValueAlias")
+                    )
+                    ->setParameter($idValueAlias, $idValue);
                 }
             }
 

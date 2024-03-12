@@ -51,30 +51,40 @@ final class ParentAssociatedQuery implements Query
                     $association = $parentEntity->associationMappedByTargetField($association);
 
                     foreach ($parentIds as $idName => $idValue) {
+                        $idValueAlias = $queryBuilder->reconciledAlias($idName);
+
                         $queryBuilder->andWhere(
                             $queryBuilder->expr()
-                                        ->eq("IDENTITY($rootEntityAlias.$association,'$idName')", $idValue)
-                        );
+                                        ->eq("IDENTITY($rootEntityAlias.$association,'$idName')", ":$idValueAlias")
+                        )
+                        ->setParameter($idValueAlias, $idValue);
                     }
                 }
                 else {
                     $subquery = $this->entityManager
                                     ->createQueryBuilder()
                                     ->from($parentEntity->class(), $parentEntityAlias)
-                                    ->join("$parentEntityAlias.$association", "__associated_$association")
-                                    ->select("__associated_$association");
+                                    ->join("$parentEntityAlias.$association", $association)
+                                    ->select($association);
+
+                    $idParameters = [];
 
                     foreach ($parentIds as $idName => $idValue) {
+                        $idValueAlias = $queryBuilder->reconciledAlias($idName);
+                        
                         $subquery->andWhere(
                             $queryBuilder->expr()
-                                        ->eq("$parentEntityAlias.$idName", $idValue)
+                                        ->eq("$parentEntityAlias.$idName", ":$idValueAlias")
                         );
+
+                        $idParameters[$idValueAlias] = $idValue;
                     }
         
                     $queryBuilder->andWhere(
                         $queryBuilder->expr()
                                     ->in($rootEntityAlias, $subquery->getDQL())
-                    );
+                    )
+                    ->setParameters($idParameters);
                 }
             }
     
