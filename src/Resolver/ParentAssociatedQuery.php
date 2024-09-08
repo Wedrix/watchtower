@@ -67,8 +67,6 @@ final class ParentAssociatedQuery implements Query
                                     ->join("$parentEntityAlias.$association", $association)
                                     ->select($association);
 
-                    $idParameters = [];
-
                     foreach ($parentIds as $idName => $idValue) {
                         $idValueAlias = $queryBuilder->reconciledAlias($idName);
                         
@@ -77,14 +75,13 @@ final class ParentAssociatedQuery implements Query
                                         ->eq("$parentEntityAlias.$idName", ":$idValueAlias")
                         );
 
-                        $idParameters[$idValueAlias] = $idValue;
+                        $queryBuilder->setParameter($idValueAlias,$idValue);
                     }
         
                     $queryBuilder->andWhere(
                         $queryBuilder->expr()
                                     ->in($rootEntityAlias, $subquery->getDQL())
-                    )
-                    ->setParameters($idParameters);
+                    );
                 }
             }
     
