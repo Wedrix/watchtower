@@ -253,4 +253,9 @@ final class Node
     {
         return $this->abstractFieldsSelection;
     }
+
+    public function info(): ResolveInfo
+    {
+        return $this->info;
+    }
 }
