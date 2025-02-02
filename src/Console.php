@@ -14,6 +14,7 @@ use Wedrix\Watchtower\Plugin\FilterPlugin;
 use Wedrix\Watchtower\Plugin\MutationPlugin;
 use Wedrix\Watchtower\Plugin\OrderingPlugin;
 use Wedrix\Watchtower\Plugin\ResolverPlugin;
+use Wedrix\Watchtower\Plugin\RootAuthorizorPlugin;
 use Wedrix\Watchtower\Plugin\SelectorPlugin;
 use Wedrix\Watchtower\Plugin\SubscriptionPlugin;
 use Wedrix\Watchtower\ScalarTypeDefinition\DateTimeScalarTypeDefinition;
@@ -202,6 +203,14 @@ class Console
                     nodeType: $nodeType,
                     isForCollections: $isForCollections
                 )
+            );
+    }
+
+    public function addRootAuthorizorPlugin(): void
+    {
+        $this->plugins
+            ->add(
+                plugin: new RootAuthorizorPlugin()
             );
     }
 
