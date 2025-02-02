@@ -32,7 +32,7 @@ final class MaybeFilteredQuery implements Query
         
                     foreach ($filters as $filterName => $_) {
                         $filterPlugin = new FilterPlugin(
-                            parentNodeType: $this->node->unwrappedType(),
+                            nodeType: $this->node->unwrappedType(),
                             filterName: $filterName
                         );
         

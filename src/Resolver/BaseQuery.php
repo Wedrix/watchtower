@@ -86,7 +86,7 @@ final class BaseQuery implements Query
                         $otherSelectedFields,
                         fn(string $otherSelectedField) => !$this->plugins->contains(
                             new ResolverPlugin(
-                                parentNodeType: $this->node->unwrappedType(),
+                                nodeType: $this->node->unwrappedType(),
                                 fieldName: $otherSelectedField
                             )
                         )
@@ -97,7 +97,7 @@ final class BaseQuery implements Query
         
                 foreach ($selectedFields as $fieldName) {
                     $selectorPlugin = new SelectorPlugin(
-                        parentNodeType: $this->node->unwrappedType(),
+                        nodeType: $this->node->unwrappedType(),
                         fieldName: $fieldName
                     );
         

@@ -21,13 +21,13 @@ final class SelectorPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $parentNodeType,
+        private readonly string $nodeType,
         private readonly string $fieldName
     )
     {
         $this->type = 'selector';
 
-        $this->name = 'apply_'.tableize($this->parentNodeType)
+        $this->name = 'apply_'.tableize($this->nodeType)
         .'_'.tableize($this->fieldName).'_selector';
 
         $this->namespace = __NAMESPACE__.'\\SelectorPlugin';

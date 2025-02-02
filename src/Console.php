@@ -9,6 +9,7 @@ use GraphQL\Language\Parser;
 use GraphQL\Utils\AST;
 use GraphQL\Utils\SchemaPrinter;
 use Wedrix\Watchtower\Plugin\AuthorizorPlugin;
+use Wedrix\Watchtower\Plugin\ConstraintPlugin;
 use Wedrix\Watchtower\Plugin\FilterPlugin;
 use Wedrix\Watchtower\Plugin\MutationPlugin;
 use Wedrix\Watchtower\Plugin\OrderingPlugin;
@@ -122,57 +123,69 @@ class Console
             );
     }
 
+    public function addConstraintPlugin(
+        string $nodeType
+    ): void
+    {
+        $this->plugins
+            ->add(
+                plugin: new ConstraintPlugin(
+                    nodeType: $nodeType
+                )
+            );
+    }
+
     public function addFilterPlugin(
-        string $parentNodeType,
+        string $nodeType,
         string $filterName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new FilterPlugin(
-                    parentNodeType: $parentNodeType,
+                    nodeType: $nodeType,
                     filterName: $filterName
                 )
             );
     }
 
     public function addOrderingPlugin(
-        string $parentNodeType,
+        string $nodeType,
         string $orderingName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new OrderingPlugin(
-                    parentNodeType: $parentNodeType,
+                    nodeType: $nodeType,
                     orderingName: $orderingName
                 )
             );
     }
 
     public function addSelectorPlugin(
-        string $parentNodeType,
+        string $nodeType,
         string $fieldName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new SelectorPlugin(
-                    parentNodeType: $parentNodeType,
+                    nodeType: $nodeType,
                     fieldName: $fieldName
                 )
             );
     }
 
     public function addResolverPlugin(
-        string $parentNodeType,
+        string $nodeType,
         string $fieldName
     ): void
     {
         $this->plugins
             ->add(
                 plugin: new ResolverPlugin(
-                    parentNodeType: $parentNodeType,
+                    nodeType: $nodeType,
                     fieldName: $fieldName
                 )
             );

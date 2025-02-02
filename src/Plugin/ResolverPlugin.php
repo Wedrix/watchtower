@@ -21,13 +21,13 @@ final class ResolverPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $parentNodeType,
+        private readonly string $nodeType,
         private readonly string $fieldName
     )
     {
         $this->type = 'resolver';
 
-        $this->name = 'resolve_'.tableize($this->parentNodeType)
+        $this->name = 'resolve_'.tableize($this->nodeType)
         .'_'.tableize($this->fieldName).'_field';
 
         $this->namespace = __NAMESPACE__.'\\ResolverPlugin';

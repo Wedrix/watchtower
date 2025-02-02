@@ -6,10 +6,7 @@ namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
-use function Wedrix\Watchtower\pluralize;
-use function Wedrix\Watchtower\tableize;
-
-final class FilterPlugin implements Plugin
+final class RootAuthorizorPlugin implements Plugin
 {
     private readonly string $type;
 
@@ -21,17 +18,13 @@ final class FilterPlugin implements Plugin
 
     private readonly string $callback;
 
-    public function __construct(
-        private readonly string $nodeType,
-        private readonly string $filterName
-    )
+    public function __construct()
     {
-        $this->type = 'filter';
+        $this->type = 'authorizor';
 
-        $this->name = 'apply_'.tableize(pluralize($this->nodeType))
-        .'_'.tableize($this->filterName).'_filter';
+        $this->name = 'authorize_result';
 
-        $this->namespace = __NAMESPACE__."\\FilterPlugin";
+        $this->namespace = __NAMESPACE__.'\\AuthorizorPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -41,10 +34,10 @@ final class FilterPlugin implements Plugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
-        use Wedrix\Watchtower\Resolver\QueryBuilder;
+        use Wedrix\Watchtower\Resolver\Result;
 
         function {$this->name}(
-            QueryBuilder \$queryBuilder,
+            Result \$result,
             Node \$node
         ): void
         {

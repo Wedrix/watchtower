@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-final class ForcedFindQuery implements Query
+use Wedrix\Watchtower\Plugin\ConstraintPlugin;
+use Wedrix\Watchtower\Plugins;
+
+final class ConstrainedQuery implements Query
 {
     private readonly bool $isWorkable;
 
@@ -12,7 +15,8 @@ final class ForcedFindQuery implements Query
 
     public function __construct(
         private readonly Query $query,
-        private readonly Node $node
+        private readonly Node $node,
+        private readonly Plugins $plugins
     )
     {
         $this->isWorkable = $this->query->isWorkable();
@@ -21,14 +25,14 @@ final class ForcedFindQuery implements Query
             $queryBuilder = $this->query->builder();
 
             if ($this->isWorkable) {
-                foreach ($this->node->args() as $idField => $idValue) {
-                    $idValueAlias = $queryBuilder->reconciledAlias($idField);
-        
-                    $queryBuilder->andWhere(
-                        $queryBuilder->expr()
-                                    ->eq("{$queryBuilder->rootAlias()}.$idField", ":$idValueAlias")
-                    )
-                    ->setParameter($idValueAlias, $idValue);
+                $constraintPlugin = new ConstraintPlugin(
+                    nodeType: $this->node->unwrappedType()
+                );
+
+                if ($this->plugins->contains($constraintPlugin)) {
+                    require_once $this->plugins->filePath($constraintPlugin);
+                    
+                    $constraintPlugin->callback()($queryBuilder, $this->node);
                 }
             }
 

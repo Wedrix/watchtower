@@ -9,7 +9,7 @@ use Wedrix\Watchtower\Plugin;
 use function Wedrix\Watchtower\pluralize;
 use function Wedrix\Watchtower\tableize;
 
-final class FilterPlugin implements Plugin
+final class ConstraintPlugin implements Plugin
 {
     private readonly string $type;
 
@@ -22,16 +22,15 @@ final class FilterPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $nodeType,
-        private readonly string $filterName
+        private readonly string $nodeType
     )
     {
-        $this->type = 'filter';
+        $this->type = 'constraint';
 
         $this->name = 'apply_'.tableize(pluralize($this->nodeType))
-        .'_'.tableize($this->filterName).'_filter';
+        .'_'.tableize($this->nodeType).'_constraint';
 
-        $this->namespace = __NAMESPACE__."\\FilterPlugin";
+        $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
 
         $this->template = <<<EOD
         <?php

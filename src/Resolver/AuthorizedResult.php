@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use Wedrix\Watchtower\Plugin\RootAuthorizorPlugin;
 use Wedrix\Watchtower\Plugins;
 use Wedrix\Watchtower\Plugin\AuthorizorPlugin;
 
@@ -23,6 +24,16 @@ final class AuthorizedResult implements Result
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {
+                if ($this->node->isTopLevel()){
+                    $rootAuthorizorPlugin = new RootAuthorizorPlugin();
+        
+                    if ($this->plugins->contains($rootAuthorizorPlugin)) {
+                        require_once $this->plugins->filePath($rootAuthorizorPlugin);
+            
+                        $rootAuthorizorPlugin->callback()($this->result, $this->node);
+                    }
+                }
+
                 $authorizorPlugin = new AuthorizorPlugin(
                     nodeType: $this->node->unwrappedType(),
                     isForCollections: $this->node->isACollection()

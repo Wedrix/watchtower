@@ -22,7 +22,7 @@ final class QueryResult implements Result
         $this->isWorkable = !$this->plugins
             ->contains(
                 new ResolverPlugin(
-                    parentNodeType: $this->node->unwrappedParentType(),
+                    nodeType: $this->node->unwrappedParentType(),
                     fieldName: $this->node->name()
                 )
             )

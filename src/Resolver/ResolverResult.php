@@ -21,7 +21,7 @@ final class ResolverResult implements Result
     )
     {
         $this->plugin = new ResolverPlugin(
-            parentNodeType: $this->node->unwrappedParentType(),
+            nodeType: $this->node->unwrappedParentType(),
             fieldName: $this->node->name()
         );
 

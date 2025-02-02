@@ -614,9 +614,9 @@ The rules for Selector plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `selectors` sub-folder.
  2. The script file's name must follow the following naming format:  
-  apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector.php
+  apply_{***node type name in snake_case***}_{***field name in snake_case***}_selector.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  apply_{***name of parent type in snake_case***}_{***name of field in snake_case***}_selector
+  apply_{***node type name in snake_case***}_{***field name in snake_case***}_selector
  4. The plugin function must have the following signature:
 
 ```php
@@ -671,9 +671,9 @@ The rules for Resolver plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `resolvers` sub-folder.
  2. The script file's name must follow the following naming format:  
-  resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field.php
+  resolve_{***node type name in snake_case***}_{***field name in snake_case***}_field.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  resolve_{***name of parent type in snake_case***}_{***name of field in snake_case***}_field
+  resolve_{***node type name in snake_case***}_{***field name in snake_case***}_field
  4. The plugin function must have the following signature:
 
 ```php
@@ -750,9 +750,9 @@ The rules for Filter plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `filters` sub-folder.
  2. The script file's name must follow the following naming format:  
-  apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter.php
+  apply_{***pluralized node type name in snake_case***}_{***filter name in snake_case***}_filter.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  apply_{***pluralized name of parent type in snake_case***}_{***name of the filter in snake_case***}_filter
+  apply_{***pluralized node type name in snake_case***}_{***filter name in snake_case***}_filter
  4. The plugin function must have the following signature:
 
 ```php
@@ -802,6 +802,58 @@ query {
 
 Kindly refer to the **Helpful Utilities** sections under **Selector Plugins** for helpful methods, using the builder.
 
+## Constraint Plugins
+
+Sometimes you may wish to apply a set of filters always regardless of the client's input. Constraint plugins allow you to do exactly that! Unlike filters that rely on the client's input via queryParams, contraints are always applied regardless. The code snippet below is an example Constraint plugin for filtering listings by a closed set of ids:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Wedrix\Watchtower\Plugin\ConstraintPlugin;
+
+use Wedrix\Watchtower\Resolver\Node;
+use Wedrix\Watchtower\Resolver\QueryBuilder;
+
+function apply_listing_constraint(
+    QueryBuilder $queryBuilder,
+    Node $node
+): void
+{
+    $entityAlias = $queryBuilder->rootAlias();
+
+    $whitelistedListings = ['listing1','listing2','listing3'];
+
+    $idsValueAlias = $queryBuilder->reconciledAlias('idsValue');
+
+    $queryBuilder->andWhere("{$entityAlias}.id IN (:$idsValueAlias)")
+                ->setParameter($idsValueAlias, $whitelistedListings);
+}
+```
+
+Given the above constraint, Listing queries will always resolve to one of the whitelisted listings.
+
+### Rules
+
+The rules for Constraint plugins are as follows:
+
+ 1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `filters` sub-folder.
+ 2. The script file's name must follow the following naming format:  
+  apply_{***node type name in snake_case***}_constraint.php
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
+  apply_{***node type name in snake_case***}_constraint
+ 4. The plugin function must have the following signature:
+
+```php
+function function_name(
+ \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+ \Wedrix\Watchtower\Resolver\Node $node
+): void;
+```
+
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ConstraintPlugin`.
+
 # Ordering
 
 This library allows you to order queries by chaining **order by** statements onto the builder. It also supports multiple ordering, where one ordering is applied after another to reorder matching elements. To implement orderings, use Ordering Plugins.
@@ -840,9 +892,9 @@ The rules for Ordering plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `orderings` sub-folder.
  2. The script file's name must follow the following naming format:  
-  apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering.php
+  apply_{***pluralized node type name in snake_case***}_{***ordering name in snake_case***}_ordering.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  apply_{***pluralized name of parent type in snake_case***}_{***name of the ordering in snake_case***}_ordering
+  apply_{***pluralized node type name in snake_case***}_{***ordering name in snake_case***}_ordering
  4. The plugin function must have the following signature:
 
 ```php
@@ -968,9 +1020,9 @@ The rules for Mutation plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `mutations` sub-folder.
  2. The script file's name must follow the following naming format:  
-  call_{***name of mutation in snake_case***}_mutation.php
+  call_{***mutation name in snake_case***}_mutation.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  call_{***name of mutation in snake_case***}_mutation
+  call_{***mutation name in snake_case***}_mutation
  4. The plugin function must have the following signature:
 
 ```php
@@ -997,9 +1049,9 @@ Subscription plugins act as connectors to your application's implementation of s
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `subscriptions` sub-folder.
  2. The script file's name must follow the following naming format:  
-  call_{***name of subscription in snake_case***}_subscription.php
+  call_{***subscription name in snake_case***}_subscription.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  call_{***name of subscription in snake_case***}_subscription
+  call_{***subscription name in snake_case***}_subscription
  4. The plugin function must have the following signature:
 
 ```php
@@ -1014,11 +1066,11 @@ Kindly refer to the [GraphQL spec](https://spec.graphql.org/October2021/#sec-Sub
 
 # Authorization
 
-Authorization allows you to you to approve results. This library handles authorization based on user-defined rules for individual node/collection types. These rules apply to all operation type results, including, Queries, Mutations, and Subscriptions. You write an authorization once and can be guaranteed that it will apply to all results. This library supports authorization through Authorization Plugins.
+Authorization allows you to you to approve results. This library handles authorization based on user-defined rules for individual node/collection types. These rules apply to all operation type results, including, Queries, Mutations, and Subscriptions. You write an authorization once and can be guaranteed that it will apply to all results. This library supports authorization through Authorizor Plugins.
 
-## Authorization Plugins
+## Authorizor Plugins
 
-Authorization plugins allow you to create authorizations for individual node/collection types. The code snippet below is an example authorization applied to User results:
+Authorizor plugins allow you to create authorizations for individual node/collection types. The code snippet below is an example authorization applied to User results:
 
 ```php
 <?php
@@ -1039,10 +1091,10 @@ function authorize_customer_result(
 ): void
 {
     $user = new Session(
-  request: $node->context()['request'] ?? throw new \Exception("Invalid context value! Unset request."),
-  response: $node->context()['response'] ?? throw new \Exception("Invalid context value! Unset response.")
- )
- ->user();
+        request: $node->context()['request'] ?? throw new \Exception("Invalid context value! Unset request."),
+        response: $node->context()['response'] ?? throw new \Exception("Invalid context value! Unset response.")
+    )
+    ->user();
 
     if (
         any_in_array(
@@ -1057,13 +1109,13 @@ function authorize_customer_result(
 
 ### Rules
 
-The rules for Authorization plugins are as follows:
+The rules for Authorizor plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `authorizors` sub-folder.
  2. The script file's name must follow the following naming format:  
-  authorize_{***name of node (pluralized if for collections) in snake_case***}_result.php
+  authorize_{***node type name (pluralized if for collections) in snake_case***}_result.php
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  authorize_{***name of node (pluralized if for collections) in snake_case***}_result
+  authorize_{***node type name (pluralized if for collections) in snake_case***}_result
  4. The plugin function must have the following signature:
 
 ```php
@@ -1074,7 +1126,67 @@ function function_name(
 ```
 
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
-6. The authorization plugin function must throw an exception when the authorization fails.
+6. The authorizor plugin function must throw an exception when the authorization fails.
+
+## Root Authorizor Plugin
+
+The Root Authorizor plugin allows you to create authorization rules that apply for all node/collection types. The code snippet below is an example authorization applied to all results:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Wedrix\Watchtower\Plugin\AuthorizorPlugin;
+
+use App\Server\Sessions\Session;
+use Wedrix\Watchtower\Resolver\Node;
+use Wedrix\Watchtower\Resolver\Result;
+
+use function array\any_in_array;
+
+function authorize_result(
+ Result $result,
+    Node $node
+): void
+{
+    $user = new Session(
+        request: $node->context()['request'] ?? throw new \Exception("Invalid context value! Unset request."),
+        response: $node->context()['response'] ?? throw new \Exception("Invalid context value! Unset response.")
+    )
+    ->user();
+
+    if (
+        any_in_array(
+            needles: \array_keys($node->concreteFieldsSelection()),
+            haystack: $user->hiddenFields()
+        )
+    ) {
+        throw new \Exception("Unauthorized! Hidden field requested.");
+    }
+}
+```
+
+### Rules
+
+The rules for the Root Authorizor plugin are as follows:
+
+ 1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `authorizors` sub-folder.
+ 2. The script file's name must follow the following naming format:  
+  authorize_result.php
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
+  authorize_result
+ 4. The plugin function must have the following signature:
+
+```php
+function function_name(
+ \Wedrix\Watchtower\Resolver\Result $result,
+ \Wedrix\Watchtower\Resolver\Node $node
+): void;
+```
+
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
+6. The authorizor plugin function must throw an exception when the authorization fails.
 
 # Optimization
 

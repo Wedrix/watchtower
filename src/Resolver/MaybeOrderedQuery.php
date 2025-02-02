@@ -41,7 +41,7 @@ final class MaybeOrderedQuery implements Query
             
                     foreach ($ordering as $orderingName => $_) {
                         $orderingPlugin = new OrderingPlugin(
-                            parentNodeType: $this->node->unwrappedType(),
+                            nodeType: $this->node->unwrappedType(),
                             orderingName: $orderingName
                         );
         

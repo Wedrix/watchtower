@@ -21,9 +21,13 @@ final class SmartQuery implements Query
     )
     {
         $this->query = (function (): Query {
-            $baseQuery = new BaseQuery(
+            $baseQuery = new ConstrainedQuery(
+                query: new BaseQuery(
+                    node: $this->node,
+                    entityManager: $this->entityManager,
+                    plugins: $this->plugins
+                ),
                 node: $this->node,
-                entityManager: $this->entityManager,
                 plugins: $this->plugins
             );
     
