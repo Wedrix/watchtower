@@ -27,8 +27,7 @@ final class ConstraintPlugin implements Plugin
     {
         $this->type = 'constraint';
 
-        $this->name = 'apply_'.tableize(pluralize($this->nodeType))
-        .'_'.tableize($this->nodeType).'_constraint';
+        $this->name = 'apply_'.tableize($this->nodeType).'_constraint';
 
         $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
 
