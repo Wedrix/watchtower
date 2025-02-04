@@ -24,14 +24,12 @@ final class AuthorizedResult implements Result
 
         $this->output = (function (): mixed {
             if ($this->isWorkable) {
-                if ($this->node->isTopLevel()){
-                    $rootAuthorizorPlugin = new RootAuthorizorPlugin();
+                $rootAuthorizorPlugin = new RootAuthorizorPlugin();
+    
+                if ($this->plugins->contains($rootAuthorizorPlugin)) {
+                    require_once $this->plugins->filePath($rootAuthorizorPlugin);
         
-                    if ($this->plugins->contains($rootAuthorizorPlugin)) {
-                        require_once $this->plugins->filePath($rootAuthorizorPlugin);
-            
-                        $rootAuthorizorPlugin->callback()($this->result, $this->node);
-                    }
+                    $rootAuthorizorPlugin->callback()($this->result, $this->node);
                 }
 
                 $authorizorPlugin = new AuthorizorPlugin(

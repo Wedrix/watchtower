@@ -168,7 +168,7 @@ Scalar Type Definitions are auto-loaded files containing the respective function
  * Serializes an internal value to include in a response.
  */
 function serialize(
- mixed $value
+    mixed $value
 ): string // You can replace 'mixed' with a more specific type 
 {
 }
@@ -177,7 +177,7 @@ function serialize(
  * Parses an externally provided value (query variable) to use as an input
  */
 function parseValue(
- string $value
+    string $value
 ): mixed // You can replace 'mixed' with a more specific type
 {
 }
@@ -188,8 +188,8 @@ function parseValue(
  * @param array<string,mixed>|null $variables
  */
 function parseLiteral(
- \GraphQL\Language\AST\Node $value, 
- ?array $variables = null
+    \GraphQL\Language\AST\Node $value, 
+    ?array $variables = null
 ): mixed // You can replace 'mixed with a more specific type
 {
 }
@@ -215,14 +215,14 @@ use GraphQL\Language\AST\StringValueNode;
 use GraphQL\Utils\Utils;
 
 function serialize(
- \DateTime $value
+    \DateTime $value
 ): string
 {
     return $value->format(\DateTime::ATOM);
 }
 
 function parseValue(
- string $value
+    string $value
 ): \DateTime
 {
     try {
@@ -240,8 +240,8 @@ function parseValue(
  * @param array<string,mixed>|null $variables
  */
 function parseLiteral(
- Node $value, 
- ?array $variables = null
+    Node $value, 
+    ?array $variables = null
 ): \DateTime
 {
     if (!$value instanceof StringValueNode) {
@@ -621,8 +621,8 @@ The rules for Selector plugins are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+    \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 
@@ -654,7 +654,7 @@ use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
 
 function resolve_currency_exchange_rate_field(
-    Node \$node
+    Node $node
 ): mixed
 {
  $exchangeRateResolver = $node->context()['exchangeRateResolver']; // Assuming the service was added to $contextValue when Executor::executeQuery() was called
@@ -678,7 +678,7 @@ The rules for Resolver plugins are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
 
@@ -757,8 +757,8 @@ The rules for Filter plugins are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+    \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 
@@ -847,8 +847,8 @@ The rules for Constraint plugins are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+    \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 
@@ -899,8 +899,8 @@ The rules for Ordering plugins are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+    \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 
@@ -1027,7 +1027,7 @@ The rules for Mutation plugins are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
 
@@ -1056,7 +1056,7 @@ Subscription plugins act as connectors to your application's implementation of s
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\Node $node
 ): mixed;
 ```
 
@@ -1086,7 +1086,7 @@ use Wedrix\Watchtower\Resolver\Result;
 use function array\any_in_array;
 
 function authorize_customer_result(
- Result $result,
+    Result $result,
     Node $node
 ): void
 {
@@ -1120,8 +1120,8 @@ The rules for Authorizor plugins are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\Result $result,
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\Result $result,
+    \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 
@@ -1146,7 +1146,7 @@ use Wedrix\Watchtower\Resolver\Result;
 use function array\any_in_array;
 
 function authorize_result(
- Result $result,
+    Result $result,
     Node $node
 ): void
 {
@@ -1180,8 +1180,8 @@ The rules for the Root Authorizor plugin are as follows:
 
 ```php
 function function_name(
- \Wedrix\Watchtower\Resolver\Result $result,
- \Wedrix\Watchtower\Resolver\Node $node
+    \Wedrix\Watchtower\Resolver\Result $result,
+    \Wedrix\Watchtower\Resolver\Node $node
 ): void;
 ```
 
