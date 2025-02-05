@@ -6,7 +6,6 @@ namespace Wedrix\Watchtower\Plugin;
 
 use Wedrix\Watchtower\Plugin;
 
-use function Wedrix\Watchtower\pluralize;
 use function Wedrix\Watchtower\tableize;
 
 final class ConstraintPlugin implements Plugin
