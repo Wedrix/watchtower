@@ -16,8 +16,8 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
 - [Ordering](#ordering)
 - [Mutations](#mutations)
 - [Subscriptions](#subscriptions)
-- [Authorization](#authorization)
-- [Optimization](#optimization)
+- [Authorizors](#authorizors)
+- [Performance Optimization](#performance-optimization)
 - [Security](#security)
 - [Known Issues](#known-issues)
 - [Versioning](#versioning)
@@ -854,6 +854,59 @@ function function_name(
 
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ConstraintPlugin`.
 
+## Root Constraint Plugin
+
+The Root Constraint plugin allows you to create constraint rules that apply for all queries. The code snippet below is an example root constraint that is applied to all queries:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Wedrix\Watchtower\Plugin\ConstraintPlugin;
+
+use Wedrix\Watchtower\Resolver\Node;
+use Wedrix\Watchtower\Resolver\QueryBuilder;
+
+function apply_constraint(
+    QueryBuilder $queryBuilder,
+    Node $node
+): void
+{
+    $entityAlias = $queryBuilder->rootAlias();
+
+    $queryBuilder->join("{$entityAlias}.app", 'app')
+                ->andWhere("app.id :appId")
+                ->setParameter('appId', Config::appId());
+}
+```
+
+Given the above constraint, all queries will always be filtered by their association to app.
+
+### Rules
+
+The rules for Root Constraint plugins are as follows:
+
+ 1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `filters` sub-folder.
+ 2. The script file's name must follow the following naming format:  
+  apply_constraint.php
+ 3. Within the script file, the plugin function's name must follow the following naming format:  
+  apply_constraint
+ 4. The plugin function must have the following signature:
+
+```php
+function function_name(
+    \Wedrix\Watchtower\Resolver\QueryBuilder $queryBuilder,
+    \Wedrix\Watchtower\Resolver\Node $node
+): void;
+```
+
+5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ConstraintPlugin`.
+
+### Usage as Authorizors
+
+Aside filtering, Constraints can also be used to "authorize" nodes, by throwing Exceptions, preventing further query processing/execution. As such, they are preferable to Authorizors for **query** operations since Authorizors only run **after** query execution.
+
 # Ordering
 
 This library allows you to order queries by chaining **order by** statements onto the builder. It also supports multiple ordering, where one ordering is applied after another to reorder matching elements. To implement orderings, use Ordering Plugins.
@@ -1064,13 +1117,13 @@ function function_name(
 
 Kindly refer to the [GraphQL spec](https://spec.graphql.org/October2021/#sec-Subscription) for the requirements of a Subscription implementation.
 
-# Authorization
+# Authorizors
 
-Authorization allows you to you to approve results. This library handles authorization based on user-defined rules for individual node/collection types. These rules apply to all operation type results, including, Queries, Mutations, and Subscriptions. You write an authorization once and can be guaranteed that it will apply to all results. This library supports authorization through Authorizor Plugins.
+Authorizors allows you to you to approve results based on user-defined rules for individual node/collection types. These rules apply to all operation type results, including, Queries, Mutations, and Subscriptions. You write an authorizors once and can be guaranteed that they will apply to all results. Athorizors are implemented through Authorizor Plugins.
 
 ## Authorizor Plugins
 
-Authorizor plugins allow you to create authorizations for individual node/collection types. The code snippet below is an example authorization applied to User results:
+Authorizor plugins allow you to create authorizors for individual node/collection types. The code snippet below is an example authorizor applied to User results:
 
 ```php
 <?php
@@ -1126,11 +1179,10 @@ function function_name(
 ```
 
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
-6. The authorizor plugin function must throw an exception when the authorization fails.
 
 ## Root Authorizor Plugin
 
-The Root Authorizor plugin allows you to create authorization rules that apply for all node/collection types. The code snippet below is an example authorization applied to all results:
+The Root Authorizor plugin allows you to create authorizor rules that apply for all node/collection types. The code snippet below is an example root authorizor that is applied on all results:
 
 ```php
 <?php
@@ -1186,13 +1238,16 @@ function function_name(
 ```
 
 5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
-6. The authorizor plugin function must throw an exception when the authorization fails.
 
-# Optimization
+# Performance Optimization
 
 To optimize the executor for production, pass `true` as the argument for the `optimize` parameter of the Executor and generate the cache before-hand using the `Console::generateCache()` method.  
 Running in 'optimize' mode, the Executor only relies on the cache as the authoritative souce for the Schema file, Plugin files, and the Scalar Type Definition files.  
 Note that the cache is never updated at runtime so it must be generated before-hand and kept up to date with changes in the source using Console::generateCache().  
+
+## Authorizors and Constraints
+
+Be careful running intensive computations and/or I/O (even requests to the Database) in Authorizors and Constraints. Since these usually run for multiple nodes (Root Authorizors run for every node!) they significantly impact performance. In cases where intensive computations and/or I/O are unavoidable, try as much as possible to use memoize results to prevent unnecessary re-computation.
 
 # Security
 

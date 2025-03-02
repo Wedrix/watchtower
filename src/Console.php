@@ -15,6 +15,7 @@ use Wedrix\Watchtower\Plugin\MutationPlugin;
 use Wedrix\Watchtower\Plugin\OrderingPlugin;
 use Wedrix\Watchtower\Plugin\ResolverPlugin;
 use Wedrix\Watchtower\Plugin\RootAuthorizorPlugin;
+use Wedrix\Watchtower\Plugin\RootConstraintPlugin;
 use Wedrix\Watchtower\Plugin\SelectorPlugin;
 use Wedrix\Watchtower\Plugin\SubscriptionPlugin;
 use Wedrix\Watchtower\ScalarTypeDefinition\DateTimeScalarTypeDefinition;
@@ -133,6 +134,14 @@ class Console
                 plugin: new ConstraintPlugin(
                     nodeType: $nodeType
                 )
+            );
+    }
+
+    public function addRootConstraintPlugin(): void
+    {
+        $this->plugins
+            ->add(
+                plugin: new RootConstraintPlugin()
             );
     }
 

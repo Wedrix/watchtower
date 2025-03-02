@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugin\ConstraintPlugin;
+use Wedrix\Watchtower\Plugin\RootConstraintPlugin;
 use Wedrix\Watchtower\Plugins;
 
 final class ConstrainedQuery implements Query
@@ -25,6 +26,14 @@ final class ConstrainedQuery implements Query
             $queryBuilder = $this->query->builder();
 
             if ($this->isWorkable) {
+                $rootConstraintPlugin = new RootConstraintPlugin();
+
+                if ($this->plugins->contains($rootConstraintPlugin)){
+                    require_once $this->plugins->filePath($rootConstraintPlugin);
+                    
+                    $rootConstraintPlugin->callback()($queryBuilder, $this->node);
+                }
+
                 $constraintPlugin = new ConstraintPlugin(
                     nodeType: $this->node->unwrappedType()
                 );
