@@ -16,7 +16,7 @@ final class ScalarResult implements Result
     )
     {
         $this->isWorkable = (
-            (isset($this->node->root()[$this->node->name()]))
+            (\in_array($this->node->name(), \array_keys($this->node->root())))
             || (
                 !$this->node->isTopLevel()
                     && $this->entityManager
@@ -56,7 +56,7 @@ final class ScalarResult implements Result
                         $embeddedField[$embeddedFieldName] = $root[$field];
                     }
         
-                    return $embeddedField;
+                    return empty(\array_filter(\array_values($embeddedField))) ? null : $embeddedField;
                 }
         
                 throw new \Exception("Invalid root value. The field '$fieldName' is unset in the resolved root.");
