@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\ScalarTypeDefinition;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
 
-final class PageScalarTypeDefinition implements ScalarTypeDefinition
+trait DateTimeScalarTypeDefinition
 {
-    private readonly GenericScalarTypeDefinition $scalarTypeDefinition;
+    private readonly ScalarTypeDefinition $scalarTypeDefinition;
 
     private readonly string $template;
 
     public function __construct()
     {
-        $this->scalarTypeDefinition = new GenericScalarTypeDefinition(
-            typeName: 'Page'
+        $this->scalarTypeDefinition = GenericScalarTypeDefinition(
+            typeName: 'DateTime'
         );
 
         $this->template = <<<EOD
@@ -23,32 +23,29 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
 
         declare(strict_types=1);
         
-        namespace Wedrix\Watchtower\ScalarTypeDefinition\PageTypeDefinition;
+        namespace Wedrix\Watchtower\ScalarTypeDefinition\DateTimeTypeDefinition;
         
-        use GraphQL\Language\AST\IntValueNode;
+        use GraphQL\Language\AST\StringValueNode;
         
         /**
          * Serializes an internal value to include in a response.
          */
         function serialize(
-            int \$value
-        ): int
+            \DateTimeImmutable \$value
+        ): string
         {
-            return \$value;
+            return \$value->format(\DateTimeImmutable::ATOM);
         }
         
         /**
          * Parses an externally provided value (query variable) to use as an input
          */
         function parseValue(
-            int \$value
-        ): int
+            string \$value
+        ): \DateTimeImmutable
         {
-            if ((\$value < 1)) {
-                throw new \Exception('Invalid Page value!');
-            }
-        
-            return \$value;
+            return \date_create_immutable(\$value) 
+                ?: throw new \Exception('Invalid DateTime value!');
         }
         
         /**
@@ -56,17 +53,17 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
          * 
          * E.g. 
          * {
-         *   page: 1,
+         *   user(createdAt: "2021-01-24T05:16:41+00:00") 
          * }
          *
          * @param array<string,mixed>|null \$variables
          */
         function parseLiteral(
-            IntValueNode \$value, 
+            StringValueNode \$value, 
             ?array \$variables = null
-        ): int
+        ): \DateTimeImmutable
         {
-            return parseValue((int) \$value->value);
+            return parseValue(\$value->value);
         }
         EOD;
     }
@@ -87,4 +84,13 @@ final class PageScalarTypeDefinition implements ScalarTypeDefinition
     {
         return $this->template;
     }
+}
+
+function DateTimeScalarTypeDefinition(): ScalarTypeDefinition
+{
+    static $instance = new class() implements ScalarTypeDefinition {
+        use DateTimeScalarTypeDefinition;
+    };
+
+    return $instance;
 }

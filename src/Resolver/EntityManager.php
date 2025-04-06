@@ -4,54 +4,80 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Doctrine\ORM\Configuration;
 use Doctrine\ORM\EntityManagerInterface as DoctrineEntityManager;
 use Wedrix\Watchtower\Entity;
 
-final class EntityManager
+use function Wedrix\Watchtower\Entity;
+
+interface EntityManager
 {
     /**
-     * @var array<string,Entity>
+     * @param string $name The name of the entity.
+     * @return Entity
      */
-    private array $entities = [];
+    public function findEntity(string $name): Entity;
 
-    public function __construct(
-        private readonly DoctrineEntityManager $doctrineEntityManager
-    ){}
+    /**
+     * @param string $name The name of the entity.
+     * @return bool
+     */
+    public function hasEntity(string $name): bool;
 
-    public function createQueryBuilder(): QueryBuilder
-    {
-        return new QueryBuilder(
-            doctrineEntityManager: $this->doctrineEntityManager
-        );
-    }
+    /**
+     * @return QueryBuilder
+     */
+    public function createQueryBuilder(): QueryBuilder;
+}
 
-    public function hasEntity(
-        string $name
-    ): bool
-    {
-        return \array_key_exists($name, $this->entities) 
-                || !empty(
-                    \array_filter(
-                        $this->doctrineEntityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
-                            ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
-                        fn (string $className) => \str_ends_with($className, "\\$name")
-                    )
-                );
-    }
+function EntityManager(
+    DoctrineEntityManager $doctrineEntityManager
+): EntityManager {
+    /**
+     * @var \WeakMap<DoctrineEntityManager,EntityManager>
+     */
+    static $instances = [];
 
-    public function findEntity(
-        string $name
-    ): Entity
-    {
-        return $this->entities[$name] ??= new Entity(
-            name: $name,
-            entityManager: $this->doctrineEntityManager
-        );
-    }
-
-    public function getConfiguration(): Configuration
-    {
-        return $this->doctrineEntityManager->getConfiguration();
-    }
+    return $instances[$doctrineEntityManager] ??= new class(
+        doctrineEntityManager: $doctrineEntityManager
+    ) implements EntityManager {
+        /**
+         * @var array<string,Entity>
+         */
+        private array $entities = [];
+    
+        public function __construct(
+            private readonly DoctrineEntityManager $doctrineEntityManager
+        ){}
+    
+        public function createQueryBuilder(): QueryBuilder
+        {
+            return QueryBuilder(
+                doctrineQueryBuilder: $this->doctrineEntityManager->createQueryBuilder()
+            );
+        }
+    
+        public function hasEntity(
+            string $name
+        ): bool
+        {
+            return \array_key_exists($name, $this->entities) 
+                    || !empty(
+                        \array_filter(
+                            $this->doctrineEntityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
+                                ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
+                            fn (string $className) => \str_ends_with($className, "\\$name")
+                        )
+                    );
+        }
+    
+        public function findEntity(
+            string $name
+        ): Entity
+        {
+            return $this->entities[$name] ??= Entity(
+                name: $name,
+                entityManager: $this->doctrineEntityManager
+            );
+        }
+    };
 }

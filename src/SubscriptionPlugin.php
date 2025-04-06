@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\Plugin;
 
 use function Wedrix\Watchtower\tableize;
 
-final class SubscriptionPlugin implements Plugin
+trait SubscriptionPlugin
 {
     private readonly string $type;
 
@@ -70,4 +70,20 @@ final class SubscriptionPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function SubscriptionPlugin(
+    string $fieldName
+): Plugin
+{
+    /**
+     * @var array<string,Plugin>
+     */
+    static $instances = [];
+
+    return $instances[$fieldName] ??= new class(
+        fieldName: $fieldName
+    ) implements Plugin {
+        use SubscriptionPlugin;
+    };
 }

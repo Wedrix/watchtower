@@ -5,9 +5,10 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugin\ResolverPlugin;
 
-final class QueryResult implements Result
+use function Wedrix\Watchtower\ResolverPlugin;
+
+trait QueryResult
 {
     private readonly bool $isWorkable;
 
@@ -21,7 +22,7 @@ final class QueryResult implements Result
     {
         $this->isWorkable = !$this->plugins
             ->contains(
-                new ResolverPlugin(
+                ResolverPlugin(
                     nodeType: $this->node->unwrappedParentType(),
                     fieldName: $this->node->name()
                 )

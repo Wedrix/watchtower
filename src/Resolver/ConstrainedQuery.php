@@ -4,49 +4,41 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Wedrix\Watchtower\Plugin\ConstraintPlugin;
-use Wedrix\Watchtower\Plugin\RootConstraintPlugin;
 use Wedrix\Watchtower\Plugins;
 
-final class ConstrainedQuery implements Query
+use function Wedrix\Watchtower\ConstraintPlugin;
+use function Wedrix\Watchtower\RootConstraintPlugin;
+
+trait ConstrainedQuery
 {
     private readonly bool $isWorkable;
 
     private readonly QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Query $query,
         private readonly Node $node,
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = $this->query->isWorkable();
+        if ($this->isWorkable) {
+            $rootConstraintPlugin = RootConstraintPlugin();
 
-        $this->queryBuilder = (function (): QueryBuilder {
-            $queryBuilder = $this->query->builder();
-
-            if ($this->isWorkable) {
-                $rootConstraintPlugin = new RootConstraintPlugin();
-
-                if ($this->plugins->contains($rootConstraintPlugin)){
-                    require_once $this->plugins->filePath($rootConstraintPlugin);
-                    
-                    $rootConstraintPlugin->callback()($queryBuilder, $this->node);
-                }
-
-                $constraintPlugin = new ConstraintPlugin(
-                    nodeType: $this->node->unwrappedType()
-                );
-
-                if ($this->plugins->contains($constraintPlugin)) {
-                    require_once $this->plugins->filePath($constraintPlugin);
-                    
-                    $constraintPlugin->callback()($queryBuilder, $this->node);
-                }
+            if ($this->plugins->contains($rootConstraintPlugin)){
+                require_once $this->plugins->filePath($rootConstraintPlugin);
+                
+                $rootConstraintPlugin->callback()($this->queryBuilder, $this->node);
             }
 
-            return $queryBuilder;
-        })();
+            $constraintPlugin = ConstraintPlugin(
+                nodeType: $this->node->unwrappedType()
+            );
+
+            if ($this->plugins->contains($constraintPlugin)) {
+                require_once $this->plugins->filePath($constraintPlugin);
+                
+                $constraintPlugin->callback()($this->queryBuilder, $this->node);
+            }
+        }
     }
 
     public function builder(): QueryBuilder

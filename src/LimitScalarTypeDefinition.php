@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\ScalarTypeDefinition;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
 
-final class DateTimeScalarTypeDefinition implements ScalarTypeDefinition
+trait LimitScalarTypeDefinition
 {
-    private readonly GenericScalarTypeDefinition $scalarTypeDefinition;
+    private readonly ScalarTypeDefinition $scalarTypeDefinition;
 
     private readonly string $template;
 
     public function __construct()
     {
-        $this->scalarTypeDefinition = new GenericScalarTypeDefinition(
-            typeName: 'DateTime'
+        $this->scalarTypeDefinition = GenericScalarTypeDefinition(
+            typeName: 'Limit'
         );
 
         $this->template = <<<EOD
@@ -23,29 +23,32 @@ final class DateTimeScalarTypeDefinition implements ScalarTypeDefinition
 
         declare(strict_types=1);
         
-        namespace Wedrix\Watchtower\ScalarTypeDefinition\DateTimeTypeDefinition;
+        namespace Wedrix\Watchtower\ScalarTypeDefinition\LimitTypeDefinition;
         
-        use GraphQL\Language\AST\StringValueNode;
+        use GraphQL\Language\AST\IntValueNode;
         
         /**
          * Serializes an internal value to include in a response.
          */
         function serialize(
-            \DateTimeImmutable \$value
-        ): string
+            int \$value
+        ): int
         {
-            return \$value->format(\DateTimeImmutable::ATOM);
+            return \$value;
         }
         
         /**
          * Parses an externally provided value (query variable) to use as an input
          */
         function parseValue(
-            string \$value
-        ): \DateTimeImmutable
+            int \$value
+        ): int
         {
-            return \date_create_immutable(\$value) 
-                ?: throw new \Exception('Invalid DateTime value!');
+            if ((\$value < 1) || (\$value > 100)) {
+                throw new \Exception('Invalid Limit value!');
+            }
+        
+            return \$value;
         }
         
         /**
@@ -53,17 +56,17 @@ final class DateTimeScalarTypeDefinition implements ScalarTypeDefinition
          * 
          * E.g. 
          * {
-         *   user(createdAt: "2021-01-24T05:16:41+00:00") 
+         *   limit: 1,
          * }
          *
          * @param array<string,mixed>|null \$variables
          */
         function parseLiteral(
-            StringValueNode \$value, 
+            IntValueNode \$value, 
             ?array \$variables = null
-        ): \DateTimeImmutable
+        ): int
         {
-            return parseValue(\$value->value);
+            return parseValue((int) \$value->value);
         }
         EOD;
     }
@@ -84,4 +87,13 @@ final class DateTimeScalarTypeDefinition implements ScalarTypeDefinition
     {
         return $this->template;
     }
+}
+
+function LimitScalarTypeDefinition(): ScalarTypeDefinition
+{
+    static $instance = new class() implements ScalarTypeDefinition {
+        use LimitScalarTypeDefinition;
+    };
+
+    return $instance;
 }

@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Wedrix\Watchtower\Plugin\ResolverPlugin;
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugin\SelectorPlugin;
 
-final class BaseQuery implements Query
+use function Wedrix\Watchtower\ResolverPlugin;
+use function Wedrix\Watchtower\SelectorPlugin;
+
+trait BaseQuery
 {
     private readonly bool $isWorkable;
 
@@ -85,7 +86,7 @@ final class BaseQuery implements Query
                     $otherSelectedFieldsWithoutResolvedFields = \array_filter(
                         $otherSelectedFields,
                         fn(string $otherSelectedField) => !$this->plugins->contains(
-                            new ResolverPlugin(
+                            ResolverPlugin(
                                 nodeType: $this->node->unwrappedType(),
                                 fieldName: $otherSelectedField
                             )
@@ -96,7 +97,7 @@ final class BaseQuery implements Query
                 })();
         
                 foreach ($selectedFields as $fieldName) {
-                    $selectorPlugin = new SelectorPlugin(
+                    $selectorPlugin = SelectorPlugin(
                         nodeType: $this->node->unwrappedType(),
                         fieldName: $fieldName
                     );

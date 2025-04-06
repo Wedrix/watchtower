@@ -2,14 +2,11 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
-use function Wedrix\Watchtower\pluralize;
 use function Wedrix\Watchtower\tableize;
 
-final class AuthorizorPlugin implements Plugin
+trait ConstraintPlugin
 {
     private readonly string $type;
 
@@ -22,19 +19,14 @@ final class AuthorizorPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $nodeType,
-        private readonly bool $isForCollections
+        private readonly string $nodeType
     )
     {
-        $this->type = 'authorizor';
+        $this->type = 'constraint';
 
-        $this->name = 'authorize_'.tableize(
-            $this->isForCollections
-                ? pluralize($this->nodeType)
-                : $this->nodeType
-        ).'_result';
+        $this->name = 'apply_'.tableize($this->nodeType).'_constraint';
 
-        $this->namespace = __NAMESPACE__.'\\AuthorizorPlugin';
+        $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
 
         $this->template = <<<EOD
         <?php
@@ -44,10 +36,10 @@ final class AuthorizorPlugin implements Plugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
-        use Wedrix\Watchtower\Resolver\Result;
+        use Wedrix\Watchtower\Resolver\QueryBuilder;
 
         function {$this->name}(
-            Result \$result,
+            QueryBuilder \$queryBuilder,
             Node \$node
         ): void
         {
@@ -78,4 +70,20 @@ final class AuthorizorPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function ConstraintPlugin(
+    string $nodeType
+): Plugin
+{
+    /**
+     * @var array<string,Plugin>
+     */
+    static $instances = [];
+
+    return $instances[$nodeType] ??= new class(
+        nodeType: $nodeType
+    ) implements Plugin {
+        use ConstraintPlugin;
+    };
 }

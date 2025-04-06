@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\ScalarTypeDefinition;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
 
 use function Wedrix\Watchtower\classify;
 
-final class GenericScalarTypeDefinition implements ScalarTypeDefinition
+trait GenericScalarTypeDefinition
 {
     private readonly string $namespace;
 
@@ -67,4 +67,19 @@ final class GenericScalarTypeDefinition implements ScalarTypeDefinition
     {
         return $this->template;
     }
+}
+
+function GenericScalarTypeDefinition(
+    string $typeName
+): ScalarTypeDefinition {
+    /**
+     * @var array<string,ScalarTypeDefinition>
+     */
+    static $instances = [];
+
+    return $instances[$typeName] ??= new class(
+        typeName: $typeName,
+    ) implements ScalarTypeDefinition {
+        use GenericScalarTypeDefinition;
+    };
 }

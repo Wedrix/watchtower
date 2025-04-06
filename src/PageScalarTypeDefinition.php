@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\ScalarTypeDefinition;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\ScalarTypeDefinition;
 
-final class LimitScalarTypeDefinition implements ScalarTypeDefinition
+trait PageScalarTypeDefinition
 {
-    private readonly GenericScalarTypeDefinition $scalarTypeDefinition;
+    private readonly ScalarTypeDefinition $scalarTypeDefinition;
 
     private readonly string $template;
 
     public function __construct()
     {
-        $this->scalarTypeDefinition = new GenericScalarTypeDefinition(
-            typeName: 'Limit'
+        $this->scalarTypeDefinition = GenericScalarTypeDefinition(
+            typeName: 'Page'
         );
 
         $this->template = <<<EOD
@@ -23,7 +23,7 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
 
         declare(strict_types=1);
         
-        namespace Wedrix\Watchtower\ScalarTypeDefinition\LimitTypeDefinition;
+        namespace Wedrix\Watchtower\ScalarTypeDefinition\PageTypeDefinition;
         
         use GraphQL\Language\AST\IntValueNode;
         
@@ -44,8 +44,8 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
             int \$value
         ): int
         {
-            if ((\$value < 1) || (\$value > 100)) {
-                throw new \Exception('Invalid Limit value!');
+            if ((\$value < 1)) {
+                throw new \Exception('Invalid Page value!');
             }
         
             return \$value;
@@ -56,7 +56,7 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
          * 
          * E.g. 
          * {
-         *   limit: 1,
+         *   page: 1,
          * }
          *
          * @param array<string,mixed>|null \$variables
@@ -87,4 +87,13 @@ final class LimitScalarTypeDefinition implements ScalarTypeDefinition
     {
         return $this->template;
     }
+}
+
+function PageScalarTypeDefinition(): ScalarTypeDefinition
+{
+    static $instance = new class() implements ScalarTypeDefinition {
+        use PageScalarTypeDefinition;
+    };
+
+    return $instance;
 }

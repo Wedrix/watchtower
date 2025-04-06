@@ -79,7 +79,8 @@ use GraphQL\Error\DebugFlag;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Slim\Factory\AppFactory;
-use Wedrix\Watchtower\Executor;
+
+use function Wedrix\Watchtower\Executor;
 
 require __DIR__ . '/vendor/autoload.php';
 
@@ -97,7 +98,7 @@ $app->post(
   * Pass the entity manager and other config options using DI or 
   * configuration objects. 
   **/
-  $executor = new Executor(
+  $executor = Executor(
    entityManager: $entityManager, // Either as a Singleton or from some DI container
    schemaFile: __DIR__ . '/resources/graphql/schema.graphql',
    pluginsDirectory: __DIR__ . '/resources/graphql/plugins',
@@ -552,7 +553,7 @@ Plugins enable features like filtering, ordering, computed fields, mutations, su
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\FilterPlugin;
+namespace Wedrix\Watchtower\FilterPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -590,7 +591,7 @@ Selector plugins allow you to chain select statements onto the query builder. Th
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\SelectorPlugin;
+namespace Wedrix\Watchtower\SelectorPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -626,7 +627,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\SelectorPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\SelectorPlugin`.
 
 ### Helpful Utilities
 
@@ -648,7 +649,7 @@ Resolver plugins allow you to resolve fields using other services from the datab
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\ResolverPlugin;
+namespace Wedrix\Watchtower\ResolverPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -682,7 +683,7 @@ function function_name(
 ): mixed;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ResolverPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\ResolverPlugin`.
 
 ### Valid Return Types
 
@@ -723,7 +724,7 @@ Filter plugins allow you to chain where conditions onto the query builder. The c
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\FilterPlugin;
+namespace Wedrix\Watchtower\FilterPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -762,7 +763,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\FilterPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\FilterPlugin`.
 
 To use filters add them to the `filters` parameter of the `queryParams` argument. For instance:
 
@@ -811,7 +812,7 @@ Sometimes you may wish to apply a set of filters always regardless of the client
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\ConstraintPlugin;
+namespace Wedrix\Watchtower\ConstraintPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -852,7 +853,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ConstraintPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\ConstraintPlugin`.
 
 ## Root Constraint Plugin
 
@@ -863,7 +864,7 @@ The Root Constraint plugin allows you to create constraint rules that apply for 
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\ConstraintPlugin;
+namespace Wedrix\Watchtower\ConstraintPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -901,7 +902,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\ConstraintPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\ConstraintPlugin`.
 
 ### Usage as Authorizors
 
@@ -920,7 +921,7 @@ Ordering plugins allow you to chain **order by** statements onto the query build
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\OrderingPlugin;
+namespace Wedrix\Watchtower\OrderingPlugin;
 
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\QueryBuilder;
@@ -957,7 +958,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\OrderingPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\OrderingPlugin`.
 
 To use orderings add them to the `ordering` parameter of the `queryParams` argument. For instance:
 
@@ -1041,9 +1042,9 @@ Mutation plugins allow you to create mutations to reliably change state in your 
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\MutationPlugin;
+namespace Wedrix\Watchtower\MutationPlugin;
 
-use App\Server\Sessions\Session;
+use App\Server\Session;
 use Wedrix\Watchtower\Resolver\Node;
 
 function call_log_in_user_mutation(
@@ -1084,7 +1085,7 @@ function function_name(
 ): mixed;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\MutationPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\MutationPlugin`.
 
 ### Valid Return Types
 
@@ -1113,7 +1114,7 @@ function function_name(
 ): mixed;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\SubscriptionPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\SubscriptionPlugin`.
 
 Kindly refer to the [GraphQL spec](https://spec.graphql.org/October2021/#sec-Subscription) for the requirements of a Subscription implementation.
 
@@ -1130,9 +1131,9 @@ Authorizor plugins allow you to create authorizors for individual node/collectio
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\AuthorizorPlugin;
+namespace Wedrix\Watchtower\AuthorizorPlugin;
 
-use App\Server\Sessions\Session;
+use App\Server\Session;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\Result;
 
@@ -1178,7 +1179,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\AuthorizorPlugin`.
 
 ## Root Authorizor Plugin
 
@@ -1189,9 +1190,9 @@ The Root Authorizor plugin allows you to create authorizor rules that apply for 
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin\AuthorizorPlugin;
+namespace Wedrix\Watchtower\AuthorizorPlugin;
 
-use App\Server\Sessions\Session;
+use App\Server\Session;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\Result;
 
@@ -1237,7 +1238,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\Plugin\AuthorizorPlugin`.
+5. The plugin function must be namespaced under `Wedrix\Watchtower\AuthorizorPlugin`.
 
 # Performance Optimization
 

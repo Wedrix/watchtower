@@ -4,34 +4,25 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-final class MaybeDistinctQuery implements Query
+trait MaybeDistinctQuery
 {
     private readonly bool $isWorkable;
 
     private readonly QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Query $query,
         private readonly Node $node
     )
     {
-        $this->isWorkable = $this->query->isWorkable();
-
-        $this->queryBuilder = (function (): QueryBuilder {
-            $queryBuilder = $this->query->builder();
-
-            if ($this->isWorkable) {
-                $queryParams = $this->node->args()['queryParams'] ?? [];
-        
-                if (!empty($queryParams)) {
-                    $distinct = $queryParams['distinct'] ?? false;
-        
-                    $queryBuilder->distinct($distinct);
-                }
-            }
+        if ($this->isWorkable) {
+            $queryParams = $this->node->args()['queryParams'] ?? [];
     
-            return $queryBuilder;
-        })();
+            if (!empty($queryParams)) {
+                $distinct = $queryParams['distinct'] ?? false;
+    
+                $this->queryBuilder->distinct($distinct);
+            }
+        }
     }
 
     public function builder(): QueryBuilder

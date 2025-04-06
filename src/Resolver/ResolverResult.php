@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use Wedrix\Watchtower\Plugin;
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugin\ResolverPlugin;
 
-final class ResolverResult implements Result
+use function Wedrix\Watchtower\ResolverPlugin;
+
+trait ResolverResult
 {
-    private readonly ResolverPlugin $plugin;
+    private readonly Plugin $plugin;
 
     private readonly bool $isWorkable;
 
@@ -20,7 +22,7 @@ final class ResolverResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->plugin = new ResolverPlugin(
+        $this->plugin = ResolverPlugin(
             nodeType: $this->node->unwrappedParentType(),
             fieldName: $this->node->name()
         );

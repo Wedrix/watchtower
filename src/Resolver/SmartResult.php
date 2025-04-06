@@ -6,7 +6,7 @@ namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
 
-final class SmartResult implements Result
+trait SmartResult
 {
     private readonly Result $result;
 
@@ -21,51 +21,63 @@ final class SmartResult implements Result
     )
     {
         $this->result = (function (): Result {
-            $scalarResult = new ScalarResult(
+            $scalarResult = new class(
                 node: $this->node,
                 entityManager: $this->entityManager
-            );
+            ) implements Result {
+                use ScalarResult;
+            };
 
             if ($scalarResult->isWorkable()) {
                 return $scalarResult;
             }
 
-            $queryResult = new QueryResult(
-                query: new SmartQuery(
+            $queryResult = new class(
+                query: new class(
                     node: $this->node,
                     entityManager: $this->entityManager,
                     plugins: $this->plugins
-                ),
+                ) implements Query {
+                    use SmartQuery;
+                },
                 node: $this->node,
                 plugins: $this->plugins
-            );
+            ) implements Result {
+                use QueryResult;
+            };
 
             if ($queryResult->isWorkable()) {
                 return $queryResult;
             }
 
-            $mutationResult = new MutationResult(
+            $mutationResult = new class(
                 node: $this->node,
                 plugins: $this->plugins
-            );
+            ) implements Result {
+                use MutationResult;
+            };
 
             if ($mutationResult->isWorkable()) {
                 return $mutationResult;
             }
 
-            $subscriptionResult = new SubscriptionResult(
+            $subscriptionResult = new class(
                 node: $this->node,
                 plugins: $this->plugins
-            );
+            ) implements Result {
+                use SubscriptionResult;
+            };
     
             if ($subscriptionResult->isWorkable()) {
                 return $subscriptionResult;
             }
 
-            $resolverResult = new ResolverResult(
+            $resolverResult = new class(
                 node: $this->node,
                 plugins: $this->plugins
-            );
+            ) implements Result {
+                use ResolverResult;
+            };
 
             if ($resolverResult->isWorkable()) {
                 return $resolverResult;

@@ -2,13 +2,9 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
-use function Wedrix\Watchtower\tableize;
-
-final class ResolverPlugin implements Plugin
+trait RootConstraintPlugin
 {
     private readonly string $type;
 
@@ -20,17 +16,13 @@ final class ResolverPlugin implements Plugin
 
     private readonly string $callback;
 
-    public function __construct(
-        private readonly string $nodeType,
-        private readonly string $fieldName
-    )
+    public function __construct()
     {
-        $this->type = 'resolver';
+        $this->type = 'constraint';
 
-        $this->name = 'resolve_'.tableize($this->nodeType)
-        .'_'.tableize($this->fieldName).'_field';
+        $this->name = 'apply_constraint';
 
-        $this->namespace = __NAMESPACE__.'\\ResolverPlugin';
+        $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
 
         $this->template = <<<EOD
         <?php
@@ -40,10 +32,12 @@ final class ResolverPlugin implements Plugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
+        use Wedrix\Watchtower\Resolver\QueryBuilder;
 
         function {$this->name}(
+            QueryBuilder \$queryBuilder,
             Node \$node
-        ): mixed
+        ): void
         {
         }
         EOD;
@@ -72,4 +66,13 @@ final class ResolverPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function RootConstraintPlugin(): Plugin
+{
+    static $instance = new class() implements Plugin {
+        use RootConstraintPlugin;
+    };
+
+    return $instance;
 }

@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\Plugin;
 
 use function Wedrix\Watchtower\tableize;
 
-final class SelectorPlugin implements Plugin
+trait MutationPlugin
 {
     private readonly string $type;
 
@@ -21,16 +21,14 @@ final class SelectorPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $nodeType,
         private readonly string $fieldName
     )
     {
-        $this->type = 'selector';
+        $this->type = 'mutation';
 
-        $this->name = 'apply_'.tableize($this->nodeType)
-        .'_'.tableize($this->fieldName).'_selector';
+        $this->name = 'call_'.tableize($this->fieldName).'_mutation';
 
-        $this->namespace = __NAMESPACE__.'\\SelectorPlugin';
+        $this->namespace = __NAMESPACE__.'\\MutationPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -40,12 +38,10 @@ final class SelectorPlugin implements Plugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
-        use Wedrix\Watchtower\Resolver\QueryBuilder;
 
         function {$this->name}(
-            QueryBuilder \$queryBuilder,
             Node \$node
-        ): void
+        ): mixed
         {
         }
         EOD;
@@ -74,4 +70,19 @@ final class SelectorPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function MutationPlugin(
+    string $fieldName
+): Plugin {
+    /**
+     * @var array<string,Plugin>
+     */
+    static $instances = [];
+
+    return $instances[$fieldName] ??= new class(
+        fieldName: $fieldName
+    ) implements Plugin {
+        use MutationPlugin;
+    };
 }

@@ -2,13 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
+use function Wedrix\Watchtower\pluralize;
 use function Wedrix\Watchtower\tableize;
 
-final class ConstraintPlugin implements Plugin
+trait AuthorizorPlugin
 {
     private readonly string $type;
 
@@ -21,14 +20,19 @@ final class ConstraintPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $nodeType
+        private readonly string $nodeType,
+        private readonly bool $isForCollections
     )
     {
-        $this->type = 'constraint';
+        $this->type = 'authorizor';
 
-        $this->name = 'apply_'.tableize($this->nodeType).'_constraint';
+        $this->name = 'authorize_'.tableize(
+            $this->isForCollections
+                ? pluralize($this->nodeType)
+                : $this->nodeType
+        ).'_result';
 
-        $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
+        $this->namespace = __NAMESPACE__.'\\AuthorizorPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -38,10 +42,10 @@ final class ConstraintPlugin implements Plugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
-        use Wedrix\Watchtower\Resolver\QueryBuilder;
+        use Wedrix\Watchtower\Resolver\Result;
 
         function {$this->name}(
-            QueryBuilder \$queryBuilder,
+            Result \$result,
             Node \$node
         ): void
         {
@@ -72,4 +76,22 @@ final class ConstraintPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function AuthorizorPlugin(
+    string $nodeType,
+    bool $isForCollections
+): Plugin
+{
+    /**
+     * @var array<string,array<string,Plugin>>
+     */
+    static $instances = [];
+
+    return $instances[$nodeType][$isForCollections ? 'true' : 'false'] ??= new class(
+        nodeType: $nodeType, 
+        isForCollections: $isForCollections
+    ) implements Plugin {
+        use AuthorizorPlugin;
+    };
 }

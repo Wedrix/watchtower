@@ -2,11 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
+use function Wedrix\Watchtower\pluralize;
+use function Wedrix\Watchtower\tableize;
 
-final class RootConstraintPlugin implements Plugin
+trait FilterPlugin
 {
     private readonly string $type;
 
@@ -18,13 +19,17 @@ final class RootConstraintPlugin implements Plugin
 
     private readonly string $callback;
 
-    public function __construct()
+    public function __construct(
+        private readonly string $nodeType,
+        private readonly string $filterName
+    )
     {
-        $this->type = 'constraint';
+        $this->type = 'filter';
 
-        $this->name = 'apply_constraint';
+        $this->name = 'apply_'.tableize(pluralize($this->nodeType))
+        .'_'.tableize($this->filterName).'_filter';
 
-        $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
+        $this->namespace = __NAMESPACE__."\\FilterPlugin";
 
         $this->template = <<<EOD
         <?php
@@ -68,4 +73,21 @@ final class RootConstraintPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function FilterPlugin(
+    string $nodeType,
+    string $filterName
+): Plugin {
+    /**
+     * @var array<string,array<string,Plugin>>
+     */
+    static $instances = [];
+
+    return $instances[$nodeType][$filterName] ??= new class(
+        nodeType: $nodeType, 
+        filterName: $filterName
+    ) implements Plugin {
+        use FilterPlugin;
+    };
 }

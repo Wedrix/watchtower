@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use Wedrix\Watchtower\Plugin;
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugin\SubscriptionPlugin;
 
-final class SubscriptionResult implements Result
+use function Wedrix\Watchtower\SubscriptionPlugin;
+
+trait SubscriptionResult
 {
-    private readonly SubscriptionPlugin $plugin;
+    private readonly Plugin $plugin;
 
     private readonly bool $isWorkable;
 
@@ -20,7 +22,7 @@ final class SubscriptionResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->plugin = new SubscriptionPlugin(
+        $this->plugin = SubscriptionPlugin(
             fieldName: $this->node->name()
         );
 

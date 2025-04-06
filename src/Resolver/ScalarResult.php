@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-final class ScalarResult implements Result
+trait ScalarResult
 {
     private readonly bool $isWorkable;
 

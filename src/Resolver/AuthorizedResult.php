@@ -4,50 +4,42 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Wedrix\Watchtower\Plugin\RootAuthorizorPlugin;
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugin\AuthorizorPlugin;
 
-final class AuthorizedResult implements Result
+use function Wedrix\Watchtower\AuthorizorPlugin;
+use function Wedrix\Watchtower\RootAuthorizorPlugin;
+
+trait AuthorizedResult
 {
     private readonly bool $isWorkable;
 
     private readonly mixed $output;
 
     public function __construct(
-        private readonly Result $result,
         private readonly Node $node,
         private readonly Plugins $plugins
     )
     {
-        $this->isWorkable = $this->result->isWorkable();
+        if ($this->isWorkable) {
+            $rootAuthorizorPlugin = RootAuthorizorPlugin();
 
-        $this->output = (function (): mixed {
-            if ($this->isWorkable) {
-                $rootAuthorizorPlugin = new RootAuthorizorPlugin();
+            if ($this->plugins->contains($rootAuthorizorPlugin)) {
+                require_once $this->plugins->filePath($rootAuthorizorPlugin);
     
-                if ($this->plugins->contains($rootAuthorizorPlugin)) {
-                    require_once $this->plugins->filePath($rootAuthorizorPlugin);
-        
-                    $rootAuthorizorPlugin->callback()($this->result, $this->node);
-                }
-
-                $authorizorPlugin = new AuthorizorPlugin(
-                    nodeType: $this->node->unwrappedType(),
-                    isForCollections: $this->node->isACollection()
-                );
-        
-                if ($this->plugins->contains($authorizorPlugin)) {
-                    require_once $this->plugins->filePath($authorizorPlugin);
-        
-                    $authorizorPlugin->callback()($this->result, $this->node);
-                }
-                
-                return $this->result->output();
+                $rootAuthorizorPlugin->callback()($this, $this->node);
             }
 
-            return null;
-        })();
+            $authorizorPlugin = AuthorizorPlugin(
+                nodeType: $this->node->unwrappedType(),
+                isForCollections: $this->node->isACollection()
+            );
+    
+            if ($this->plugins->contains($authorizorPlugin)) {
+                require_once $this->plugins->filePath($authorizorPlugin);
+    
+                $authorizorPlugin->callback()($this, $this->node);
+            }
+        }
     }
 
     public function output(): mixed

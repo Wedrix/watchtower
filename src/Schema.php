@@ -9,70 +9,62 @@ use GraphQL\Language\AST\InterfaceTypeDefinitionNode;
 use GraphQL\Language\AST\ScalarTypeDefinitionNode;
 use GraphQL\Utils\AST;
 use GraphQL\Utils\BuildSchema;
-use GraphQL\Language\AST\SchemaDefinitionNode;
 use GraphQL\Language\AST\TypeDefinitionNode;
 use GraphQL\Language\AST\UnionTypeDefinitionNode;
 use GraphQL\Language\Parser;
-use GraphQL\Type\Schema as SchemaType;
-use GraphQL\Type\Definition\AbstractType;
-use GraphQL\Type\Definition\Directive;
-use GraphQL\Type\Definition\ImplementingType;
-use GraphQL\Type\Definition\InterfaceType;
+use GraphQL\Type\Schema as GraphQLSchema;
 use GraphQL\Type\Definition\ResolveInfo;
-use GraphQL\Type\Definition\Type;
-use GraphQL\Utils\InterfaceImplementations;
-use Wedrix\Watchtower\ScalarTypeDefinition\GenericScalarTypeDefinition;
 
-final class Schema extends SchemaType
+final class Schema extends GraphQLSchema
 {
-    /**
-     * @var array<string,SchemaType>
-     */
-    private static array $schemas = [];
-
-    private readonly string $cacheFile;
-
-    private readonly SchemaType $schema;
+    private readonly GraphQLSchema $schema;
 
     public function __construct(
-        private readonly string $sourceFile, 
-        private readonly ScalarTypeDefinitions $scalarTypeDefinitions,
-        private readonly string $cacheDirectory,
-        private readonly bool $optimize
+        string $sourceFile, 
+        ScalarTypeDefinitions $scalarTypeDefinitions,
+        string $cacheDirectory,
+        bool $optimize
     )
     {
-        if (!\is_file($this->sourceFile)) {
-            throw new \Exception("The schema '{$this->sourceFile}' does not exist. Kindly generate it first to proceed.");
+        /**
+         * @var array<string,GraphQLSchema>
+         */
+        static $schemas = [];
+
+        static $cacheFile = null;
+
+        if (!\is_file($sourceFile)) {
+            throw new \Exception("The schema '{$sourceFile}' does not exist. Kindly generate it first to proceed.");
         }
 
-        $this->cacheFile = $this->cacheDirectory.'/'.\pathinfo($this->sourceFile,\PATHINFO_BASENAME);
+        $cacheFile ??= $cacheDirectory.'/'.\pathinfo($sourceFile,\PATHINFO_BASENAME);
 
-        if ($this->optimize) {
-            if (!\is_file($this->cacheFile)) {
-                throw new \Exception("The cache '{$this->cacheFile}' does not exist. Kindly generate it first to proceed.");
+        if ($optimize) {
+            if (!\is_file($cacheFile)) {
+                throw new \Exception("The cache '{$cacheFile}' does not exist. Kindly generate it first to proceed.");
             }
         }
 
-        $this->schema = static::$schemas[$sourceFile] ??= (function (): SchemaType {
+        $this->schema = $schemas[$sourceFile] ??= (function () use ($sourceFile, $scalarTypeDefinitions, $cacheFile, $optimize): GraphQLSchema {
             /**
              * @param array<string,mixed> $typeConfig
              * 
              * @return array<string,mixed>
              */
-            $typeConfigDecorator = function (array $typeConfig, TypeDefinitionNode $typeDefinitionNode): array {
+            $typeConfigDecorator = function (array $typeConfig, TypeDefinitionNode $typeDefinitionNode) use($scalarTypeDefinitions): array {
                 $astNode = $typeConfig['astNode'] ?? null;
     
                 if ($astNode instanceof ScalarTypeDefinitionNode) {
-                    $scalarTypeDefinition = new GenericScalarTypeDefinition(
+                    $scalarTypeDefinition = GenericScalarTypeDefinition(
                         typeName: $typeName = $typeConfig['name']
                     );
     
-                    if (!$this->scalarTypeDefinitions->contains($scalarTypeDefinition)) {
+                    if (!$scalarTypeDefinitions->contains($scalarTypeDefinition)) {
                         throw new \LogicException("The type definition for '$typeName' does not exist.
-                            Kindly create it in '{$this->scalarTypeDefinitions->filePath($scalarTypeDefinition)}'.");
+                            Kindly create it in '{$scalarTypeDefinitions->filePath($scalarTypeDefinition)}'.");
                     }
 
-                    require_once $this->scalarTypeDefinitions->filePath($scalarTypeDefinition);
+                    require_once $scalarTypeDefinitions->filePath($scalarTypeDefinition);
     
                     $typeConfig = \array_merge($typeConfig, [
                         'serialize' => $scalarTypeDefinition->namespace().'\\serialize',
@@ -99,9 +91,9 @@ final class Schema extends SchemaType
                 return $typeConfig;
             };
     
-            $AST = (function (): DocumentNode {
-                if ($this->optimize) {
-                    $document = AST::fromArray(require $this->cacheFile);
+            $AST = (function () use($optimize, $sourceFile, $cacheFile): DocumentNode {
+                if ($optimize) {
+                    $document = AST::fromArray(require $cacheFile);
 
                     if (!$document instanceof DocumentNode) {
                         throw new \Exception('Invalid schema. Could not be parsed as a document node.');
@@ -111,9 +103,9 @@ final class Schema extends SchemaType
                 }
                 
                 return Parser::parse(
-                    source: \is_string($schemaFileContents = \file_get_contents($this->sourceFile)) 
+                    source: \is_string($schemaFileContents = \file_get_contents($sourceFile)) 
                                 ? $schemaFileContents 
-                                : throw new \Exception("Unable to read the schema file '{$this->sourceFile}'.")
+                                : throw new \Exception("Unable to read the schema file '{$sourceFile}'.")
                 );
             })();
             
@@ -121,114 +113,23 @@ final class Schema extends SchemaType
         })();
     }
 
-    public function getTypeMap(): array
+    /**
+     * Magic method to handle calls to undefined methods.
+     * If the method exists on the GraphQL Schema instance, it proxies the call to it.
+     *
+     * @param string $name The name of the method being called.
+     * @param array<int,mixed> $arguments The arguments passed to the method.
+     *
+     * @return mixed The result of the proxied method call.
+     *
+     * @throws \BadMethodCallException If the method does not exist on the GraphQL Schema instance.
+     */
+    public function __call(string $name, array $arguments): mixed
     {
-        return $this->schema
-                    ->getTypeMap();
-    }
+        if (!\method_exists($this->schema, $name)) {
+            throw new \BadMethodCallException("Method '{$name}' does not exist on the schema.");
+        }
 
-    public function getDirectives()
-    {
-        return $this->schema
-                    ->getDirectives();
-    }
-
-    public function getOperationType(
-        $operation
-    )
-    {
-        return $this->schema
-                    ->getOperationType($operation);
-    }
-
-    public function getQueryType(): ?Type
-    {
-        return $this->schema
-                    ->getQueryType();
-    }
-
-    public function getMutationType(): ?Type
-    {
-        return $this->schema
-                    ->getMutationType();
-    }
-
-    public function getSubscriptionType(): ?Type
-    {
-        return $this->schema
-                    ->getSubscriptionType();
-    }
-
-    public function getConfig()
-    {
-        return $this->schema
-                    ->getConfig();
-    }
-
-    public function getType(
-        string $name
-    ): ?Type
-    {
-        return $this->schema
-                    ->getType($name);
-    }
-
-    public function hasType(
-        string $name
-    ): bool
-    {
-        return $this->schema
-                    ->hasType($name);
-    }
-
-    public function getPossibleTypes(
-        Type $abstractType
-    ): array
-    {
-        return $this->schema
-                    ->getPossibleTypes($abstractType);
-    }
-
-    public function getImplementations(
-        InterfaceType $abstractType
-    ): InterfaceImplementations
-    {
-        return $this->schema
-                    ->getImplementations($abstractType);
-    }
-
-    public function isSubType(
-        AbstractType $abstractType, 
-        ImplementingType $maybeSubType
-    ): bool
-    {
-        return $this->schema
-                    ->isSubType($abstractType, $maybeSubType);
-    }
-
-    public function getDirective(
-        string $name
-    ): ?Directive
-    {
-        return $this->schema
-                    ->getDirective($name);
-    }
-
-    public function getAstNode(): ?SchemaDefinitionNode
-    {
-        return $this->schema
-                    ->getAstNode();
-    }
-
-    public function assertValid(): void
-    {
-        $this->schema
-            ->assertValid();
-    }
-
-    public function validate()
-    {
-        return $this->schema
-                    ->validate();
+        return $this->schema->{$name}(...$arguments);
     }
 }

@@ -10,7 +10,31 @@
         "files": [
             "src/string_extensions.php",
             "src/array_extensions.php",
-            "src/file_extensions.php"
+            "src/file_extensions.php",
+            "src/AuthorizorPlugin.php",
+            "src/Console.php",
+            "src/ConstraintPlugin.php",
+            "src/DateTimeScalarTypeDefinition.php",
+            "src/Entity.php",
+            "src/Executor.php",
+            "src/FilterPlugin.php",
+            "src/GenericScalarTypeDefinition.php",
+            "src/LimitScalarTypeDefinition.php",
+            "src/MutationPlugin.php",
+            "src/OrderingPlugin.php",
+            "src/PageScalarTypeDefinition.php",
+            "src/PluginInfo.php",
+            "src/Plugins.php",
+            "src/Resolver.php",
+            "src/ResolverPlugin.php",
+            "src/RootAuthorizorPlugin.php",
+            "src/RootConstraintPlugin.php",
+            "src/ScalarTypeDefinitions.php",
+            "src/SelectorPlugin.php",
+            "src/SubscriptionPlugin.php",
+            "src/Resolver/EntityManager.php",
+            "src/Resolver/Node.php",
+            "src/Resolver/QueryBuilder.php"
         ]
     },
     "authors": [
@@ -21,7 +45,7 @@
     ],
     "minimum-stability": "stable",
     "require": {
-        "php": "^8.1",
+        "php": "^8.3",
         "doctrine/orm": "^2.8",
         "webonyx/graphql-php": "^14.4"
     },

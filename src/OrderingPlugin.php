@@ -2,13 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\Plugin;
 
+use function Wedrix\Watchtower\pluralize;
 use function Wedrix\Watchtower\tableize;
 
-final class MutationPlugin implements Plugin
+trait OrderingPlugin
 {
     private readonly string $type;
 
@@ -21,14 +22,16 @@ final class MutationPlugin implements Plugin
     private readonly string $callback;
 
     public function __construct(
-        private readonly string $fieldName
+        private readonly string $nodeType,
+        private readonly string $orderingName
     )
     {
-        $this->type = 'mutation';
+        $this->type = 'ordering';
 
-        $this->name = 'call_'.tableize($this->fieldName).'_mutation';
+        $this->name = 'apply_'.tableize(pluralize($this->nodeType))
+        .'_'.tableize($this->orderingName).'_ordering';
 
-        $this->namespace = __NAMESPACE__.'\\MutationPlugin';
+        $this->namespace = __NAMESPACE__.'\\OrderingPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -38,10 +41,12 @@ final class MutationPlugin implements Plugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
+        use Wedrix\Watchtower\Resolver\QueryBuilder;
 
         function {$this->name}(
+            QueryBuilder \$queryBuilder,
             Node \$node
-        ): mixed
+        ): void
         {
         }
         EOD;
@@ -70,4 +75,22 @@ final class MutationPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function OrderingPlugin(
+    string $nodeType,
+    string $orderingName
+): Plugin
+{
+    /**
+     * @var array<string,array<string,Plugin>>
+     */
+    static $instances = [];
+
+    return $instances[$nodeType][$orderingName] ??= new class(
+        nodeType: $nodeType, 
+        orderingName: $orderingName
+    ) implements Plugin {
+        use OrderingPlugin;
+    };
 }

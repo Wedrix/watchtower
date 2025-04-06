@@ -5,32 +5,26 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower;
 
 use Doctrine\ORM\EntityManagerInterface;
-use GraphQL\Language\AST\SchemaDefinitionNode;
 use GraphQL\Type\Definition\ScalarType;
-use GraphQL\Type\Schema as SchemaType;
-use GraphQL\Type\Definition\AbstractType;
+use GraphQL\Type\Schema as GraphQLSchema;
 use GraphQL\Type\Definition\CustomScalarType;
-use GraphQL\Type\Definition\Directive;
-use GraphQL\Type\Definition\ImplementingType;
 use GraphQL\Type\Definition\InputObjectType;
-use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\NullableType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
-use GraphQL\Utils\InterfaceImplementations;
 
 use function Wedrix\Watchtower\camelize;
 use function Wedrix\Watchtower\pluralize;
 
-final class SyncedQuerySchema extends SchemaType
+final class SyncedQuerySchema extends GraphQLSchema
 {
-    private readonly SchemaType $schema;
+    private readonly GraphQLSchema $schema;
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
     )
     {
-        $this->schema = (function(): SchemaType {
+        $this->schema = (function(): GraphQLSchema {
             $scalars = [
                 'DateTime' => new CustomScalarType([
                     'name' => 'DateTime'
@@ -161,7 +155,7 @@ final class SyncedQuerySchema extends SchemaType
                             $associatedEntityType = function() use (&$types, $associatedEntityName, $addEntityType): NullableType {
                                 if (!isset($types[$associatedEntityName])) {
                                     $addEntityType(
-                                        new Entity(
+                                        Entity(
                                             name: $associatedEntityName,
                                             entityManager: $this->entityManager
                                         )
@@ -203,7 +197,7 @@ final class SyncedQuerySchema extends SchemaType
 
             foreach ($entityClassNames as $entityClassName) {
                 $addEntityType(
-                    new Entity(
+                    Entity(
                         name: \array_slice(\explode('\\', $entityClassName), -1)[0],
                         entityManager: $this->entityManager
                     )
@@ -217,7 +211,7 @@ final class SyncedQuerySchema extends SchemaType
 
                 $collectionQueryName = pluralize($singleQueryName);
 
-                $entity = new Entity(
+                $entity = Entity(
                     name: \array_slice(\explode('\\', $entityClassName), -1)[0],
                     entityManager: $this->entityManager
                 );
@@ -256,7 +250,7 @@ final class SyncedQuerySchema extends SchemaType
                 ];
             }
    
-            return new SchemaType([
+            return new GraphQLSchema([
                 'query' => new ObjectType([
                     'name' => 'Query',
                     'fields' => $queries
@@ -265,114 +259,23 @@ final class SyncedQuerySchema extends SchemaType
         })();
     }
 
-    public function getTypeMap(): array
+    /**
+     * Magic method to handle calls to undefined methods.
+     * If the method exists on the GraphQL Schema instance, it proxies the call to it.
+     *
+     * @param string $name The name of the method being called.
+     * @param array<int,mixed> $arguments The arguments passed to the method.
+     *
+     * @return mixed The result of the proxied method call.
+     *
+     * @throws \BadMethodCallException If the method does not exist on the GraphQL Schema instance.
+     */
+    public function __call(string $name, array $arguments): mixed
     {
-        return $this->schema
-                    ->getTypeMap();
-    }
+        if (!\method_exists($this->schema, $name)) {
+            throw new \BadMethodCallException("Method '{$name}' does not exist on the schema.");
+        }
 
-    public function getDirectives()
-    {
-        return $this->schema
-                    ->getDirectives();
-    }
-
-    public function getOperationType(
-        $operation
-    )
-    {
-        return $this->schema
-                    ->getOperationType($operation);
-    }
-
-    public function getQueryType(): ?Type
-    {
-        return $this->schema
-                    ->getQueryType();
-    }
-
-    public function getMutationType(): ?Type
-    {
-        return $this->schema
-                    ->getMutationType();
-    }
-
-    public function getSubscriptionType(): ?Type
-    {
-        return $this->schema
-                    ->getSubscriptionType();
-    }
-
-    public function getConfig()
-    {
-        return $this->schema
-                    ->getConfig();
-    }
-
-    public function getType(
-        string $name
-    ): ?Type
-    {
-        return $this->schema
-                    ->getType($name);
-    }
-
-    public function hasType(
-        string $name
-    ): bool
-    {
-        return $this->schema
-                    ->hasType($name);
-    }
-
-    public function getPossibleTypes(
-        Type $abstractType
-    ): array
-    {
-        return $this->schema
-                    ->getPossibleTypes($abstractType);
-    }
-
-    public function getImplementations(
-        InterfaceType $abstractType
-    ): InterfaceImplementations
-    {
-        return $this->schema
-                    ->getImplementations($abstractType);
-    }
-
-    public function isSubType(
-        AbstractType $abstractType, 
-        ImplementingType $maybeSubType
-    ): bool
-    {
-        return $this->schema
-                    ->isSubType($abstractType, $maybeSubType);
-    }
-
-    public function getDirective(
-        string $name
-    ): ?Directive
-    {
-        return $this->schema
-                    ->getDirective($name);
-    }
-
-    public function getAstNode(): ?SchemaDefinitionNode
-    {
-        return $this->schema
-                    ->getAstNode();
-    }
-
-    public function assertValid(): void
-    {
-        $this->schema
-            ->assertValid();
-    }
-
-    public function validate()
-    {
-        return $this->schema
-                    ->validate();
+        return $this->schema->{$name}(...$arguments);
     }
 }

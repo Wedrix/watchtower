@@ -4,38 +4,31 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-final class FindQuery implements Query
+trait FindQuery
 {
     private readonly bool $isWorkable;
 
     private readonly QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Query $query,
         private readonly Node $node
     )
     {
-        $this->isWorkable = $this->node->isTopLevel() 
-            && $this->node->operation() === 'query'
-            && $this->query->isWorkable();
+        $this->isWorkable = $this->isWorkable
+            && $this->node->isTopLevel() 
+            && $this->node->operation() === 'query';
 
-        $this->queryBuilder = (function (): QueryBuilder {
-            $queryBuilder = $this->query->builder();
-
-            if ($this->isWorkable) {
-                foreach ($this->node->args() as $idField => $idValue) {
-                    $idValueAlias = $queryBuilder->reconciledAlias($idField);
-        
-                    $queryBuilder->andWhere(
-                        $queryBuilder->expr()
-                                    ->eq("{$queryBuilder->rootAlias()}.$idField", ":$idValueAlias")
-                    )
-                    ->setParameter($idValueAlias, $idValue);
-                }
+        if ($this->isWorkable) {
+            foreach ($this->node->args() as $idField => $idValue) {
+                $idValueAlias = $this->queryBuilder->reconciledAlias($idField);
+    
+                $this->queryBuilder->andWhere(
+                    $this->queryBuilder->expr()
+                                ->eq("{$this->queryBuilder->rootAlias()}.$idField", ":$idValueAlias")
+                )
+                ->setParameter($idValueAlias, $idValue);
             }
-
-            return $queryBuilder;
-        })();
+        }
     }
 
     public function builder(): QueryBuilder

@@ -2,11 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\Plugin;
 
-final class RootAuthorizorPlugin implements Plugin
+use function Wedrix\Watchtower\tableize;
+
+trait ResolverPlugin
 {
     private readonly string $type;
 
@@ -18,13 +20,17 @@ final class RootAuthorizorPlugin implements Plugin
 
     private readonly string $callback;
 
-    public function __construct()
+    public function __construct(
+        private readonly string $nodeType,
+        private readonly string $fieldName
+    )
     {
-        $this->type = 'authorizor';
+        $this->type = 'resolver';
 
-        $this->name = 'authorize_result';
+        $this->name = 'resolve_'.tableize($this->nodeType)
+        .'_'.tableize($this->fieldName).'_field';
 
-        $this->namespace = __NAMESPACE__.'\\AuthorizorPlugin';
+        $this->namespace = __NAMESPACE__.'\\ResolverPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -34,12 +40,10 @@ final class RootAuthorizorPlugin implements Plugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
-        use Wedrix\Watchtower\Resolver\Result;
 
         function {$this->name}(
-            Result \$result,
             Node \$node
-        ): void
+        ): mixed
         {
         }
         EOD;
@@ -68,4 +72,22 @@ final class RootAuthorizorPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function ResolverPlugin(
+    string $nodeType,
+    string $fieldName
+): Plugin
+{
+    /**
+     * @var array<string,array<string,Plugin>>
+     */
+    static $instances = [];
+
+    return $instances[$nodeType][$fieldName] ??= new class(
+        nodeType: $nodeType,
+        fieldName: $fieldName
+    ) implements Plugin {
+        use ResolverPlugin;
+    };
 }

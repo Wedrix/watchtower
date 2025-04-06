@@ -2,14 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\Plugin;
+namespace Wedrix\Watchtower;
 
 use Wedrix\Watchtower\Plugin;
 
-use function Wedrix\Watchtower\pluralize;
 use function Wedrix\Watchtower\tableize;
 
-final class OrderingPlugin implements Plugin
+trait SelectorPlugin
 {
     private readonly string $type;
 
@@ -23,15 +22,15 @@ final class OrderingPlugin implements Plugin
 
     public function __construct(
         private readonly string $nodeType,
-        private readonly string $orderingName
+        private readonly string $fieldName
     )
     {
-        $this->type = 'ordering';
+        $this->type = 'selector';
 
-        $this->name = 'apply_'.tableize(pluralize($this->nodeType))
-        .'_'.tableize($this->orderingName).'_ordering';
+        $this->name = 'apply_'.tableize($this->nodeType)
+        .'_'.tableize($this->fieldName).'_selector';
 
-        $this->namespace = __NAMESPACE__.'\\OrderingPlugin';
+        $this->namespace = __NAMESPACE__.'\\SelectorPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -75,4 +74,22 @@ final class OrderingPlugin implements Plugin
     {
         return $this->template;
     }
+}
+
+function SelectorPlugin(
+    string $nodeType,
+    string $fieldName
+): Plugin
+{
+    /**
+     * @var array<string,array<string,Plugin>>
+     */
+    static $instances = [];
+
+    return $instances[$nodeType][$fieldName] ??= new class(
+        nodeType: $nodeType,
+        fieldName: $fieldName
+    ) implements Plugin {
+        use SelectorPlugin;
+    };
 }

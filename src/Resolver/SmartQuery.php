@@ -6,9 +6,18 @@ namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
 
-final class SmartQuery implements Query
+trait SmartQuery
 {
-    private readonly Query $query;
+    use BaseQuery, ConstrainedQuery, MaybePaginatedQuery, MaybeOrderedQuery, MaybeFilteredQuery, MaybeDistinctQuery, ParentAssociatedQuery, FindQuery {
+        BaseQuery::__construct as constructBase;
+        ConstrainedQuery::__construct as constrain;
+        MaybePaginatedQuery::__construct as paginate;
+        MaybeOrderedQuery::__construct as order;
+        MaybeFilteredQuery::__construct as filter;
+        MaybeDistinctQuery::__construct as deduplicate;
+        ParentAssociatedQuery::__construct as associateParent;
+        FindQuery::__construct as find;
+    }
 
     private readonly bool $isWorkable;
 
@@ -20,60 +29,33 @@ final class SmartQuery implements Query
         private readonly Plugins $plugins
     )
     {
-        $this->query = (function (): Query {
-            $baseQuery = new ConstrainedQuery(
-                query: new BaseQuery(
-                    node: $this->node,
-                    entityManager: $this->entityManager,
-                    plugins: $this->plugins
-                ),
-                node: $this->node,
-                plugins: $this->plugins
-            );
-    
-            if ($this->node->isACollection()) {
-                $collectionQuery = new MaybeDistinctQuery(
-                    query: new MaybeFilteredQuery(
-                        query: new MaybeOrderedQuery(
-                            query: new MaybePaginatedQuery(
-                                query: $baseQuery,
-                                node: $this->node
-                            ),
-                            node: $this->node,
-                            plugins: $this->plugins
-                        ),
-                        node: $this->node,
-                        plugins: $this->plugins
-                    ),
-                    node: $this->node
-                );
-    
-                if ($this->node->isTopLevel()) {
-                    return $collectionQuery;
-                }
+        $this->constructBase($node, $entityManager, $plugins);
 
-                return new ParentAssociatedQuery(
-                    query: $collectionQuery,
-                    node: $this->node
-                );
+        $this->constrain($node, $plugins);
+
+        if ($node->isACollection()) {
+            $this->filter($node, $plugins);
+
+            $this->deduplicate($node);
+
+            $this->order($node, $plugins);
+
+            $this->paginate($node, $plugins);
+
+            if (!$node->isTopLevel()) {
+                $this->associateParent($node, $entityManager);
             }
+        }
 
-            if ($this->node->isTopLevel()) {
-                return new FindQuery(
-                    query: $baseQuery,
-                    node: $this->node
-                );
+        if (!$node->isACollection()){
+            if ($node->isTopLevel()) {
+                $this->find($node);
             }
-            
-            return new ParentAssociatedQuery(
-                query: $baseQuery,
-                node: $this->node
-            );
-        })();
-        
-        $this->isWorkable = $this->query->isWorkable();
-
-        $this->queryBuilder = $this->query->builder();
+    
+            if (!$node->isTopLevel()){
+                $this->associateParent($node, $entityManager);
+            }
+        }
     }
 
     public function builder(): QueryBuilder

@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\Plugin\MutationPlugin;
+use Wedrix\Watchtower\Plugin;
 
-final class MutationResult implements Result
+use function Wedrix\Watchtower\MutationPlugin;
+
+trait MutationResult
 {
-    private readonly MutationPlugin $plugin;
+    private readonly Plugin $plugin;
 
     private readonly bool $isWorkable;
 
@@ -20,7 +22,7 @@ final class MutationResult implements Result
         private readonly Plugins $plugins
     )
     {
-        $this->plugin = new MutationPlugin(
+        $this->plugin = MutationPlugin(
             fieldName: $this->node->name()
         );
 
