@@ -45,9 +45,9 @@ This library is inspired by similar others created for different platforms:
 
 # Requirements
 
-- php >= v8.1
+- php >= v8.3
 - doctrine/orm >= v2.8
-- graphql-php >= 14.4
+- graphql-php >= v14.4
 
 # Installation
 
