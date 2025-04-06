@@ -25,7 +25,7 @@ function QueryBuilder(
     /**
      * @var \WeakMap<DoctrineQueryBuilder,QueryBuilder>
      */
-    static $instances = [];
+    static $instances = new \WeakMap();
 
     return $instances[$doctrineQueryBuilder] ??= new class(
         doctrineQueryBuilder: $doctrineQueryBuilder

@@ -73,7 +73,7 @@ function Entity(
     /**
      * @var \WeakMap<EntityManagerInterface,array<string,Entity>>
      */
-    static $instances = [];
+    static $instances = new \WeakMap();
 
     return $instances[$entityManager][$name] ??= new class(
         name: $name,

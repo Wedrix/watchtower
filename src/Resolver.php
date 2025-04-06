@@ -36,7 +36,7 @@ function Resolver(
     /**
      * @var \WeakMap<EntityManagerInterface,\WeakMap<Plugins,Resolver>>
      */
-    static $instances = [];
+    static $instances = new \WeakMap();
 
     return $instances[$entityManager][$plugins] ??= new class(
         entityManager: $entityManager,

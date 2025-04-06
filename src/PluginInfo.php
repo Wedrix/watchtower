@@ -18,7 +18,7 @@ function PluginInfo(
     /**
      * @var \WeakMap<\SplFileInfo,PluginInfo>
      */
-    static $instances = [];
+    static $instances = new \WeakMap();
 
     return $instances[$pluginFile] ??= new class(
         pluginFile: $pluginFile

@@ -89,7 +89,8 @@ function Console(
     /**
      * @var \WeakMap<EntityManagerInterface,array<string,array<string,array<string,array<string,array<string,Console>>>>
      */
-    static $instances = [];
+    static $instances = new \WeakMap();
+
     return $instances[$entityManager][$schemaFileDirectory][$schemaFileName][$pluginsDirectory][$scalarTypeDefinitionsDirectory][$cacheDirectory] ??= new class(
         entityManager: $entityManager,
         schemaFileDirectory: $schemaFileDirectory,

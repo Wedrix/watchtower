@@ -56,7 +56,8 @@ function Executor(
     /**
      * @var \WeakMap<EntityManagerInterface,array<string,array<string,array<string,array<string,array<string,Executor>>>>
      */
-    static $instances = [];
+    static $instances = new \WeakMap();
+
     return $instances[$entityManager][$schemaFile][$pluginsDirectory][$scalarTypeDefinitionsDirectory][$cacheDirectory][$optimize ? 'true' : 'false'] ??= new class(
         entityManager: $entityManager,
         schemaFile: $schemaFile,
