@@ -23,7 +23,7 @@ trait PageScalarTypeDefinition
 
         declare(strict_types=1);
         
-        namespace Wedrix\Watchtower\ScalarTypeDefinition\PageTypeDefinition;
+        namespace Wedrix\Watchtower\PageTypeDefinition;
         
         use GraphQL\Language\AST\IntValueNode;
         

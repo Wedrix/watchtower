@@ -197,7 +197,7 @@ function parseLiteral(
 ```
 
 5. The respective functions `serialize()`, `parseValue()`, and `parseLiteral()` must be namespaced following this format:
-  `Wedrix\Watchtower\ScalarTypeDefinition\{the scalar type name in PascalCase}TypeDefinition`
+  `Wedrix\Watchtower\{the scalar type name in PascalCase}TypeDefinition`
 
 The below code snippet is an example Scalar Type Definition for a custom DateTime scalar type:
 
@@ -208,7 +208,7 @@ The below code snippet is an example Scalar Type Definition for a custom DateTim
 
 declare(strict_types=1);
 
-namespace Wedrix\Watchtower\ScalarTypeDefinition\DateTimeTypeDefinition;
+namespace Wedrix\Watchtower\DateTimeTypeDefinition;
 
 use GraphQL\Error\Error;
 use GraphQL\Language\AST\Node;

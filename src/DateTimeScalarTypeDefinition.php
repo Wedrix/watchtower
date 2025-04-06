@@ -23,7 +23,7 @@ trait DateTimeScalarTypeDefinition
 
         declare(strict_types=1);
         
-        namespace Wedrix\Watchtower\ScalarTypeDefinition\DateTimeTypeDefinition;
+        namespace Wedrix\Watchtower\DateTimeTypeDefinition;
         
         use GraphQL\Language\AST\StringValueNode;
         
