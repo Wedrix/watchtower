@@ -10,14 +10,14 @@ use function Wedrix\Watchtower\ResolverPlugin;
 
 trait QueryResult
 {
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly mixed $output;
+    private mixed $output;
 
     public function __construct(
-        private readonly Query $query,
-        private readonly Node $node,
-        private readonly Plugins $plugins
+        private Query $query,
+        private Node $node,
+        private Plugins $plugins
     )
     {
         $this->isWorkable = !$this->plugins

@@ -10,13 +10,13 @@ use function Wedrix\Watchtower\FilterPlugin;
 
 trait MaybeFilteredQuery
 {
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly QueryBuilder $queryBuilder;
+    private QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly Plugins $plugins
+        private Node $node,
+        private Plugins $plugins
     )
     {
         if ($this->isWorkable) {

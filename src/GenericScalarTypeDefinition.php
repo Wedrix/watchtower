@@ -10,12 +10,12 @@ use function Wedrix\Watchtower\classify;
 
 trait GenericScalarTypeDefinition
 {
-    private readonly string $namespace;
+    private string $namespace;
 
-    private readonly string $template;
+    private string $template;
 
     public function __construct(
-        private readonly string $typeName
+        private string $typeName
     )
     {
         $this->namespace = __NAMESPACE__.'\\'.classify($this->typeName).'TypeDefinition';

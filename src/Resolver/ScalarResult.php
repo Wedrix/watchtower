@@ -6,13 +6,13 @@ namespace Wedrix\Watchtower\Resolver;
 
 trait ScalarResult
 {
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly mixed $output;
+    private mixed $output;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly EntityManager $entityManager
+        private Node $node,
+        private EntityManager $entityManager
     )
     {
         $this->isWorkable = (

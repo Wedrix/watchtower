@@ -23,9 +23,13 @@ function QueryBuilder(
 ): QueryBuilder
 {
     /**
-     * @var \WeakMap<DoctrineQueryBuilder,QueryBuilder>
+     * @var \WeakMap<DoctrineQueryBuilder,?QueryBuilder>
      */
     static $instances = new \WeakMap();
+
+    if (!isset($instances[$doctrineQueryBuilder])) {
+        $instances[$doctrineQueryBuilder] = null;
+    }
 
     return $instances[$doctrineQueryBuilder] ??= new class(
         doctrineQueryBuilder: $doctrineQueryBuilder
@@ -38,7 +42,7 @@ function QueryBuilder(
         private array $aliases = [];
     
         public function __construct(
-            private readonly DoctrineQueryBuilder $doctrineQueryBuilder
+            private DoctrineQueryBuilder $doctrineQueryBuilder
         ){}
     
         public function rootAlias(): string

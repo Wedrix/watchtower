@@ -8,18 +8,18 @@ use function Wedrix\Watchtower\tableize;
 
 trait ConstraintPlugin
 {
-    private readonly string $type;
+    private string $type;
 
-    private readonly string $name;
+    private string $name;
 
-    private readonly string $namespace;
+    private string $namespace;
 
-    private readonly string $template;
+    private string $template;
 
-    private readonly string $callback;
+    private string $callback;
 
     public function __construct(
-        private readonly string $nodeType
+        private string $nodeType
     )
     {
         $this->type = 'constraint';

@@ -19,14 +19,14 @@ trait SmartQuery
         FindQuery::__construct as find;
     }
 
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly QueryBuilder $queryBuilder;
+    private QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly EntityManager $entityManager,
-        private readonly Plugins $plugins
+        private Node $node,
+        private EntityManager $entityManager,
+        private Plugins $plugins
     )
     {
         $this->constructBase($node, $entityManager, $plugins);

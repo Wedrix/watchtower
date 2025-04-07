@@ -11,13 +11,13 @@ use function Wedrix\Watchtower\RootAuthorizorPlugin;
 
 trait AuthorizedResult
 {
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly mixed $output;
+    private mixed $output;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly Plugins $plugins
+        private Node $node,
+        private Plugins $plugins
     )
     {
         if ($this->isWorkable) {

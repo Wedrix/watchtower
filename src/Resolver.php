@@ -34,19 +34,27 @@ function Resolver(
 ): Resolver
 {
     /**
-     * @var \WeakMap<EntityManagerInterface,\WeakMap<Plugins,Resolver>>
+     * @var \WeakMap<EntityManagerInterface,\WeakMap<Plugins,?Resolver>>
      */
     static $instances = new \WeakMap();
+
+    if (!isset($instances[$entityManager])) {
+        $instances[$entityManager] = new \WeakMap(); // @phpstan-ignore-line
+    }
+
+    if (!isset($instances[$entityManager][$plugins])) {
+        $instances[$entityManager][$plugins] = null;
+    }
 
     return $instances[$entityManager][$plugins] ??= new class(
         entityManager: $entityManager,
         plugins: $plugins
     ) implements Resolver {
-        private readonly EntityManager $entityManager;
+        private EntityManager $entityManager;
     
         public function __construct(
             EntityManagerInterface $entityManager,
-            private readonly Plugins $plugins
+            private Plugins $plugins
         )
         {
             $this->entityManager = EntityManager(

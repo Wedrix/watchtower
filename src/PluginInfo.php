@@ -16,16 +16,20 @@ function PluginInfo(
 ): PluginInfo
 {
     /**
-     * @var \WeakMap<\SplFileInfo,PluginInfo>
+     * @var \WeakMap<\SplFileInfo,?PluginInfo>
      */
     static $instances = new \WeakMap();
+
+    if (!isset($instances[$pluginFile])) {
+        $instances[$pluginFile] = null;
+    }
 
     return $instances[$pluginFile] ??= new class(
         pluginFile: $pluginFile
     ) implements PluginInfo {
-        private readonly string $name;
+        private string $name;
     
-        private readonly string $type;
+        private string $type;
     
         public function __construct(
             \SplFileInfo $pluginFile

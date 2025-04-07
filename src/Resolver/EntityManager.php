@@ -33,9 +33,13 @@ function EntityManager(
     DoctrineEntityManager $doctrineEntityManager
 ): EntityManager {
     /**
-     * @var \WeakMap<DoctrineEntityManager,EntityManager>
+     * @var \WeakMap<DoctrineEntityManager,?EntityManager>
      */
     static $instances = new \WeakMap();
+
+    if (!isset($instances[$doctrineEntityManager])) {
+        $instances[$doctrineEntityManager] = null;
+    }
 
     return $instances[$doctrineEntityManager] ??= new class(
         doctrineEntityManager: $doctrineEntityManager
@@ -46,7 +50,7 @@ function EntityManager(
         private array $entities = [];
     
         public function __construct(
-            private readonly DoctrineEntityManager $doctrineEntityManager
+            private DoctrineEntityManager $doctrineEntityManager
         ){}
     
         public function createQueryBuilder(): QueryBuilder

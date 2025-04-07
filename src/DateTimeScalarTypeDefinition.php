@@ -8,9 +8,9 @@ use Wedrix\Watchtower\ScalarTypeDefinition;
 
 trait DateTimeScalarTypeDefinition
 {
-    private readonly ScalarTypeDefinition $scalarTypeDefinition;
+    private ScalarTypeDefinition $scalarTypeDefinition;
 
-    private readonly string $template;
+    private string $template;
 
     public function __construct()
     {

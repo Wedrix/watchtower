@@ -6,13 +6,13 @@ namespace Wedrix\Watchtower\Resolver;
 
 trait ParentAssociatedQuery
 {
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly QueryBuilder $queryBuilder;
+    private QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly EntityManager $entityManager,
+        private Node $node,
+        private EntityManager $entityManager,
     )
     {
         $this->isWorkable = $this->isWorkable

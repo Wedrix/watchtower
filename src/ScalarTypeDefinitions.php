@@ -39,9 +39,9 @@ function ScalarTypeDefinitions(
         optimize: $optimize
     ) implements ScalarTypeDefinitions {
         public function __construct(
-            private readonly string $directory,
-            private readonly string $cacheDirectory,
-            private readonly bool $optimize
+            private string $directory,
+            private string $cacheDirectory,
+            private bool $optimize
         ){}
     
         public function contains(

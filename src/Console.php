@@ -91,6 +91,10 @@ function Console(
      */
     static $instances = new \WeakMap();
 
+    if (!isset($instances[$entityManager])) {
+        $instances[$entityManager] = [];
+    }
+
     return $instances[$entityManager][$schemaFileDirectory][$schemaFileName][$pluginsDirectory][$scalarTypeDefinitionsDirectory][$cacheDirectory] ??= new class(
         entityManager: $entityManager,
         schemaFileDirectory: $schemaFileDirectory,
@@ -99,17 +103,17 @@ function Console(
         scalarTypeDefinitionsDirectory: $scalarTypeDefinitionsDirectory,
         cacheDirectory: $cacheDirectory
     ) implements Console {
-        private readonly Plugins $plugins;
+        private Plugins $plugins;
     
-        private readonly ScalarTypeDefinitions $scalarTypeDefinitions;
+        private ScalarTypeDefinitions $scalarTypeDefinitions;
 
         public function __construct(
-            private readonly EntityManagerInterface $entityManager,
-            private readonly string $schemaFileDirectory,
-            private readonly string $schemaFileName,
-            private readonly string $pluginsDirectory,
-            private readonly string $scalarTypeDefinitionsDirectory,
-            private readonly string $cacheDirectory
+            private EntityManagerInterface $entityManager,
+            private string $schemaFileDirectory,
+            private string $schemaFileName,
+            private string $pluginsDirectory,
+            private string $scalarTypeDefinitionsDirectory,
+            private string $cacheDirectory
         )
         {
             $this->plugins = Plugins(

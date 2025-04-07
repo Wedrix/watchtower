@@ -9,19 +9,19 @@ use function Wedrix\Watchtower\tableize;
 
 trait AuthorizorPlugin
 {
-    private readonly string $type;
+    private string $type;
 
-    private readonly string $name;
+    private string $name;
 
-    private readonly string $namespace;
+    private string $namespace;
 
-    private readonly string $template;
+    private string $template;
 
-    private readonly string $callback;
+    private string $callback;
 
     public function __construct(
-        private readonly string $nodeType,
-        private readonly bool $isForCollections
+        private string $nodeType,
+        private bool $isForCollections
     )
     {
         $this->type = 'authorizor';

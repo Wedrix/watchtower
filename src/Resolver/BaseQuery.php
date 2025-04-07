@@ -11,14 +11,14 @@ use function Wedrix\Watchtower\SelectorPlugin;
 
 trait BaseQuery
 {
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly QueryBuilder $queryBuilder;
+    private QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly EntityManager $entityManager,
-        private readonly Plugins $plugins
+        private Node $node,
+        private EntityManager $entityManager,
+        private Plugins $plugins
     )
     {
         $this->isWorkable = !$this->node->isAbstract()

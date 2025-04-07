@@ -8,16 +8,16 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartResult
 {
-    private readonly Result $result;
+    private Result $result;
 
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly mixed $output;
+    private mixed $output;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly EntityManager $entityManager,
-        private readonly Plugins $plugins
+        private Node $node,
+        private EntityManager $entityManager,
+        private Plugins $plugins
     )
     {
         $this->result = (function (): Result {

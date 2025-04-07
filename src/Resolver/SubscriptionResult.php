@@ -11,15 +11,15 @@ use function Wedrix\Watchtower\SubscriptionPlugin;
 
 trait SubscriptionResult
 {
-    private readonly Plugin $plugin;
+    private Plugin $plugin;
 
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly mixed $output;
+    private mixed $output;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly Plugins $plugins
+        private Node $node,
+        private Plugins $plugins
     )
     {
         $this->plugin = SubscriptionPlugin(

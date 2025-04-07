@@ -166,33 +166,33 @@ function Node(
         context: $context,
         info: $info
     ) implements Node {
-        private readonly string $name;
+        private string $name;
     
-        private readonly string $unwrappedType;
+        private string $unwrappedType;
     
-        private readonly string $unwrappedParentType;
+        private string $unwrappedParentType;
     
-        private readonly string $operation;
+        private string $operation;
     
-        private readonly bool $isNullable;
+        private bool $isNullable;
     
-        private readonly bool $isACollection;
+        private bool $isACollection;
     
-        private readonly bool $isTopLevel;
+        private bool $isTopLevel;
     
-        private readonly bool $isAbstract;
+        private bool $isAbstract;
     
-        private readonly bool $isALeaf;
-    
-        /**
-         * @var array<string,mixed>
-         */
-        private readonly array $concreteFieldsSelection;
+        private bool $isALeaf;
     
         /**
          * @var array<string,mixed>
          */
-        private readonly array $abstractFieldsSelection;
+        private array $concreteFieldsSelection;
+    
+        /**
+         * @var array<string,mixed>
+         */
+        private array $abstractFieldsSelection;
     
         /**
          * @param array<string,mixed> $root
@@ -200,10 +200,10 @@ function Node(
          * @param array<string,mixed> $context
          */
         public function __construct(
-            private readonly array $root,
-            private readonly array $args,
-            private readonly array $context,
-            private readonly ResolveInfo $info
+            private array $root,
+            private array $args,
+            private array $context,
+            private ResolveInfo $info
         )
         {
             $this->name = $this->info->fieldName;

@@ -5,19 +5,18 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
-use Wedrix\Watchtower\OrderingPlugin;
 
 use function Wedrix\Watchtower\OrderingPlugin;
 
 trait MaybeOrderedQuery
 {
-    private readonly bool $isWorkable;
+    private bool $isWorkable;
 
-    private readonly QueryBuilder $queryBuilder;
+    private QueryBuilder $queryBuilder;
 
     public function __construct(
-        private readonly Node $node,
-        private readonly Plugins $plugins
+        private Node $node,
+        private Plugins $plugins
     )
     {
         if ($this->isWorkable) {

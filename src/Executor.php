@@ -58,6 +58,10 @@ function Executor(
      */
     static $instances = new \WeakMap();
 
+    if (!isset($instances[$entityManager])) {
+        $instances[$entityManager] = [];
+    }
+
     return $instances[$entityManager][$schemaFile][$pluginsDirectory][$scalarTypeDefinitionsDirectory][$cacheDirectory][$optimize ? 'true' : 'false'] ??= new class(
         entityManager: $entityManager,
         schemaFile: $schemaFile,
@@ -66,17 +70,17 @@ function Executor(
         cacheDirectory: $cacheDirectory,
         optimize: $optimize
     ) implements Executor {
-        private readonly GraphQLTypeSchema $schema;
+        private GraphQLTypeSchema $schema;
     
-        private readonly Resolver $resolver;
+        private Resolver $resolver;
 
         public function __construct(
-            private readonly EntityManagerInterface $entityManager,
-            private readonly string $schemaFile,
-            private readonly string $pluginsDirectory,
-            private readonly string $scalarTypeDefinitionsDirectory,
-            private readonly string $cacheDirectory,
-            private readonly bool $optimize
+            private EntityManagerInterface $entityManager,
+            private string $schemaFile,
+            private string $pluginsDirectory,
+            private string $scalarTypeDefinitionsDirectory,
+            private string $cacheDirectory,
+            private bool $optimize
         )
         {
             if (!\is_file($this->schemaFile)) {

@@ -74,33 +74,37 @@ function Entity(
      * @var \WeakMap<EntityManagerInterface,array<string,Entity>>
      */
     static $instances = new \WeakMap();
+    
+    if (!isset($instances[$entityManager])) {
+        $instances[$entityManager] = [];
+    }
 
     return $instances[$entityManager][$name] ??= new class(
         name: $name,
         entityManager: $entityManager
     ) implements Entity {
-        private readonly string $class;
+        private string $class;
     
-        private readonly ClassMetadata $metadata;
-    
-        /**
-         * @var array<string>
-         */
-        private readonly array $fields;
+        private ClassMetadata $metadata;
     
         /**
          * @var array<string>
          */
-        private readonly array $idFields;
+        private array $fields;
     
         /**
          * @var array<string>
          */
-        private readonly array $associations;
+        private array $idFields;
+    
+        /**
+         * @var array<string>
+         */
+        private array $associations;
     
         public function __construct(
-            private readonly string $name,
-            private readonly EntityManagerInterface $entityManager
+            private string $name,
+            private EntityManagerInterface $entityManager
         )
         {
             $this->class = (function (): string {
