@@ -4,17 +4,12 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Wedrix\Watchtower\Plugins;
-
 trait MaybePaginatedQuery
 {
-    private bool $isWorkable;
-
-    private QueryBuilder $queryBuilder;
-
     public function __construct(
         private Node $node,
-        private Plugins $plugins
+        private QueryBuilder $queryBuilder,
+        private bool $isWorkable
     )
     {
         if ($this->isWorkable) {

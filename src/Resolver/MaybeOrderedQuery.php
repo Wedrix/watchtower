@@ -10,13 +10,11 @@ use function Wedrix\Watchtower\OrderingPlugin;
 
 trait MaybeOrderedQuery
 {
-    private bool $isWorkable;
-
-    private QueryBuilder $queryBuilder;
-
     public function __construct(
         private Node $node,
-        private Plugins $plugins
+        private Plugins $plugins,
+        private QueryBuilder $queryBuilder,
+        private bool $isWorkable
     )
     {
         if ($this->isWorkable) {
@@ -31,7 +29,7 @@ trait MaybeOrderedQuery
                      * @param array{rank:int,params:null|array<string,mixed>} $a
                      * @param array{rank:int,params:null|array<string,mixed>} $b
                      */
-                    fn(array $a, array $b): int => $a['rank'] - $b['rank']
+                    static fn (array $a, array $b): int => $a['rank'] - $b['rank']
                 );
         
                 foreach ($ordering as $orderingName => $_) {

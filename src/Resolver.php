@@ -4,12 +4,11 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityManagerInterface as DoctrineEntityManager;
 use GraphQL\Type\Definition\ResolveInfo;
-use Wedrix\Watchtower\Resolver\AuthorizedSmartResult;
 use Wedrix\Watchtower\Resolver\EntityManager;
-use Wedrix\Watchtower\Resolver\Result;
 
+use function Wedrix\Watchtower\Resolver\AuthorizedSmartResult;
 use function Wedrix\Watchtower\Resolver\EntityManager;
 use function Wedrix\Watchtower\Resolver\Node;
 
@@ -29,36 +28,36 @@ interface Resolver
 }
 
 function Resolver(
-    EntityManagerInterface $entityManager,
+    DoctrineEntityManager $doctrineEntityManager,
     Plugins $plugins
 ): Resolver
 {
     /**
-     * @var \WeakMap<EntityManagerInterface,\WeakMap<Plugins,?Resolver>>
+     * @var \WeakMap<DoctrineEntityManager,\WeakMap<Plugins,?Resolver>>
      */
     static $instances = new \WeakMap();
 
-    if (!isset($instances[$entityManager])) {
-        $instances[$entityManager] = new \WeakMap(); // @phpstan-ignore-line
+    if (!isset($instances[$doctrineEntityManager])) {
+        $instances[$doctrineEntityManager] = new \WeakMap(); // @phpstan-ignore-line
     }
 
-    if (!isset($instances[$entityManager][$plugins])) {
-        $instances[$entityManager][$plugins] = null;
+    if (!isset($instances[$doctrineEntityManager][$plugins])) {
+        $instances[$doctrineEntityManager][$plugins] = null;
     }
 
-    return $instances[$entityManager][$plugins] ??= new class(
-        entityManager: $entityManager,
+    return $instances[$doctrineEntityManager][$plugins] ??= new class(
+        doctrineEntityManager: $doctrineEntityManager,
         plugins: $plugins
     ) implements Resolver {
         private EntityManager $entityManager;
     
         public function __construct(
-            EntityManagerInterface $entityManager,
+            private DoctrineEntityManager $doctrineEntityManager,
             private Plugins $plugins
         )
         {
             $this->entityManager = EntityManager(
-                doctrineEntityManager: $entityManager
+                doctrineEntityManager: $this->doctrineEntityManager
             );
         }
     
@@ -69,7 +68,7 @@ function Resolver(
             ResolveInfo $info
         ): mixed
         {
-            $result = new class(
+            $result = AuthorizedSmartResult(
                 node: Node(
                     root: $root,
                     args: $args,
@@ -77,12 +76,10 @@ function Resolver(
                     info: $info
                 ),
                 entityManager: $this->entityManager,
-                plugins: $this->plugins
-            ) implements Result {
-                use AuthorizedSmartResult;
-            };
+                plugins: $this->plugins,
+            );
             
-            return $result->output();
+            return $result->value();
         }
     };
 }

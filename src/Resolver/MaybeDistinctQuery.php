@@ -6,12 +6,10 @@ namespace Wedrix\Watchtower\Resolver;
 
 trait MaybeDistinctQuery
 {
-    private bool $isWorkable;
-
-    private QueryBuilder $queryBuilder;
-
     public function __construct(
-        private Node $node
+        private Node $node,
+        private QueryBuilder $queryBuilder,
+        private bool $isWorkable
     )
     {
         if ($this->isWorkable) {

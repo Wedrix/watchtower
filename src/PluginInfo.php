@@ -32,12 +32,12 @@ function PluginInfo(
         private string $type;
     
         public function __construct(
-            \SplFileInfo $pluginFile
+            private \SplFileInfo $pluginFile
         )
         {
-            $this->name = \explode('.php', $pluginFile->getBasename())[0];
+            $this->name = \explode('.php', $this->pluginFile->getBasename())[0];
     
-            $this->type = singularize(\array_slice(\explode(\DIRECTORY_SEPARATOR, $pluginFile->getPath()), -1)[0]);
+            $this->type = singularize(\array_slice(\explode(\DIRECTORY_SEPARATOR, $this->pluginFile->getPath()), -1)[0]);
         }
     
         public function name(): string

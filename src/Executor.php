@@ -11,6 +11,9 @@ use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Type\Schema as GraphQLTypeSchema;
 use GraphQL\Validator\Rules\ValidationRule;
 
+use function Wedrix\Watchtower\Resolver\NodeBuffer;
+use function Wedrix\Watchtower\Resolver\ResultBuffer;
+
 interface Executor
 {
     /**
@@ -99,7 +102,7 @@ function Executor(
             );
     
             $this->resolver = Resolver(
-                entityManager: $this->entityManager,
+                doctrineEntityManager: $this->entityManager,
                 plugins: Plugins(
                     directory: $this->pluginsDirectory,
                     cacheDirectory: $this->cacheDirectory,
@@ -123,7 +126,7 @@ function Executor(
             ?array $validationRules
         ): ExecutionResult 
         {
-            return GraphQL::executeQuery(
+            $result = GraphQL::executeQuery(
                 schema: $this->schema,
                 source: $source,
                 rootValue: $rootValue,
@@ -133,6 +136,12 @@ function Executor(
                 fieldResolver: $this->resolver,
                 validationRules: $validationRules
             );
+
+            // Clear buffers after each execution to avoid data leakage between executions.
+            NodeBuffer()->clear();
+            ResultBuffer()->clear();
+
+            return $result;
         }
     };
 }

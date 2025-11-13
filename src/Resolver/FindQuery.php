@@ -6,12 +6,10 @@ namespace Wedrix\Watchtower\Resolver;
 
 trait FindQuery
 {
-    private bool $isWorkable;
-
-    private QueryBuilder $queryBuilder;
-
     public function __construct(
-        private Node $node
+        private Node $node,
+        private QueryBuilder $queryBuilder,
+        private bool $isWorkable
     )
     {
         $this->isWorkable = $this->isWorkable

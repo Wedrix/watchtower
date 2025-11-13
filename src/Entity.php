@@ -16,17 +16,17 @@ interface Entity
     /**
      * @return array<string>
      */
-    public function fields(): array;
+    public function fieldNames(): array;
 
     /**
      * @return array<string>
      */
-    public function idFields(): array;
+    public function idFieldNames(): array;
 
     /**
      * @return array<string>
      */
-    public function associations(): array;
+    public function associationNames(): array;
 
     public function hasEmbeddedField(
         string $fieldName
@@ -53,6 +53,10 @@ interface Entity
     ): bool;
 
     public function associationMappedByTargetField(
+        string $fieldName
+    ): string;
+
+    public function associationInversedByTargetField(
         string $fieldName
     ): string;
 
@@ -90,17 +94,17 @@ function Entity(
         /**
          * @var array<string>
          */
-        private array $fields;
+        private array $fieldNames;
     
         /**
          * @var array<string>
          */
-        private array $idFields;
+        private array $idFieldNames;
     
         /**
          * @var array<string>
          */
-        private array $associations;
+        private array $associationNames;
     
         public function __construct(
             private string $name,
@@ -120,11 +124,11 @@ function Entity(
     
             $this->metadata = $this->entityManager->getClassMetadata($this->class);
     
-            $this->fields = $this->metadata->getFieldNames();
+            $this->fieldNames = $this->metadata->getFieldNames();
     
-            $this->idFields = $this->metadata->getIdentifierFieldNames();
+            $this->idFieldNames = $this->metadata->getIdentifierFieldNames();
     
-            $this->associations = $this->metadata->getAssociationNames();
+            $this->associationNames = $this->metadata->getAssociationNames();
         }
     
         public function name(): string
@@ -137,19 +141,19 @@ function Entity(
             return $this->class;
         }
     
-        public function fields(): array
+        public function fieldNames(): array
         {
-            return $this->fields;
+            return $this->fieldNames;
         }
     
-        public function idFields(): array
+        public function idFieldNames(): array
         {
-            return $this->idFields;
+            return $this->idFieldNames;
         }
     
-        public function associations(): array
+        public function associationNames(): array
         {
-            return $this->associations;
+            return $this->associationNames;
         }
     
         public function hasEmbeddedField(
@@ -199,6 +203,13 @@ function Entity(
         ): string
         {
             return $this->metadata->getAssociationMappedByTargetField($fieldName);
+        }
+
+        public function associationInversedByTargetField(
+            string $fieldName
+        ): string
+        {
+            return $this->metadata->associationMappings[$fieldName]['inversedBy'];
         }
     
         public function associationIsSingleValued(

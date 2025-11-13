@@ -24,7 +24,7 @@ use GraphQL\Utils\InterfaceImplementations;
 
 final class Schema extends GraphQLSchema
 {
-    private readonly GraphQLSchema $schema;
+    private GraphQLSchema $schema;
 
     public function __construct(
         string $sourceFile, 

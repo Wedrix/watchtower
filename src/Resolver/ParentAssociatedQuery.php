@@ -6,33 +6,53 @@ namespace Wedrix\Watchtower\Resolver;
 
 trait ParentAssociatedQuery
 {
-    private bool $isWorkable;
-
-    private QueryBuilder $queryBuilder;
-
     public function __construct(
         private Node $node,
         private EntityManager $entityManager,
+        private QueryBuilder $queryBuilder,
+        private bool $isWorkable
     )
     {
         $this->isWorkable = $this->isWorkable
             && !$this->node->isTopLevel()
             && $this->entityManager->hasEntity(name: $this->node->unwrappedParentType());
+    }
 
+    public function builder(): QueryBuilder
+    {       
         if ($this->isWorkable) {
+            $batchNodes = (function (): array {
+                $batchKey = BatchKey(node: $this->node);
+
+                $nodes = [$this->node];
+
+                foreach (NodeBuffer() as $bufferedNode) {
+                    $_batchKey = BatchKey(node: $bufferedNode);
+
+                    if ($_batchKey->value() === $batchKey->value()) {
+                        $nodes[] = $bufferedNode;
+                    }
+                }
+
+                return $nodes;
+            })();
+
             $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
 
-            $parentIds = \array_reduce(
-                $parentEntity->idFields(),
-                function(array $parentIdValue, string $parentIdField) use($parentEntity): array {
-                    $rootKey = \in_array($parentIdField, $parentEntity->associations()) ? "__associated_$parentIdField" : $parentIdField;
-
-                    $parentIdValue[$parentIdField] = $this->node->root()[$rootKey];
+            $parentIds = \array_map(
+                static fn (Node $batchNode): array =>
+                    \array_reduce(
+                        $parentEntity->idFieldNames(),
+                        static function (array $parentIdValue, string $parentIdFieldName) use ($parentEntity, $batchNode): array {
+                            $rootKey = \in_array($parentIdFieldName, $parentEntity->associationNames()) 
+                                ? "__associated_$parentIdFieldName" 
+                                : $parentIdFieldName;
+                    $parentIdValue[$parentIdFieldName] = $batchNode->root()[$rootKey];
 
                     return $parentIdValue;
                 },
                 []
-            );
+            ), $batchNodes);
             
             $association = $this->node->name();
     
@@ -43,44 +63,70 @@ trait ParentAssociatedQuery
             if ($parentEntity->associationIsInverseSide($association)) {
                 $association = $parentEntity->associationMappedByTargetField($association);
 
-                foreach ($parentIds as $idName => $idValue) {
-                    $idValueAlias = $this->queryBuilder->reconciledAlias($idName);
+                $idFieldNames = $parentEntity->idFieldNames();
 
-                    $this->queryBuilder->andWhere(
-                        $this->queryBuilder->expr()
-                                    ->eq("IDENTITY($rootEntityAlias.$association,'$idName')", ":$idValueAlias")
-                    )
-                    ->setParameter($idValueAlias, $idValue);
+                // Build OR conditions for composite key matching
+                $orConditions = $this->queryBuilder->expr()->orX();
+                
+                foreach ($parentIds as $index => $parentId) {
+                    $andConditions = $this->queryBuilder->expr()->andX();
+                    
+                    foreach ($idFieldNames as $idFieldName) {
+                        $paramName = "parent_id_{$index}_{$idFieldName}";
+                        $andConditions->add(
+                            $this->queryBuilder->expr()
+                                ->eq("IDENTITY($rootEntityAlias.$association, '$idFieldName')", ":$paramName")
+                        );
+                        $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
+                    }
+                    
+                    $orConditions->add($andConditions);
+                }
+                
+                $this->queryBuilder->andWhere($orConditions);
+
+                foreach ($idFieldNames as $idFieldName) {
+                    $idNameAlias = "{$parentEntityAlias}_$idFieldName";
+                    $this->queryBuilder->addSelect("IDENTITY($rootEntityAlias.$association, '$idFieldName') AS $idNameAlias");
                 }
             }
             else {
-                $subquery = $this->entityManager
-                                ->createQueryBuilder()
-                                ->from($parentEntity->class(), $parentEntityAlias)
-                                ->join("$parentEntityAlias.$association", $association)
-                                ->select($association);
+                $association = $parentEntity->associationInversedByTargetField($association);
 
-                foreach ($parentIds as $idName => $idValue) {
-                    $idValueAlias = $this->queryBuilder->reconciledAlias($idName);
-                    
-                    $subquery->andWhere(
-                        $this->queryBuilder->expr()
-                                    ->eq("$parentEntityAlias.$idName", ":$idValueAlias")
-                    );
-
-                    $this->queryBuilder->setParameter($idValueAlias,$idValue);
-                }
-    
-                $this->queryBuilder->andWhere(
-                    $this->queryBuilder->expr()
-                                ->in($rootEntityAlias, $subquery->getDQL())
+                $this->queryBuilder->join(
+                    "$rootEntityAlias.$association",
+                    $parentEntityAlias
                 );
+
+                $idFieldNames = $parentEntity->idFieldNames();
+
+                // Build OR conditions for composite key matching
+                $orConditions = $this->queryBuilder->expr()->orX();
+                
+                foreach ($parentIds as $index => $parentId) {
+                    $andConditions = $this->queryBuilder->expr()->andX();
+                    
+                    foreach ($idFieldNames as $idFieldName) {
+                        $paramName = "parent_id_{$index}_{$idFieldName}";
+                        $andConditions->add(
+                            $this->queryBuilder->expr()
+                                ->eq("$parentEntityAlias.$idFieldName", ":$paramName")
+                        );
+                        $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
+                    }
+                    
+                    $orConditions->add($andConditions);
+                }
+                
+                $this->queryBuilder->andWhere($orConditions);
+
+                foreach ($idFieldNames as $idFieldName) {
+                    $idNameAlias = "{$parentEntityAlias}_$idFieldName";
+                    $this->queryBuilder->addSelect("$parentEntityAlias.$idFieldName AS $idNameAlias");
+                }
             }
         }
-    }
 
-    public function builder(): QueryBuilder
-    {
         return $this->queryBuilder;
     }
 

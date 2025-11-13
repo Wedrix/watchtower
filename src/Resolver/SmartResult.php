@@ -8,11 +8,17 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartResult
 {
-    private Result $result;
+    use ScalarResult, QueryResult, MutationResult, SubscriptionResult, ResolverResult {
+        ScalarResult::__construct as private constructScalarResult;
+        QueryResult::__construct as private constructQueryResult;
+        MutationResult::__construct as private constructMutationResult;
+        SubscriptionResult::__construct as private constructSubscriptionResult;
+        ResolverResult::__construct as private constructResolverResult;
+    }
 
     private bool $isWorkable;
 
-    private mixed $output;
+    private mixed $value;
 
     public function __construct(
         private Node $node,
@@ -20,80 +26,63 @@ trait SmartResult
         private Plugins $plugins
     )
     {
-        $this->result = (function (): Result {
-            $scalarResult = new class(
+        $this->constructScalarResult(
+            node: $this->node,
+            entityManager: $this->entityManager,
+        );
+
+        if ($this->isWorkable) {
+            return;
+        }
+
+        $this->constructQueryResult(
+            query: SmartQuery(
                 node: $this->node,
-                entityManager: $this->entityManager
-            ) implements Result {
-                use ScalarResult;
-            };
+                entityManager: $this->entityManager,
+                plugins: $this->plugins,
+            ),
+            node: $this->node,
+            plugins: $this->plugins,
+            entityManager: $this->entityManager,
+        );
 
-            if ($scalarResult->isWorkable()) {
-                return $scalarResult;
-            }
+        if ($this->isWorkable) {
+            return;
+        }
 
-            $queryResult = new class(
-                query: new class(
-                    node: $this->node,
-                    entityManager: $this->entityManager,
-                    plugins: $this->plugins
-                ) implements Query {
-                    use SmartQuery;
-                },
-                node: $this->node,
-                plugins: $this->plugins
-            ) implements Result {
-                use QueryResult;
-            };
+        $this->constructMutationResult(
+            node: $this->node,
+            plugins: $this->plugins
+        );
 
-            if ($queryResult->isWorkable()) {
-                return $queryResult;
-            }
+        if ($this->isWorkable) {
+            return;
+        }
 
-            $mutationResult = new class(
-                node: $this->node,
-                plugins: $this->plugins
-            ) implements Result {
-                use MutationResult;
-            };
+        $this->constructSubscriptionResult(
+            node: $this->node,
+            plugins: $this->plugins
+        );
 
-            if ($mutationResult->isWorkable()) {
-                return $mutationResult;
-            }
+        if ($this->isWorkable) {
+            return;
+        }
 
-            $subscriptionResult = new class(
-                node: $this->node,
-                plugins: $this->plugins
-            ) implements Result {
-                use SubscriptionResult;
-            };
-    
-            if ($subscriptionResult->isWorkable()) {
-                return $subscriptionResult;
-            }
+        $this->constructResolverResult(
+            node: $this->node,
+            plugins: $this->plugins
+        );
 
-            $resolverResult = new class(
-                node: $this->node,
-                plugins: $this->plugins
-            ) implements Result {
-                use ResolverResult;
-            };
+        if ($this->isWorkable) {
+            return;
+        }
 
-            if ($resolverResult->isWorkable()) {
-                return $resolverResult;
-            }
-
-            throw new \Exception("Unable to resolve the node. None of the computed results are workable.");
-        })();
-
-        $this->isWorkable = $this->result->isWorkable();
-
-        $this->output = $this->isWorkable ? $this->result->output() : null;
+        throw new \Exception("Unable to resolve the node. None of the result strategies were workable.");
     }
 
-    public function output(): mixed
+    public function value(): mixed
     {
-        return $this->output;
+        return $this->value;
     }
 
     public function isWorkable(): bool

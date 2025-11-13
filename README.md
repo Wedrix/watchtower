@@ -1,6 +1,6 @@
-A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for serving GraphQL from [Doctrine](https://github.com/doctrine/orm)-based frameworks like Symfony.
+An auto-generation library that eliminates boilerplate by automatically building production-ready GraphQL APIs from [Doctrine ORM](https://github.com/doctrine/orm) entities. Built on [graphql-php](https://github.com/webonyx/graphql-php), it provides out-of-the-box support for queries, mutations, filtering, pagination, and authorization — perfect for [Symfony](https://symfony.com) and other Doctrine-based frameworks.
 
-# Table of Content
+# Table of Contents
 
 - [Features](#features)
 - [Motivation](#motivation)
@@ -27,21 +27,26 @@ A wrapper around [graphql-php](https://github.com/webonyx/graphql-php) for servi
 
 # Features
 
-- SDL first.
-- Out-of-the-box pagination support.
-- Support for computed fields, filtering, ordering, mutations, subscriptions, authorization, and custom resolvers via user-generated plugins.
-- Support for all type system features including enums, abstract types (i.e. Unions and Interfaces), custom scalars, and custom directives.
-- Schema generation and updation for queries, based on the project's current Doctrine models.
-- Code generation for plugins and scalar type definitions.
+- **SDL-First Approach** — Define your GraphQL schema using the Schema Definition Language for clarity and maintainability.
+- **Automatic Pagination** — Out-of-the-box pagination support for queries and collections without extra boilerplate.
+- **Extensible Plugin System** — Implement computed fields, custom filtering, ordering, mutations, subscriptions, authorization, and custom resolvers through an intuitive plugin architecture.
+- **Complete Type System Support** — Full support for enums, abstract types (Unions and Interfaces), custom scalars, custom directives, and more.
+- **Schema Auto-Generation** — Automatically generate initial GraphQL schemas from your Doctrine ORM entities and update them as your models evolve.
+- **Code Generation Tools** — CLI commands to auto-generate plugin boilerplate and scalar type definitions, speeding up development.
+- **Performance-Optimized Batching** — Automatic query batching and support for mutation/resolver batching to eliminate the N+1 problem and reduce database load.
 
 # Motivation
 
-Supporting a GraphQL API usually involves writing a lot of redundant boilerplate code. By abstracting away this boilerplate, you save precious development and maintenance time, allowing you to focus on the more unique aspects of your API.
+Building GraphQL APIs typically requires writing extensive boilerplate code: schema definitions, resolvers for queries and mutations, pagination logic, filtering, authorization checks, and more. This repetitive work is time-consuming and error-prone, diverting your focus from implementing your API's unique business logic.
 
-This library is inspired by similar others created for different platforms:
+Watchtower changes this by **automatically generating your entire GraphQL API from your existing Doctrine ORM models**. Using your existing Doctrine annotations, Watchtower generates a GraphQL SDL schema and provides a complete, production-ready GraphQL API with full querying, filtering, pagination, and authorization capabilities—eliminating months of routine development.
 
-- [Lighthouse](https://github.com/nuwave/lighthouse) for Laravel and Eloquent
-- [Mongoose GraphQL Server](https://github.com/DanishSiraj/mongoose-graphql-server) for Express and Mongoose
+This library draws inspiration from similar code-generation approaches on other platforms:
+
+- **[Lighthouse](https://github.com/nuwave/lighthouse)** for Laravel and Eloquent
+- **[Mongoose GraphQL Server](https://github.com/DanishSiraj/mongoose-graphql-server)** for Express and Mongoose
+
+These projects have proven the immense value of automatically generating GraphQL servers. Watchtower brings the same philosophy to the PHP/Doctrine ecosystem.
 
 # Requirements
 
@@ -55,7 +60,7 @@ This library is inspired by similar others created for different platforms:
 
 ## Symfony
 
-The documentation for the Symfony bundle is avaiable [here](https://github.com/Wedrix/watchtower-symfony-bundle). Kindly view it for the appropriate installation steps for Symfony.
+The documentation for the Symfony bundle is available [here](https://github.com/Wedrix/watchtower-symfony-bundle). Kindly view it for the appropriate installation steps for Symfony.
 
 ## Demo Application  
 
@@ -68,7 +73,7 @@ This library is composed of two main components:
  1. The Executor component `Wedrix\Watchtower\Executor`, responsible for auto-resolving queries.
  2. The Console component `Wedrix\Watchtower\Console`, responsible for code generation, schema management, and plugin management.
 
-The Executor component should be used in some controller class or callback  function to power your service's GraphQL endpoint. The example usage below is for a Slim 4 application:
+The Executor component should be used in some controller class or callback function to power your service's GraphQL endpoint. The example usage below is for a Slim 4 application:
 
 ```php
 #index.php
@@ -128,7 +133,7 @@ $app->post(
        validationRules: null
       )
       ->toArray(
-       debug: DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag:INCLUDE_TRACE
+       debug: DebugFlag::INCLUDE_DEBUG_MESSAGE | DebugFlag::INCLUDE_TRACE
       )
      )
     ) 
@@ -191,7 +196,7 @@ function parseValue(
 function parseLiteral(
     \GraphQL\Language\AST\Node $value, 
     ?array $variables = null
-): mixed // You can replace 'mixed with a more specific type
+): mixed // You can replace 'mixed' with a more specific type
 {
 }
 ```
@@ -271,20 +276,22 @@ To facilitate speedy development, the Console component offers the convenience m
 
 The console component comes with the helper method `generateSchema()` which may be used to generate the initial schema file based on the project's Doctrine models.
 
+### Important Limitations
+
 Kindly take note of the following when using the schema generator:
 
- 1. The generator only generates Query operations. It does not generate any Mutation or Subscription operations - those must be added in manually.
- 2. The generator auto-generates the scalar type definitions for the custom types: `DateTime`, `Page`, and `Limit` if they do not already exist.
- 3. The generator is able to only resolve the following Doctrine types:
+ 1. **Query-Only Generation:** The generator only generates Query operations. It does not generate any Mutation or Subscription operations - those must be added manually.
+ 2. **Partial Scalar Auto-Generation:** The generator auto-generates scalar type definitions for the custom types: `DateTime`, `Page`, and `Limit` if they do not already exist.
+ 3. **Limited Type Support:** The generator is able to resolve only the following Doctrine types:
 
-    - All [interger types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
+    - All [integer types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#integer-types)  - resolve to GraphQL's `Int` type.
     - All [decimal types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#decimal-types) - resolve to GraphQL's `Float` type.
     - All [string types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#string-types) - resolve to GraphQL's `String` type.
     - All [date and time types](https://www.doctrine-project.org/projects/doctrine-dbal/en/current/reference/types.html#date-and-time-types) - resolve to the custom `DateTime` type (auto-generated if it doesn't already exist).
 
- 4. The generator skips all fields having scalar types different from the above-mentioned types. You must manually add those in, with their corresponding Scalar Type Definitions.
- 5. The generator only resolves actual fields that correspond to database columns. All other fields must be added in manually, as either Computed or Resolved fields.
- 6. The generator is not able to properly ascertain the nullability of Embedded Types and Relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
+ 4. **Manual Type Additions:** The generator skips all fields having scalar types different from the above-mentioned types. You must manually add those in, with their corresponding Scalar Type Definitions.
+ 5. **Database Columns Only:** The generator only resolves actual fields that correspond to database columns. All other fields must be added manually, as either Computed or Resolved fields.
+ 6. **Manual Nullability for Complex Types:** The generator is not able to properly ascertain the nullability of Embedded Types and Relations, so those must be manually set. Currently, all embedded field types will be nullable by default, and all relations, non-nullable.
 
 ## Updating the Schema
 
@@ -363,9 +370,9 @@ query {
 }
 ```
 
-returns the result for the productLine with product id **1** and order id **1**.  
+returns the result for the productLine with product id **1** and order id **1**.
 
-Notice that in the previous example, the unique key for ProductLine is a compound key consisting of the associations `product` and `user`. You may use any combination of fields/associations, that together make a valid unique key, as Find Query parameters.
+Notice that in the previous example, the unique key for ProductLine is a compound key consisting of the associations `product` and `order`. You may use any combination of fields/associations, that together make a valid unique key, as Find Query parameters.
 
 Note that Find Queries can only be represented by top-level query fields since the resolver auto-relates sub-level fields as relations.
 
@@ -407,7 +414,9 @@ resolves the product with id **1**, its best seller, and all the corresponding l
 
 ## Pagination
 
-By default, the complete result-set for a collection relation is returned. To enable pagination for a particular relation, all you have to do is pass the `queryParams` argument to the corresponding field in the document. For example:
+### Collection Pagination
+
+By default, the complete result-set for a collection relation is returned. To enable pagination for a particular collection relation, all you have to do is pass the `queryParams` argument to the corresponding field in the document. For example:
 
 ```graphql
 type Query {
@@ -433,6 +442,8 @@ input ListingsQueryParams {
 ```
 
 The type specified for the `queryParams` argument does not matter. The only requirement is that it must define the two fields `limit` and `page` as integer types. You may also choose to make them non-nullable to force pagination for the particular query field.
+
+### Query Pagination
 
 `queryParams` may also be used to paginate the results of a query. For instance, given the following schema:
 
@@ -545,6 +556,32 @@ Plugins are special auto-loaded functions you define that allow you to add custo
  6. The plugin function must be namespaced based on the specified convention for the particular plugin type (see [subsequent sections](#computed-fields) for more details).
 
 Plugins enable features like filtering, ordering, computed fields, mutations, subscriptions, and authorization. Below is an example filter plugin for filtering listings by the given ids:
+
+## Plugin Types Reference
+
+Here's a quick reference guide for all plugin types and their naming conventions:
+
+| Plugin Type | Subdirectory | File Naming | Function Naming | Namespace | Purpose |
+|---|---|---|---|---|---|
+| **Selector** | `selectors/` | `apply_{type}_{field}_selector.php` | `apply_{type}_{field}_selector` | `Wedrix\Watchtower\SelectorPlugin` | Compute fields using database queries |
+| **Resolver** | `resolvers/` | `resolve_{type}_{field}_field.php` | `resolve_{type}_{field}_field` | `Wedrix\Watchtower\ResolverPlugin` | Resolve fields using custom logic or services |
+| **Filter** | `filters/` | `apply_{type}_{filter}_filter.php` | `apply_{pluralType}_{filter}_filter` | `Wedrix\Watchtower\FilterPlugin` | Filter collections based on parameters |
+| **Constraint** | `filters/` | `apply_{type}_constraint.php` | `apply_{type}_constraint` | `Wedrix\Watchtower\ConstraintPlugin` | Always-applied filters |
+| **Root Constraint** | `filters/` | `apply_constraint.php` | `apply_constraint` | `Wedrix\Watchtower\ConstraintPlugin` | Global constraints for all queries |
+| **Ordering** | `orderings/` | `apply_{type}_{order}_ordering.php` | `apply_{pluralType}_{order}_ordering` | `Wedrix\Watchtower\OrderingPlugin` | Order collection results |
+| **Mutation** | `mutations/` | `call_{mutation}_mutation.php` | `call_{mutation}_mutation` | `Wedrix\Watchtower\MutationPlugin` | Perform state-changing operations |
+| **Subscription** | `subscriptions/` | `call_{subscription}_subscription.php` | `call_{subscription}_subscription` | `Wedrix\Watchtower\SubscriptionPlugin` | Subscribe to event streams |
+| **Authorizor** | `authorizors/` | `authorize_{type}_result.php` | `authorize_{type}_result` | `Wedrix\Watchtower\AuthorizorPlugin` | Authorize individual results |
+| **Root Authorizor** | `authorizors/` | `authorize_result.php` | `authorize_result` | `Wedrix\Watchtower\AuthorizorPlugin` | Global authorization rules |
+
+**Key Notes:**
+
+- `{type}` = singular entity type name in snake_case (e.g., `product`)
+- `{pluralType}` = pluralized entity type name in snake_case (e.g., `products`)
+- `{field}` = field name in snake_case
+- `{filter}` / `{order}` / `{mutation}` = operation name in snake_case
+
+Below is an example filter plugin for filtering listings by the given ids:
 
 ```php
 # resources/graphql/plugins/filters/apply_listings_ids_filter.php
@@ -751,9 +788,11 @@ The rules for Filter plugins are as follows:
 
  1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `filters` sub-folder.
  2. The script file's name must follow the following naming format:  
-  apply_{***pluralized node type name in snake_case***}_{***filter name in snake_case***}_filter.php
+  apply_{***node type name in snake_case***}_{***filter name in snake_case***}_filter.php  
+  **Note:** The node type name in the filename should be singular (e.g., `apply_product_ids_filter.php` for a Product type filter), but for the function name, use the format as described below.
  3. Within the script file, the plugin function's name must follow the following naming format:  
-  apply_{***pluralized node type name in snake_case***}_{***filter name in snake_case***}_filter
+  apply_{***pluralized node type name in snake_case***}_{***filter name in snake_case***}_filter  
+  **Example:** For filtering products by IDs, the function would be `apply_products_ids_filter()` in the file `apply_product_ids_filter.php`.
  4. The plugin function must have the following signature:
 
 ```php
@@ -763,7 +802,7 @@ function function_name(
 ): void;
 ```
 
-5. The plugin function must be namespaced under `Wedrix\Watchtower\FilterPlugin`.
+ 5. The plugin function must be namespaced under `Wedrix\Watchtower\FilterPlugin`.
 
 To use filters add them to the `filters` parameter of the `queryParams` argument. For instance:
 
@@ -801,11 +840,11 @@ query {
 }
 ```
 
-Kindly refer to the **Helpful Utilities** sections under **Selector Plugins** for helpful methods, using the builder.
+Kindly refer to the **Helpful Utilities** section under **Selector Plugins** for helpful methods using the builder.
 
 ## Constraint Plugins
 
-Sometimes you may wish to apply a set of filters always regardless of the client's input. Constraint plugins allow you to do exactly that! Unlike filters that rely on the client's input via queryParams, contraints are always applied regardless. The code snippet below is an example Constraint plugin for filtering listings by a closed set of ids:
+Sometimes you may wish to apply a set of filters always regardless of the client's input. Constraint plugins allow you to do exactly that! Unlike filters that rely on the client's input via queryParams, constraints are always applied regardless. The code snippet below is an example Constraint plugin for filtering listings by a closed set of ids:
 
 ```php
 <?php
@@ -877,7 +916,7 @@ function apply_constraint(
     $entityAlias = $queryBuilder->rootAlias();
 
     $queryBuilder->join("{$entityAlias}.app", 'app')
-                ->andWhere("app.id :appId")
+                ->andWhere("app.id = :appId")
                 ->setParameter('appId', Config::appId());
 }
 ```
@@ -979,8 +1018,8 @@ input ProductsQueryOrderingParam {
 }
 
 input ProductsQueryOrderingClosestParam {
-    rank: Int! # This parmeter is required for all orderings
-    params: ProductsQueryOrderingClosestParamsParam! # This optional for parameterized orderings
+    rank: Int! # This parameter is required for all orderings
+    params: ProductsQueryOrderingClosestParamsParam! # This is optional for parameterized orderings
 }
 
 input ProductsQueryOrderingClosestParamsParam {
@@ -1011,7 +1050,7 @@ query {
                 closest:{
                     rank:2,
                     params:{
-                        locaton:"40.74684111541018,-73.98518096794233"
+                        location:"40.74684111541018,-73.98518096794233"
                     }
                 }
             }
@@ -1027,7 +1066,7 @@ Kindly take note of the `rank` parameter that is required for all orderings. It'
 
 You can also pass params to the ordering using the `params` parameter.
 
-Kindly refer to the **Helpful Utilities** sections under **Selector Plugins** for helpful methods, using the builder.
+Kindly refer to the **Helpful Utilities** section under **Selector Plugins** for helpful methods using the builder.
 
 # Mutations
 
@@ -1097,7 +1136,7 @@ Like with Resolver plugin functions, values returned from a mutation function mu
 
 ## Subscription Plugins
 
-Subscription plugins act as connectors to your application's implementation of subscriptions.  The rules for creating Subscription Plugins are as follows:
+Subscription plugins act as connectors to your application's implementation of subscriptions. The rules for creating Subscription Plugins are as follows:
 
 ### Rules
 
@@ -1120,7 +1159,7 @@ Kindly refer to the [GraphQL spec](https://spec.graphql.org/October2021/#sec-Sub
 
 # Authorizors
 
-Authorizors allows you to you to approve results based on user-defined rules for individual node/collection types. These rules apply to all operation type results, including, Queries, Mutations, and Subscriptions. You write an authorizors once and can be guaranteed that they will apply to all results. Athorizors are implemented through Authorizor Plugins.
+Authorizors allow you to approve results based on user-defined rules for individual node/collection types. These rules apply to all operation type results, including Queries, Mutations, and Subscriptions. You write authorizors once and can be guaranteed that they will apply to all results. Authorizors are implemented through Authorizor Plugins.
 
 ## Authorizor Plugins
 
@@ -1242,13 +1281,101 @@ function function_name(
 
 # Performance Optimization
 
-To optimize the executor for production, pass `true` as the argument for the `optimize` parameter of the Executor and generate the cache before-hand using the `Console::generateCache()` method.  
-Running in 'optimize' mode, the Executor only relies on the cache as the authoritative souce for the Schema file, Plugin files, and the Scalar Type Definition files.  
-Note that the cache is never updated at runtime so it must be generated before-hand and kept up to date with changes in the source using Console::generateCache().  
+To optimize the executor for production, pass `true` as the argument for the `optimize` parameter of the Executor and generate the cache beforehand using the `Console::generateCache()` method.  
+Running in 'optimize' mode, the Executor only relies on the cache as the authoritative source for the Schema file, Plugin files, and the Scalar Type Definition files.  
+Note that the cache is never updated at runtime so it must be generated beforehand and kept up to date with changes in the source using Console::generateCache().  
+
+## Batching
+
+This library auto-batches queries, mutations, and resolvers to optimize performance and avoid the N + 1 problem. Batching works by deferring the execution of similar operations and combining them into a single batch operation, which significantly reduces the number of database calls and other I/O operations.
+
+**When is batching beneficial?** Batching is especially useful when:
+
+- Resolving many relations of the same type for different parent entities
+- Executing multiple similar mutations with identical or similar parameters
+- Calling external services or APIs that support bulk operations
+
+### How Batching Works
+
+The batching mechanism uses two key components:
+
+1. **NodeBuffer**: Collects all nodes that need to be resolved during a single GraphQL operation execution.
+2. **ResultBuffer**: Caches batch operation results using a `BatchKey` (derived from the node type, field name, and arguments) to enable result reuse across multiple nodes with identical parameters.
+
+When a batch result is resolved and stored in the `ResultBuffer`, any other node requesting the same result (same parent type, field name, and arguments) can reuse the cached result instead of recomputing it.
+
+### Query Batching (Auto-Applied)
+
+Queries are automatically batched by the library. When multiple nodes with the same parent type and field name are resolved, they are combined into a single database query.
+
+### Mutation Batching
+
+Mutations can also be batched if multiple mutations are called with identical arguments. While mutations execute sequentially per the GraphQL specification, batching allows you to group identical mutations into a single operation:
+
+```php
+<?php
+
+declare(strict_types=1);
+
+namespace Wedrix\Watchtower\MutationPlugin;
+
+use Wedrix\Watchtower\Resolver\Node;
+
+use function Wedrix\Watchtower\Resolver\NodeBuffer;
+use function Wedrix\Watchtower\Resolver\ResultBuffer;
+use function Wedrix\Watchtower\Resolver\BatchKey;
+
+function call_send_notification_mutation(
+    Node $node
+): mixed
+{
+    $batchKey = BatchKey(node: $node);
+    
+    // 1. Check if the batch result is already cached
+    if (ResultBuffer()->has($batchKey)) {
+        $batchResult = ResultBuffer()->get($batchKey);
+        
+        // Filter to only those relevant for this node
+        return $batchResult[$node->args()['user_id']];
+    }
+    
+    // 2. Collect all matching nodes with the same batch key
+    $matchingNodes = [];
+    foreach (NodeBuffer() as $bufferedNode) {
+        if (BatchKey(node: $bufferedNode)->value() === $batchKey->value()) {
+            $matchingNodes[] = $bufferedNode;
+        }
+    }
+    
+    // 3. Perform the batch mutation for all matching nodes
+    $notificationService = $node->context()['notificationService'];
+    $userIds = \array_map(
+        static fn (Node $n) => $n->args()['user_id'],
+        $matchingNodes
+    );
+    $batchResult = $notificationService->sendMultiple($userIds, "Hello World!!!");
+    
+    // 4. Cache the result for subsequent identical mutations
+    ResultBuffer()->add(
+        batchKey: $batchKey, 
+        batchResult: $batchResult
+    );
+    
+    // Filter to only those relevant for this node
+    return $batchResult[$node->args()['user_id']];
+}
+```
+
+### Resolver Batching
+
+You can similarly batch resolvers for external API calls or heavy computations by following the same pattern as mutation batching. This is particularly useful when you have multiple nodes requesting data from the same external service or requiring expensive computations. By batching these requests together, you can significantly reduce the overhead of repeated service calls.
+
+**Note:** While Resolver Batching is supported, detailed examples are limited in this documentation. Refer to the Mutation Batching pattern above for implementation guidance, adapting it to your specific resolver use case.
+
 
 ## Authorizors and Constraints
 
-Be careful running intensive computations and/or I/O (even requests to the Database) in Authorizors and Constraints. Since these usually run for multiple nodes (Root Authorizors run for every node!) they significantly impact performance. In cases where intensive computations and/or I/O are unavoidable, try as much as possible to use memoize results to prevent unnecessary re-computation.
+Be careful running intensive computations and/or I/O (even requests to the Database) in Authorizors and Constraints. Since these usually run for multiple nodes (Root Authorizors run for every node!) they significantly impact performance. In cases where intensive computations and/or I/O are unavoidable, try as much as possible to memoize results to prevent unnecessary re-computation.
 
 # Security
 
@@ -1257,10 +1384,6 @@ Kindly follow the [graphql-php manual](https://webonyx.github.io/graphql-php/sec
 # Known Issues
 
 This section details some of the known issues relating to this library's usage and their possible workarounds.
-
-## N + 1 Problem
-
-This library is susceptible to the [N + 1 problem](https://techdozo.dev/spring-for-graphql-how-to-solve-the-n1-problem/). However, for most use-cases, this shouldn't pose too much of a problem with current database solutions. You may however start to face performance issues when using Resolver Plugins to make external API calls. For such use-cases, we recommend using an async-capable HTTP client paired with a query batching solution like [Dataloader](https://github.com/overblog/dataloader-php) to mitigate network latency bottlenecks.
 
 ## Case Sensitivity & Naming
 

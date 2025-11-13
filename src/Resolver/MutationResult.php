@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use GraphQL\Deferred;
 use Wedrix\Watchtower\Plugins;
 use Wedrix\Watchtower\Plugin;
 
@@ -15,7 +16,7 @@ trait MutationResult
 
     private bool $isWorkable;
 
-    private mixed $output;
+    private mixed $value;
 
     public function __construct(
         private Node $node,
@@ -30,20 +31,26 @@ trait MutationResult
             && $this->node->isTopLevel()
             && $this->plugins->contains($this->plugin);
 
-        $this->output = (function (): mixed {
-            if ($this->isWorkable) {
+        $this->value = (function (): mixed {
+            if (!$this->isWorkable) {
+                return null;
+            }
+            
+            NodeBuffer()->add(
+                node: $this->node
+            );
+
+            return new Deferred(function (): mixed {
                 require_once $this->plugins->filePath($this->plugin);
 
                 return $this->plugin->callback()($this->node);
-            }
-
-            return null;
+            });
         })();
     }
 
-    public function output(): mixed
+    public function value(): mixed
     {
-        return $this->output;
+        return $this->value;
     }
 
     public function isWorkable(): bool

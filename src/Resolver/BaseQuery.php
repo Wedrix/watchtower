@@ -24,7 +24,7 @@ trait BaseQuery
         $this->isWorkable = !$this->node->isAbstract()
             && $this->entityManager->hasEntity(name: $this->node->unwrappedType());
 
-        $this->queryBuilder = (function(): QueryBuilder {
+        $this->queryBuilder = (function (): QueryBuilder {
             $queryBuilder = $this->entityManager->createQueryBuilder();
 
             if ($this->isWorkable) {
@@ -44,8 +44,8 @@ trait BaseQuery
                     $requestedFields = \array_keys($fieldsSelection);
             
                     $selectedEntityFields = \array_filter(
-                        $rootEntity->fields(), 
-                        static fn(string $entityField) => \in_array($entityField, $rootEntity->idFields())
+                        $rootEntity->fieldNames(), 
+                        static fn (string $entityField) => \in_array($entityField, $rootEntity->idFieldNames())
                             || \in_array($entityField, $requestedFields)
                             || \array_reduce(
                                 $requestedFields, 
@@ -59,7 +59,7 @@ trait BaseQuery
                                         $requestedSubFields = \array_keys($subFieldsSelection);
             
                                         $requestedEmbeddedFields = \array_map(
-                                            static fn(string $requestedSubField) => "$requestedField.$requestedSubField", 
+                                            static fn (string $requestedSubField) => "$requestedField.$requestedSubField", 
                                             $requestedSubFields
                                         );
             
@@ -74,18 +74,18 @@ trait BaseQuery
             
                     $otherSelectedFields = \array_filter(
                         $requestedFields, 
-                        static fn(string $requestedField) => !\in_array($requestedField, $rootEntity->associations()) 
-                            && !\in_array($requestedField, $rootEntity->fields())
+                        static fn (string $requestedField) => !\in_array($requestedField, $rootEntity->associationNames()) 
+                            && !\in_array($requestedField, $rootEntity->fieldNames())
                             && !\array_reduce(
-                                $rootEntity->fields(), 
-                                static fn(bool $isEmbeddedEntityField, string $entityField) => $isEmbeddedEntityField || \str_starts_with($entityField, "$requestedField."), 
+                                $rootEntity->fieldNames(), 
+                                static fn (bool $isEmbeddedEntityField, string $entityField) => $isEmbeddedEntityField || \str_starts_with($entityField, "$requestedField."), 
                                 false
                             )
                     );
 
                     $otherSelectedFieldsWithoutResolvedFields = \array_filter(
                         $otherSelectedFields,
-                        fn(string $otherSelectedField) => !$this->plugins->contains(
+                        fn (string $otherSelectedField) => !$this->plugins->contains(
                             ResolverPlugin(
                                 nodeType: $this->node->unwrappedType(),
                                 fieldName: $otherSelectedField
@@ -113,8 +113,8 @@ trait BaseQuery
                 }
 
                 $identifierAssociationFields = \array_filter(
-                    $rootEntity->idFields(),
-                    static fn(string $idField) => \in_array($idField, $rootEntity->associations())
+                    $rootEntity->idFieldNames(),
+                    static fn (string $idField) => \in_array($idField, $rootEntity->associationNames())
                 );
 
                 foreach ($identifierAssociationFields as $identifierAssociationField) {

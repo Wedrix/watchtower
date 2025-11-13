@@ -8,15 +8,16 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartQuery
 {
-    use BaseQuery, ConstrainedQuery, MaybePaginatedQuery, MaybeOrderedQuery, MaybeFilteredQuery, MaybeDistinctQuery, ParentAssociatedQuery, FindQuery {
-        BaseQuery::__construct as constructBase;
-        ConstrainedQuery::__construct as constrain;
-        MaybePaginatedQuery::__construct as paginate;
-        MaybeOrderedQuery::__construct as order;
-        MaybeFilteredQuery::__construct as filter;
-        MaybeDistinctQuery::__construct as deduplicate;
-        ParentAssociatedQuery::__construct as associateParent;
-        FindQuery::__construct as find;
+    use BaseQuery, ConstrainedQuery, MaybePaginatedQuery, MaybeOrderedQuery, MaybeFilteredQuery, MaybeDistinctQuery, FindQuery, ParentAssociatedQuery {
+        BaseQuery::__construct as private constructBaseQuery;
+        ConstrainedQuery::__construct as private constructConstrainedQuery;
+        MaybePaginatedQuery::__construct as private constructMaybePaginatedQuery;
+        MaybeOrderedQuery::__construct as private constructMaybeOrderedQuery;
+        MaybeFilteredQuery::__construct as private constructMaybeFilteredQuery;
+        MaybeDistinctQuery::__construct as private constructMaybeDistinctQuery;
+        FindQuery::__construct as private constructFindQuery;
+        ParentAssociatedQuery::__construct as private constructParentAssociatedQuery;
+        ParentAssociatedQuery::builder as private parentAssociatedBuilder;
     }
 
     private bool $isWorkable;
@@ -29,37 +30,70 @@ trait SmartQuery
         private Plugins $plugins
     )
     {
-        $this->constructBase($node, $entityManager, $plugins);
+        $this->constructBaseQuery(
+            node: $this->node, 
+            entityManager: $this->entityManager, 
+            plugins: $this->plugins
+        );
 
-        $this->constrain($node, $plugins);
+        $this->constructConstrainedQuery(
+            node: $this->node,
+            plugins: $this->plugins,
+            queryBuilder: $this->queryBuilder,
+            isWorkable: $this->isWorkable
+        );
 
-        if ($node->isACollection()) {
-            $this->filter($node, $plugins);
+        if ($this->node->isACollection()) {
+            $this->constructMaybeFilteredQuery(
+                node: $this->node,
+                plugins: $this->plugins,
+                queryBuilder: $this->queryBuilder,
+                isWorkable: $this->isWorkable
+            );
 
-            $this->deduplicate($node);
+            $this->constructMaybeDistinctQuery(
+                node: $this->node,
+                queryBuilder: $this->queryBuilder,
+                isWorkable: $this->isWorkable
+            );
 
-            $this->order($node, $plugins);
+            $this->constructMaybeOrderedQuery(
+                node: $this->node, 
+                plugins: $this->plugins,
+                queryBuilder: $this->queryBuilder,
+                isWorkable: $this->isWorkable
+            );
 
-            $this->paginate($node, $plugins);
-
-            if (!$node->isTopLevel()) {
-                $this->associateParent($node, $entityManager);
-            }
+            $this->constructMaybePaginatedQuery(
+                node: $this->node,
+                queryBuilder: $this->queryBuilder,
+                isWorkable: $this->isWorkable
+            );
+        } 
+        else if ($this->node->isTopLevel()) {
+            $this->constructFindQuery(
+                node: $this->node,
+                queryBuilder: $this->queryBuilder,
+                isWorkable: $this->isWorkable
+            );
         }
 
-        if (!$node->isACollection()){
-            if ($node->isTopLevel()) {
-                $this->find($node);
-            }
-    
-            if (!$node->isTopLevel()){
-                $this->associateParent($node, $entityManager);
-            }
+        if (!$this->node->isTopLevel()) {
+            $this->constructParentAssociatedQuery(
+                node: $this->node,
+                entityManager: $this->entityManager,
+                queryBuilder: $this->queryBuilder,
+                isWorkable: $this->isWorkable
+            );
         }
     }
 
     public function builder(): QueryBuilder
     {
+        if (!$this->node->isTopLevel()) {
+            return $this->parentAssociatedBuilder();
+        }
+
         return $this->queryBuilder;
     }
 
@@ -67,4 +101,18 @@ trait SmartQuery
     {
         return $this->isWorkable;
     }
+}
+
+function SmartQuery(
+    Node $node,
+    EntityManager $entityManager,
+    Plugins $plugins
+): Query {
+    return new class(
+        node: $node,
+        entityManager: $entityManager,
+        plugins: $plugins
+    ) implements Query {
+        use SmartQuery;
+    };
 }

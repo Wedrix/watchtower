@@ -15,7 +15,7 @@ trait SubscriptionResult
 
     private bool $isWorkable;
 
-    private mixed $output;
+    private mixed $value;
 
     public function __construct(
         private Node $node,
@@ -30,7 +30,7 @@ trait SubscriptionResult
             && $this->node->isTopLevel()
             && $this->plugins->contains($this->plugin);
 
-        $this->output = (function (): mixed {
+        $this->value = (function (): mixed {
             if ($this->isWorkable) {
                 require_once $this->plugins->filePath($this->plugin);
 
@@ -41,9 +41,9 @@ trait SubscriptionResult
         })();
     }
 
-    public function output(): mixed
+    public function value(): mixed
     {
-        return $this->output;
+        return $this->value;
     }
 
     public function isWorkable(): bool

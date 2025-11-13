@@ -24,10 +24,10 @@ use function Wedrix\Watchtower\pluralize;
 
 final class SyncedQuerySchema extends GraphQLSchema
 {
-    private readonly GraphQLSchema $schema;
+    private GraphQLSchema $schema;
 
     public function __construct(
-        private readonly EntityManagerInterface $entityManager,
+        private EntityManagerInterface $entityManager,
     )
     {
         $this->schema = (function(): GraphQLSchema {
@@ -62,7 +62,7 @@ final class SyncedQuerySchema extends GraphQLSchema
                          */
                         $entityFields = [];
 
-                        foreach ($entity->fields() as $field) {
+                        foreach ($entity->fieldNames() as $field) {
                             if (\str_contains($field, '.')) {
                                 [$fieldName, $embeddedFieldName] = \explode('.', $field);
 
@@ -155,7 +155,7 @@ final class SyncedQuerySchema extends GraphQLSchema
                             }
                         }
 
-                        foreach ($entity->associations() as $associationName) {
+                        foreach ($entity->associationNames() as $associationName) {
                             $associatedEntityName = \array_slice(\explode('\\',$entity->associationTargetEntity($associationName)), -1)[0];
 
                             $associatedEntityType = function() use (&$types, $associatedEntityName, $addEntityType): NullableType {
@@ -225,7 +225,7 @@ final class SyncedQuerySchema extends GraphQLSchema
                 $queries[$singleQueryName] = [
                     'type' => $type = Type::nonNull($types[$entityName]),
                     'args' => \array_reduce(
-                        $entity->idFields(),
+                        $entity->idFieldNames(),
                         static function(array $args, string $idField): array {
                             $args[$idField] = [
                                 'type' => Type::nonNull(Type::id())

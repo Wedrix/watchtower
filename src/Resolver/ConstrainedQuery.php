@@ -11,13 +11,11 @@ use function Wedrix\Watchtower\RootConstraintPlugin;
 
 trait ConstrainedQuery
 {
-    private bool $isWorkable;
-
-    private QueryBuilder $queryBuilder;
-
     public function __construct(
         private Node $node,
-        private Plugins $plugins
+        private Plugins $plugins,
+        private QueryBuilder $queryBuilder,
+        private bool $isWorkable
     )
     {
         if ($this->isWorkable) {
