@@ -122,7 +122,12 @@ trait ParentAssociatedQuery
 
                 foreach ($idFieldNames as $idFieldName) {
                     $idNameAlias = "{$parentEntityAlias}_$idFieldName";
-                    $this->queryBuilder->addSelect("$parentEntityAlias.$idFieldName AS $idNameAlias");
+                    
+                    if (\in_array($idFieldName, $parentEntity->associationNames())) {
+                        $this->queryBuilder->addSelect("IDENTITY($parentEntityAlias.$idFieldName) AS $idNameAlias");
+                    } else {
+                        $this->queryBuilder->addSelect("$parentEntityAlias.$idFieldName AS $idNameAlias");
+                    }
                 }
             }
         }
