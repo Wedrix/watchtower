@@ -11,7 +11,11 @@ use Doctrine\ORM\QueryBuilder as DoctrineQueryBuilder;
  */
 interface QueryBuilder
 {
-    public function rootAlias(): string;
+    public function identifierAlias(): string;
+
+    public function parentEntityAlias(): string;
+
+    public function rootEntityAlias(): string;
 
     public function reconciledAlias(
         string $alias
@@ -34,27 +38,55 @@ function QueryBuilder(
     return $instances[$doctrineQueryBuilder] ??= new class(
         doctrineQueryBuilder: $doctrineQueryBuilder
     ) implements QueryBuilder {
+        const RESERVED_PREFIXES = [
+            '__root',
+            '__parent',
+            '__primary',
+        ];
+
         /**
          * @var array<string,int>
          * 
          * The key is the alias and the value is the count
          */
         private array $aliases = [];
+
+        private string $identifierAlias = '__primary';
+
+        private string $parentEntityAlias = '__parent';
+
+        private string $rootEntityAlias = '__root';
     
         public function __construct(
             private DoctrineQueryBuilder $doctrineQueryBuilder
         ){}
-    
-        public function rootAlias(): string
+
+        public function identifierAlias(): string
         {
-            return $this->doctrineQueryBuilder
-                        ->getRootAliases()[0] ?? throw new \Exception("Invalid Query. The rootAlias is unset.");
+            return $this->identifierAlias;
+        }
+
+        public function parentEntityAlias(): string
+        {
+            return $this->parentEntityAlias;
+        }
+    
+        public function rootEntityAlias(): string
+        {
+            return $this->rootEntityAlias;
         }
     
         public function reconciledAlias(
             string $alias
         ): string
         {
+            // Remove reserved prefixes from the alias
+            foreach (self::RESERVED_PREFIXES as $prefix) {
+                if (\str_starts_with($alias, $prefix)) {
+                    throw new \InvalidArgumentException("Alias '{$alias}' uses reserved prefix '{$prefix}'");
+                }
+            }
+
             if (!isset($this->aliases[$alias])) {
                 $this->aliases[$alias] = 1;
     

@@ -6,7 +6,6 @@ namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
 
-use function Wedrix\Watchtower\ResolverPlugin;
 use function Wedrix\Watchtower\SelectorPlugin;
 
 trait BaseQuery
@@ -30,95 +29,95 @@ trait BaseQuery
             if ($this->isWorkable) {
                 $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
+                $rootEntityAlias = $queryBuilder->rootEntityAlias();
+                
+                $nodeFieldsSelection = $this->node->concreteFieldsSelection();
+        
+                $selectedNodeFields = \array_keys($nodeFieldsSelection);
+
                 $queryBuilder->from(
                     from: $rootEntity->class(),
-                    alias: '__root'
+                    alias: $rootEntityAlias
                 );
 
                 /**
                  * @var array<string>
                  */
-                $selectedFields = (function() use ($rootEntity): array {
-                    $fieldsSelection = $this->node->concreteFieldsSelection();
-            
-                    $requestedFields = \array_keys($fieldsSelection);
-            
-                    $selectedEntityFields = \array_filter(
-                        $rootEntity->fieldNames(), 
-                        static fn (string $entityField) => \in_array($entityField, $rootEntity->idFieldNames())
-                            || \in_array($entityField, $requestedFields)
-                            || \array_reduce(
-                                $requestedFields, 
-                                static function(bool $isRequestedEmbeddedField, string $requestedField) use ($entityField, $fieldsSelection) {
-                                    /**
-                                     * @var array<string,mixed>
-                                     */
-                                    $subFieldsSelection = $fieldsSelection[$requestedField]['fields'] ?? [];
-            
-                                    if (!empty($subFieldsSelection)) {
-                                        $requestedSubFields = \array_keys($subFieldsSelection);
-            
-                                        $requestedEmbeddedFields = \array_map(
-                                            static fn (string $requestedSubField) => "$requestedField.$requestedSubField", 
-                                            $requestedSubFields
-                                        );
-            
-                                        return $isRequestedEmbeddedField || \in_array($entityField, $requestedEmbeddedFields);
-                                    }
-            
-                                    return $isRequestedEmbeddedField;
-                                }, 
-                                false
-                            )
-                    );
-            
-                    $otherSelectedFields = \array_filter(
-                        $requestedFields, 
-                        static fn (string $requestedField) => !\in_array($requestedField, $rootEntity->associationNames()) 
-                            && !\in_array($requestedField, $rootEntity->fieldNames())
-                            && !\array_reduce(
-                                $rootEntity->fieldNames(), 
-                                static fn (bool $isEmbeddedEntityField, string $entityField) => $isEmbeddedEntityField || \str_starts_with($entityField, "$requestedField."), 
-                                false
-                            )
-                    );
-
-                    $otherSelectedFieldsWithoutResolvedFields = \array_filter(
-                        $otherSelectedFields,
-                        fn (string $otherSelectedField) => !$this->plugins->contains(
-                            ResolverPlugin(
-                                nodeType: $this->node->unwrappedType(),
-                                fieldName: $otherSelectedField
-                            )
-                        )
-                    );
-                    
-                    return \array_merge($selectedEntityFields, $otherSelectedFieldsWithoutResolvedFields);
-                })();
+                $selectedScalarEntityFields = \array_filter(
+                    $rootEntity->scalarFieldNames(), 
+                    static fn (string $selectedScalarEntityField) => \in_array($selectedScalarEntityField, $rootEntity->idFieldNames())
+                        || \in_array($selectedScalarEntityField, $selectedNodeFields)
+                        || \array_reduce(
+                            $selectedNodeFields, 
+                            static function(bool $isSelectedEmbeddedField, string $selectedNodeField) use ($selectedScalarEntityField, $nodeFieldsSelection) {
+                                /**
+                                 * @var array<string,mixed>
+                                 */
+                                $subFieldsSelection = $nodeFieldsSelection[$selectedNodeField]['fields'] ?? [];
         
-                foreach ($selectedFields as $fieldName) {
+                                if (!empty($subFieldsSelection)) {
+                                    $requestedSubFields = \array_keys($subFieldsSelection);
+        
+                                    $selectedEmbeddedFields = \array_map(
+                                        static fn (string $requestedSubField) => "$selectedNodeField.$requestedSubField", 
+                                        $requestedSubFields
+                                    );
+        
+                                    return $isSelectedEmbeddedField || \in_array($selectedScalarEntityField, $selectedEmbeddedFields);
+                                }
+        
+                                return $isSelectedEmbeddedField;
+                            }, 
+                            false
+                        )
+                );
+
+                /**
+                 * @var array<string>
+                 */
+                $selectedSelectorFields = \array_filter(
+                    $selectedNodeFields, 
+                    fn (string $selectedNodeField) => $this->plugins->contains(
+                        SelectorPlugin(
+                            nodeType: $this->node->unwrappedType(),
+                            fieldName: $selectedNodeField
+                        )
+                    )
+                );
+        
+                foreach ($selectedScalarEntityFields as $fieldName) {
+                    $queryBuilder->addSelect("{$rootEntityAlias}.$fieldName");
+                }
+
+                foreach ($selectedSelectorFields as $fieldName) {
                     $selectorPlugin = SelectorPlugin(
                         nodeType: $this->node->unwrappedType(),
                         fieldName: $fieldName
                     );
-        
-                    if ($this->plugins->contains($selectorPlugin)) {
-                        require_once $this->plugins->filePath($selectorPlugin);
+                    
+                    require_once $this->plugins->filePath($selectorPlugin);
 
-                        $selectorPlugin->callback()($queryBuilder, $this->node);
-                    }
-                    else {
-                        $queryBuilder->addSelect("{$queryBuilder->rootAlias()}.$fieldName");
-                    }
+                    $selectorPlugin->callback()($queryBuilder, $this->node);
                 }
+
+                $identifierAlias = $queryBuilder->identifierAlias();
 
                 $identifierAssociationFields = \array_filter(
                     $rootEntity->idFieldNames(),
-                    static fn (string $idField) => \in_array($idField, $rootEntity->associationNames())
+                    static fn (string $idField) => \in_array($idField, $rootEntity->associationFieldNames())
                 );
 
                 foreach ($identifierAssociationFields as $identifierAssociationField) {
-                    $queryBuilder->addSelect("IDENTITY({$queryBuilder->rootAlias()}.$identifierAssociationField) AS __associated_$identifierAssociationField");
+                    $targetEntity = $this->entityManager->findEntity(
+                        name: $rootEntity->associationTargetEntity(
+                            associationName: $identifierAssociationField
+                        )
+                    );
+
+                    foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
+                        $idNameAlias = "{$identifierAlias}_{$identifierAssociationField}_{$targetIdFieldName}";
+                        $queryBuilder->addSelect("IDENTITY({$rootEntityAlias}.$identifierAssociationField, '$targetIdFieldName') AS $idNameAlias");
+                    }
                 }
             }
     

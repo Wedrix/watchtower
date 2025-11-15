@@ -65,27 +65,63 @@ trait QueryResult
                 $filteredBatch = (function () use ($batchResult): array {
                     if (!$this->node->isTopLevel()) {
                         $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
+
+                        $parentEntityAlias = $this->query->builder()->parentEntityAlias();
+
+                        $identifierAlias = $this->query->builder()->identifierAlias();
                         
                         // Extract this node's parent ID
                         $parentIds = \array_reduce(
                             $parentEntity->idFieldNames(),
-                            function (array $parentIdValue, string $parentIdFieldName) use ($parentEntity): array {
-                                $rootKey = \in_array($parentIdFieldName, $parentEntity->associationNames()) 
-                                    ? "__associated_$parentIdFieldName" 
-                                    : $parentIdFieldName;
-                                $parentIdValue[$parentIdFieldName] = $this->node->root()[$rootKey];
+                            function (array $parentIdValue, string $parentIdFieldName) use ($parentEntity, $identifierAlias): array {
+                                if (\in_array($parentIdFieldName, $parentEntity->associationFieldNames())) {
+                                    $targetEntity = $this->entityManager->findEntity(
+                                        name: $parentEntity->associationTargetEntity(
+                                            associationName: $parentIdFieldName
+                                        )
+                                    );
+
+                                    $parentIdValue[$parentIdFieldName] = \array_reduce(
+                                        $targetEntity->idFieldNames(),
+                                        function (array $associatedIdValue, string $targetIdFieldName) use ($parentIdFieldName, $identifierAlias): array {
+                                            $rootKey = "{$identifierAlias}_{$parentIdFieldName}_{$targetIdFieldName}";
+                                            $associatedIdValue[$targetIdFieldName] = $this->node->root()[$rootKey];
+
+                                            return $associatedIdValue;
+                                        },
+                                        []
+                                    );
+                                } else {
+                                    $parentIdValue[$parentIdFieldName] = $this->node->root()[$parentIdFieldName];
+                                }
+
                                 return $parentIdValue;
                             },
                             []
                         );
                         
                         // Filter batch to get only results for this node's parent
-                        $batchResult = \array_filter($batchResult, function ($item) use ($parentEntity, $parentIds): bool {
+                        $batchResult = \array_filter($batchResult, function ($resultRecord) use ($parentEntity, $parentEntityAlias, $parentIds): bool {
                             // Check parent ID fields that were added to the query
                             foreach ($parentEntity->idFieldNames() as $idFieldName) {
-                                $parentIdKey = "__parent_$idFieldName";
-                                if (!isset($item[$parentIdKey]) || $item[$parentIdKey] !== $parentIds[$idFieldName]) {
-                                    return false;
+                                if (\in_array($idFieldName, $parentEntity->associationFieldNames())) {
+                                    $targetEntity = $this->entityManager->findEntity(
+                                        name: $parentEntity->associationTargetEntity(
+                                            associationName: $idFieldName
+                                        )
+                                    );
+
+                                    foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
+                                        $parentIdKey = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
+                                        if (!isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName][$targetIdFieldName]) {
+                                            return false;
+                                        }
+                                    }
+                                } else {
+                                    $parentIdKey = "{$parentEntityAlias}_$idFieldName";
+                                    if (!isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName]) {
+                                        return false;
+                                    }
                                 }
                             }
                             return true;

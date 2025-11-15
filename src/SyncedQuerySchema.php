@@ -62,7 +62,7 @@ final class SyncedQuerySchema extends GraphQLSchema
                          */
                         $entityFields = [];
 
-                        foreach ($entity->fieldNames() as $field) {
+                        foreach ($entity->scalarFieldNames() as $field) {
                             if (\str_contains($field, '.')) {
                                 [$fieldName, $embeddedFieldName] = \explode('.', $field);
 
@@ -155,8 +155,8 @@ final class SyncedQuerySchema extends GraphQLSchema
                             }
                         }
 
-                        foreach ($entity->associationNames() as $associationName) {
-                            $associatedEntityName = \array_slice(\explode('\\',$entity->associationTargetEntity($associationName)), -1)[0];
+                        foreach ($entity->associationFieldNames() as $associationName) {
+                            $associatedEntityName = $entity->associationTargetEntity($associationName);
 
                             $associatedEntityType = function() use (&$types, $associatedEntityName, $addEntityType): NullableType {
                                 if (!isset($types[$associatedEntityName])) {

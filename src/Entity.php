@@ -16,7 +16,7 @@ interface Entity
     /**
      * @return array<string>
      */
-    public function fieldNames(): array;
+    public function scalarFieldNames(): array;
 
     /**
      * @return array<string>
@@ -26,7 +26,7 @@ interface Entity
     /**
      * @return array<string>
      */
-    public function associationNames(): array;
+    public function associationFieldNames(): array;
 
     public function hasEmbeddedField(
         string $fieldName
@@ -94,7 +94,7 @@ function Entity(
         /**
          * @var array<string>
          */
-        private array $fieldNames;
+        private array $scalarFieldNames;
     
         /**
          * @var array<string>
@@ -104,7 +104,7 @@ function Entity(
         /**
          * @var array<string>
          */
-        private array $associationNames;
+        private array $associationFieldNames;
     
         public function __construct(
             private string $name,
@@ -124,11 +124,11 @@ function Entity(
     
             $this->metadata = $this->entityManager->getClassMetadata($this->class);
     
-            $this->fieldNames = $this->metadata->getFieldNames();
+            $this->scalarFieldNames = $this->metadata->getFieldNames();
     
             $this->idFieldNames = $this->metadata->getIdentifierFieldNames();
     
-            $this->associationNames = $this->metadata->getAssociationNames();
+            $this->associationFieldNames = $this->metadata->getAssociationNames();
         }
     
         public function name(): string
@@ -141,9 +141,9 @@ function Entity(
             return $this->class;
         }
     
-        public function fieldNames(): array
+        public function scalarFieldNames(): array
         {
-            return $this->fieldNames;
+            return $this->scalarFieldNames;
         }
     
         public function idFieldNames(): array
@@ -151,9 +151,9 @@ function Entity(
             return $this->idFieldNames;
         }
     
-        public function associationNames(): array
+        public function associationFieldNames(): array
         {
-            return $this->associationNames;
+            return $this->associationFieldNames;
         }
     
         public function hasEmbeddedField(
@@ -181,7 +181,7 @@ function Entity(
             string $associationName
         ): string
         {
-            return $this->metadata->getAssociationMapping($associationName)['targetEntity'];
+            return \basename(\str_replace('\\', '/', $this->metadata->getAssociationMapping($associationName)['targetEntity']));
         }
     
         public function embeddedFieldClass(

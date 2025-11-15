@@ -600,7 +600,7 @@ function apply_listings_ids_filter(
     Node $node
 ): void
 {
-    $entityAlias = $queryBuilder->rootAlias();
+    $entityAlias = $queryBuilder->rootEntityAlias();
 
     $ids = $node->args()['queryParams']['filters']['ids'];
 
@@ -638,7 +638,7 @@ function apply_product_selling_price_selector(
     Node $node
 ): void
 {
-    $entityAlias = $queryBuilder->rootAlias();
+    $entityAlias = $queryBuilder->rootEntityAlias();
     
     $queryBuilder->addSelect("
         $entityAlias.markedPrice - $entityAlias.discount AS sellingPrice
@@ -670,7 +670,7 @@ function function_name(
 
 The first function parameter `$queryBuilder` represents the query builder on which you can chain your own queries to resolve the computed field. It extends the interface for `\Doctrine\ORM\QueryBuilder` with these added functions to help you build the query:
 
- 1. Use `$queryBuilder->rootAlias()` to get the query's root entity alias.
+ 1. Use `$queryBuilder->rootEntityAlias()` to get the query's root entity alias.
  2. Use `$queryBuilder->reconciledAlias(string $alias)` to get an alias that's compatible with the rest of the query aliases. Use it to prevent name collisions.
 
 The second function parameter `$node` represents the particular query node being resolved in the query graph. Use it to determine the appropriate query to chain onto the builder.
@@ -771,7 +771,7 @@ function apply_listings_ids_filter(
     Node $node
 ): void
 {
-    $entityAlias = $queryBuilder->rootAlias();
+    $entityAlias = $queryBuilder->rootEntityAlias();
 
     $ids = $node->args()['queryParams']['filters']['ids'];
 
@@ -861,7 +861,7 @@ function apply_listing_constraint(
     Node $node
 ): void
 {
-    $entityAlias = $queryBuilder->rootAlias();
+    $entityAlias = $queryBuilder->rootEntityAlias();
 
     $whitelistedListings = ['listing1','listing2','listing3'];
 
@@ -913,7 +913,7 @@ function apply_constraint(
     Node $node
 ): void
 {
-    $entityAlias = $queryBuilder->rootAlias();
+    $entityAlias = $queryBuilder->rootEntityAlias();
 
     $queryBuilder->join("{$entityAlias}.app", 'app')
                 ->andWhere("app.id = :appId")
@@ -970,7 +970,7 @@ function apply_listings_newest_ordering(
     Node $node
 ): void
 {
-    $entityAlias = $queryBuilder->rootAlias();
+    $entityAlias = $queryBuilder->rootEntityAlias();
 
     $dateCreatedAlias = $queryBuilder->reconciledAlias('dateCreated');
 
@@ -1391,7 +1391,25 @@ GraphQL names are case-sensitive as detailed by the [spec](https://spec.graphql.
 
 ## Aliasing Parameterized Fields
 
-There is currently an [open issue](https://github.com/webonyx/graphql-php/issues/1072) in graphql-php that prevents this library from properly resolving a parameterized field passed different arguments. This should probably be fixed in the next major release of graphql-php. Until then, kindly take note of this issue when using aliases.  
+There is currently an [open issue](https://github.com/webonyx/graphql-php/issues/1072) in graphql-php that prevents this library from properly resolving a parameterized field passed different arguments. This should probably be fixed in the next major release of graphql-php. Until then, kindly take note of this issue when using aliases.
+
+## Entity Naming Constraints
+
+**Unique Base Names Required** — All Doctrine entities must have unique base names (the class name without the namespace). Entities with identical base names in different namespaces are not supported. For example, you cannot have both `App\Accounts\Seller` and `App\Dome\Seller` in the same application, as they share the same base name `Seller`. Ensure all entity class names are unique across your entire application.
+
+## Composite Association Keys
+
+**Single-Level Nesting Only** — Composite association keys (compound keys involving associations) are currently supported only to one level of nesting. Attempting to use more deeply nested compound association keys will likely result in errors.
+
+## Reserved Alias Prefixes
+
+When using custom plugins or working with query builders, avoid using the following reserved prefixes in your field aliases or parameter names:
+
+- `__root` — Reserved for root entity aliases
+- `__parent` — Reserved for parent entity aliases  
+- `__primary` — Reserved for primary key/identifier aliases
+
+Using these prefixes will result in an `InvalidArgumentException`. Choose alternative naming patterns for your custom aliases to avoid conflicts with the internal query building system.  
 
 # Versioning
 
