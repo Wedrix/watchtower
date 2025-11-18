@@ -52,13 +52,13 @@ final class Schema extends GraphQLSchema
             }
         }
 
-        $this->schema = $schemas[$sourceFile] ??= (function () use ($sourceFile, $scalarTypeDefinitions, $cacheFile, $optimize): GraphQLSchema {
+        $this->schema = $schemas[$sourceFile] ??= (static function () use ($sourceFile, $scalarTypeDefinitions, $cacheFile, $optimize): GraphQLSchema {
             /**
              * @param array<string,mixed> $typeConfig
              * 
              * @return array<string,mixed>
              */
-            $typeConfigDecorator = function (array $typeConfig, TypeDefinitionNode $typeDefinitionNode) use($scalarTypeDefinitions): array {
+            $typeConfigDecorator = static function (array $typeConfig, TypeDefinitionNode $typeDefinitionNode) use ($scalarTypeDefinitions): array {
                 $astNode = $typeConfig['astNode'] ?? null;
     
                 if ($astNode instanceof ScalarTypeDefinitionNode) {
@@ -82,7 +82,7 @@ final class Schema extends GraphQLSchema
 
                 if ($astNode instanceof InterfaceTypeDefinitionNode || $astNode instanceof UnionTypeDefinitionNode) {
                     $typeConfig = \array_merge($typeConfig, [
-                        'resolveType' => function (array $value, array $context, ResolveInfo $resolveInfo): string {
+                        'resolveType' => static function (array $value, array $context, ResolveInfo $resolveInfo): string {
                             $typeName = $value['__typename'] 
                                 ?? throw new \Exception('Invalid abstract type. Kindly specify \'__typename\' in the resolved result.');
 
@@ -98,7 +98,7 @@ final class Schema extends GraphQLSchema
                 return $typeConfig;
             };
     
-            $AST = (function () use($optimize, $sourceFile, $cacheFile): DocumentNode {
+            $AST = (static function () use ($optimize, $sourceFile, $cacheFile): DocumentNode {
                 if ($optimize) {
                     $document = AST::fromArray(require $cacheFile);
 

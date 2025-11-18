@@ -44,7 +44,7 @@ trait AuthorizedResult
                 $result = $this;
 
                 $this->value = $this->value->then(
-                    function ($resolvedValue) use ($authorize, $result): mixed {
+                    static function ($resolvedValue) use ($authorize, $result): mixed {
                         $result->value = $resolvedValue;
                         
                         \Closure::fromCallable($authorize)->call($result);

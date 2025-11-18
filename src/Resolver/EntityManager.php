@@ -15,13 +15,17 @@ interface EntityManager
      * @param string $name The name of the entity.
      * @return Entity
      */
-    public function findEntity(string $name): Entity;
+    public function findEntity(
+        string $name
+    ): Entity;
 
     /**
      * @param string $name The name of the entity.
      * @return bool
      */
-    public function hasEntity(string $name): bool;
+    public function hasEntity(
+        string $name
+    ): bool;
 
     /**
      * @return QueryBuilder
@@ -69,7 +73,7 @@ function EntityManager(
                         \array_filter(
                             $this->doctrineEntityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
                                 ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
-                            fn (string $className) => \str_ends_with($className, "\\$name")
+                            static fn (string $className) => \str_ends_with($className, "\\$name")
                         )
                     );
         }

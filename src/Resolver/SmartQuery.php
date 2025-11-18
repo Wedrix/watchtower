@@ -9,15 +9,15 @@ use Wedrix\Watchtower\Plugins;
 trait SmartQuery
 {
     use BaseQuery, ConstrainedQuery, MaybePaginatedQuery, MaybeOrderedQuery, MaybeFilteredQuery, MaybeDistinctQuery, FindQuery, ParentAssociatedQuery {
-        BaseQuery::__construct as private constructBaseQuery;
-        ConstrainedQuery::__construct as private constructConstrainedQuery;
-        MaybePaginatedQuery::__construct as private constructMaybePaginatedQuery;
-        MaybeOrderedQuery::__construct as private constructMaybeOrderedQuery;
-        MaybeFilteredQuery::__construct as private constructMaybeFilteredQuery;
-        MaybeDistinctQuery::__construct as private constructMaybeDistinctQuery;
-        FindQuery::__construct as private constructFindQuery;
-        ParentAssociatedQuery::__construct as private constructParentAssociatedQuery;
-        ParentAssociatedQuery::builder as private parentAssociatedBuilder;
+        BaseQuery::__construct as private _constructBaseQuery;
+        ConstrainedQuery::__construct as private _constructConstrainedQuery;
+        MaybePaginatedQuery::__construct as private _constructMaybePaginatedQuery;
+        MaybeOrderedQuery::__construct as private _constructMaybeOrderedQuery;
+        MaybeFilteredQuery::__construct as private _constructMaybeFilteredQuery;
+        MaybeDistinctQuery::__construct as private _constructMaybeDistinctQuery;
+        FindQuery::__construct as private _constructFindQuery;
+        ParentAssociatedQuery::__construct as private _constructParentAssociatedQuery;
+        ParentAssociatedQuery::builder as private _parentAssociatedBuilder;
     }
 
     private bool $isWorkable;
@@ -30,13 +30,13 @@ trait SmartQuery
         private Plugins $plugins
     )
     {
-        $this->constructBaseQuery(
+        $this->_constructBaseQuery(
             node: $this->node, 
             entityManager: $this->entityManager, 
             plugins: $this->plugins
         );
 
-        $this->constructConstrainedQuery(
+        $this->_constructConstrainedQuery(
             node: $this->node,
             plugins: $this->plugins,
             queryBuilder: $this->queryBuilder,
@@ -44,34 +44,34 @@ trait SmartQuery
         );
 
         if ($this->node->isACollection()) {
-            $this->constructMaybeFilteredQuery(
+            $this->_constructMaybeFilteredQuery(
                 node: $this->node,
                 plugins: $this->plugins,
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
             );
 
-            $this->constructMaybeDistinctQuery(
+            $this->_constructMaybeDistinctQuery(
                 node: $this->node,
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
             );
 
-            $this->constructMaybeOrderedQuery(
+            $this->_constructMaybeOrderedQuery(
                 node: $this->node, 
                 plugins: $this->plugins,
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
             );
 
-            $this->constructMaybePaginatedQuery(
+            $this->_constructMaybePaginatedQuery(
                 node: $this->node,
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
             );
         } 
         else if ($this->node->isTopLevel()) {
-            $this->constructFindQuery(
+            $this->_constructFindQuery(
                 node: $this->node,
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
@@ -79,7 +79,7 @@ trait SmartQuery
         }
 
         if (!$this->node->isTopLevel()) {
-            $this->constructParentAssociatedQuery(
+            $this->_constructParentAssociatedQuery(
                 node: $this->node,
                 entityManager: $this->entityManager,
                 queryBuilder: $this->queryBuilder,
@@ -91,7 +91,7 @@ trait SmartQuery
     public function builder(): QueryBuilder
     {
         if (!$this->node->isTopLevel()) {
-            return $this->parentAssociatedBuilder();
+            return $this->_parentAssociatedBuilder();
         }
 
         return $this->queryBuilder;

@@ -9,8 +9,8 @@ use Wedrix\Watchtower\Plugins;
 trait AuthorizedSmartResult
 {
     use SmartResult, AuthorizedResult {
-        SmartResult::__construct as private constructSmartResult;
-        AuthorizedResult::__construct as private constructAuthorizedResult;
+        SmartResult::__construct as private _constructSmartResult;
+        AuthorizedResult::__construct as private _constructAuthorizedResult;
     }
 
     private bool $isWorkable;
@@ -23,9 +23,18 @@ trait AuthorizedSmartResult
         private Plugins $plugins
     )
     {
-        $this->constructSmartResult($this->node, $this->entityManager, $this->plugins);
+        $this->_constructSmartResult(
+            node: $this->node, 
+            entityManager: $this->entityManager, 
+            plugins: $this->plugins
+        );
 
-        $this->constructAuthorizedResult($this->node, $this->plugins, $this->value, $this->isWorkable);
+        $this->_constructAuthorizedResult(
+            node: $this->node,
+            plugins: $this->plugins, 
+            value: $this->value, 
+            isWorkable: $this->isWorkable
+        );
     }
 
     public function value(): mixed

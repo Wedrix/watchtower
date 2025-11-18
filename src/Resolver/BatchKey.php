@@ -25,7 +25,7 @@ function BatchKey(
                 $args = $this->node->args(); 
                 
                 // Recursively sort arrays and associative arrays
-                $sortArgs = function ($value) use (&$sortArgs) {
+                $sortArgs = static function ($value) use (&$sortArgs) {
                     if (\is_array($value)) {
                         // Check if associative 
                         if (!\array_is_list($value)) {

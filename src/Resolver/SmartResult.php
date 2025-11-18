@@ -9,11 +9,11 @@ use Wedrix\Watchtower\Plugins;
 trait SmartResult
 {
     use ScalarResult, QueryResult, MutationResult, SubscriptionResult, ResolverResult {
-        ScalarResult::__construct as private constructScalarResult;
-        QueryResult::__construct as private constructQueryResult;
-        MutationResult::__construct as private constructMutationResult;
-        SubscriptionResult::__construct as private constructSubscriptionResult;
-        ResolverResult::__construct as private constructResolverResult;
+        ScalarResult::__construct as private _constructScalarResult;
+        QueryResult::__construct as private _constructQueryResult;
+        MutationResult::__construct as private _constructMutationResult;
+        SubscriptionResult::__construct as private _constructSubscriptionResult;
+        ResolverResult::__construct as private _constructResolverResult;
     }
 
     private bool $isWorkable;
@@ -26,7 +26,7 @@ trait SmartResult
         private Plugins $plugins
     )
     {
-        $this->constructScalarResult(
+        $this->_constructScalarResult(
             node: $this->node,
             entityManager: $this->entityManager,
         );
@@ -35,7 +35,7 @@ trait SmartResult
             return;
         }
 
-        $this->constructQueryResult(
+        $this->_constructQueryResult(
             query: SmartQuery(
                 node: $this->node,
                 entityManager: $this->entityManager,
@@ -50,7 +50,7 @@ trait SmartResult
             return;
         }
 
-        $this->constructMutationResult(
+        $this->_constructMutationResult(
             node: $this->node,
             plugins: $this->plugins
         );
@@ -59,7 +59,7 @@ trait SmartResult
             return;
         }
 
-        $this->constructSubscriptionResult(
+        $this->_constructSubscriptionResult(
             node: $this->node,
             plugins: $this->plugins
         );
@@ -68,7 +68,7 @@ trait SmartResult
             return;
         }
 
-        $this->constructResolverResult(
+        $this->_constructResolverResult(
             node: $this->node,
             plugins: $this->plugins
         );
