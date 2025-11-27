@@ -50,9 +50,9 @@ These projects have proven the immense value of automatically generating GraphQL
 
 # Requirements
 
-- php >= v8.3
-- doctrine/orm >= v2.8
-- graphql-php >= v14.4
+- php >= v8.0
+- doctrine/orm ^2.8 || ^3.0
+- webonyx/graphql-php ^14.4
 
 # Installation
 
