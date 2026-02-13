@@ -19,12 +19,12 @@ interface Executor
     /**
      * Executes a GraphQL query.
      *
-     * @param string|DocumentNode $source The GraphQL query string or DocumentNode.
-     * @param array<string,mixed> $rootValue The root value for the query.
-     * @param array<string,mixed> $contextValue The context value for the query.
-     * @param array<mixed>|null $variableValues The variable values for the query.
-     * @param string|null $operationName The name of the operation to execute.
-     * @param array<ValidationRule>|null $validationRules The validation rules to apply.
+     * @param  string|DocumentNode  $source  The GraphQL query string or DocumentNode.
+     * @param  array<string,mixed>  $rootValue  The root value for the query.
+     * @param  array<string,mixed>  $contextValue  The context value for the query.
+     * @param  array<mixed>|null  $variableValues  The variable values for the query.
+     * @param  string|null  $operationName  The name of the operation to execute.
+     * @param  array<ValidationRule>|null  $validationRules  The validation rules to apply.
      */
     public function executeQuery(
         string|DocumentNode $source,
@@ -38,14 +38,14 @@ interface Executor
 
 /**
  * @api
- * 
- * @param EntityManagerInterface $entityManager The Doctrine entityManager instance.
- * @param string $schemaFile The schema file.
- * @param string $pluginsDirectory The plugin functions' directory.
- * @param string $scalarTypeDefinitionsDirectory The scalar types' definitions' directory.
- * @param bool $optimize Use the cache for improved perfomance. 
- *      Note: You must run Console::generateCache() to create the cache with the latest changes.
- * @param string $cacheDirectory The directory for storing cache files.
+ *
+ * @param  EntityManagerInterface  $entityManager  The Doctrine entityManager instance.
+ * @param  string  $schemaFile  The schema file.
+ * @param  string  $pluginsDirectory  The plugin functions' directory.
+ * @param  string  $scalarTypeDefinitionsDirectory  The scalar types' definitions' directory.
+ * @param  bool  $optimize  Use the cache for improved perfomance.
+ *                          Note: You must run Console::generateCache() to create the cache with the latest changes.
+ * @param  string  $cacheDirectory  The directory for storing cache files.
  */
 function Executor(
     EntityManagerInterface $entityManager,
@@ -54,27 +54,20 @@ function Executor(
     string $scalarTypeDefinitionsDirectory,
     string $cacheDirectory,
     bool $optimize
-): Executor
-{
+): Executor {
     /**
-     * @var \WeakMap<EntityManagerInterface,array<string,array<string,array<string,array<string,array<string,Executor>>>>
+     * @var \WeakMap<EntityManagerInterface,array<string,mixed>>
      */
-    static $instances = new \WeakMap();
+    static $instances = new \WeakMap;
 
-    if (!isset($instances[$entityManager])) {
+    if (! isset($instances[$entityManager])) {
         $instances[$entityManager] = [];
     }
 
-    return $instances[$entityManager][$schemaFile][$pluginsDirectory][$scalarTypeDefinitionsDirectory][$cacheDirectory][$optimize ? 'true' : 'false'] ??= new class(
-        entityManager: $entityManager,
-        schemaFile: $schemaFile,
-        pluginsDirectory: $pluginsDirectory,
-        scalarTypeDefinitionsDirectory: $scalarTypeDefinitionsDirectory,
-        cacheDirectory: $cacheDirectory,
-        optimize: $optimize
-    ) implements Executor {
+    return $instances[$entityManager][$schemaFile][$pluginsDirectory][$scalarTypeDefinitionsDirectory][$cacheDirectory][$optimize ? 'true' : 'false'] ??= new class(entityManager: $entityManager, schemaFile: $schemaFile, pluginsDirectory: $pluginsDirectory, scalarTypeDefinitionsDirectory: $scalarTypeDefinitionsDirectory, cacheDirectory: $cacheDirectory, optimize: $optimize) implements Executor
+    {
         private GraphQLTypeSchema $schema;
-    
+
         private Resolver $resolver;
 
         public function __construct(
@@ -84,12 +77,11 @@ function Executor(
             private string $scalarTypeDefinitionsDirectory,
             private string $cacheDirectory,
             private bool $optimize
-        )
-        {
-            if (!\is_file($this->schemaFile)) {
+        ) {
+            if (! \is_file($this->schemaFile)) {
                 throw new \Exception("The schema '{$this->schemaFile}' does not exist. Kindly generate it first to proceed.");
             }
-    
+
             $this->schema = new Schema(
                 sourceFile: $this->schemaFile,
                 scalarTypeDefinitions: ScalarTypeDefinitions(
@@ -100,7 +92,7 @@ function Executor(
                 cacheDirectory: $this->cacheDirectory,
                 optimize: $this->optimize
             );
-    
+
             $this->resolver = Resolver(
                 doctrineEntityManager: $this->entityManager,
                 plugins: Plugins(
@@ -110,12 +102,12 @@ function Executor(
                 )
             );
         }
-    
+
         /**
-         * @param array<string,mixed> $rootValue
-         * @param array<string,mixed> $contextValue
-         * @param array<mixed>|null $variableValues
-         * @param array<ValidationRule>|null $validationRules
+         * @param  array<string,mixed>  $rootValue
+         * @param  array<string,mixed>  $contextValue
+         * @param  array<mixed>|null  $variableValues
+         * @param  array<ValidationRule>|null  $validationRules
          */
         public function executeQuery(
             string|DocumentNode $source,
@@ -124,8 +116,7 @@ function Executor(
             ?array $variableValues,
             ?string $operationName,
             ?array $validationRules
-        ): ExecutionResult 
-        {
+        ): ExecutionResult {
             $result = GraphQL::executeQuery(
                 schema: $this->schema,
                 source: $source,

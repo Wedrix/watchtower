@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\ScalarTypeDefinition;
-
 trait DateTimeScalarTypeDefinition
 {
     private ScalarTypeDefinition $scalarTypeDefinition;
@@ -71,13 +69,13 @@ trait DateTimeScalarTypeDefinition
     public function typeName(): string
     {
         return $this->scalarTypeDefinition
-                    ->typeName();
+            ->typeName();
     }
 
     public function namespace(): string
     {
         return $this->scalarTypeDefinition
-                    ->namespace();
+            ->namespace();
     }
 
     public function template(): string
@@ -88,7 +86,8 @@ trait DateTimeScalarTypeDefinition
 
 function DateTimeScalarTypeDefinition(): ScalarTypeDefinition
 {
-    static $instance = new class() implements ScalarTypeDefinition {
+    static $instance = new class implements ScalarTypeDefinition
+    {
         use DateTimeScalarTypeDefinition;
     };
 

@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use function Wedrix\Watchtower\tableize;
-
 trait ConstraintPlugin
 {
     private string $type;
@@ -20,13 +18,12 @@ trait ConstraintPlugin
 
     public function __construct(
         private string $nodeType
-    )
-    {
+    ) {
         $this->type = 'constraint';
 
         $this->name = 'apply_'.tableize($this->nodeType).'_constraint';
 
-        $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
+        $this->namespace = __NAMESPACE__.'\\ConstraintPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -74,16 +71,14 @@ trait ConstraintPlugin
 
 function ConstraintPlugin(
     string $nodeType
-): Plugin
-{
+): Plugin {
     /**
      * @var array<string,Plugin>
      */
     static $instances = [];
 
-    return $instances[$nodeType] ??= new class(
-        nodeType: $nodeType
-    ) implements Plugin {
+    return $instances[$nodeType] ??= new class(nodeType: $nodeType) implements Plugin
+    {
         use ConstraintPlugin;
     };
 }

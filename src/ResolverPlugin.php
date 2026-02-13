@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
-use function Wedrix\Watchtower\tableize;
-
 trait ResolverPlugin
 {
     private string $type;
@@ -23,8 +19,7 @@ trait ResolverPlugin
     public function __construct(
         private string $nodeType,
         private string $fieldName
-    )
-    {
+    ) {
         $this->type = 'resolver';
 
         $this->name = 'resolve_'.tableize($this->nodeType)
@@ -77,17 +72,14 @@ trait ResolverPlugin
 function ResolverPlugin(
     string $nodeType,
     string $fieldName
-): Plugin
-{
+): Plugin {
     /**
      * @var array<string,array<string,Plugin>>
      */
     static $instances = [];
 
-    return $instances[$nodeType][$fieldName] ??= new class(
-        nodeType: $nodeType,
-        fieldName: $fieldName
-    ) implements Plugin {
+    return $instances[$nodeType][$fieldName] ??= new class(nodeType: $nodeType, fieldName: $fieldName) implements Plugin
+    {
         use ResolverPlugin;
     };
 }

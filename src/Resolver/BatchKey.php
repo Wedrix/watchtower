@@ -11,44 +11,43 @@ interface BatchKey
 
 function BatchKey(
     Node $node,
-): BatchKey
-{ 
+): BatchKey {
     return new class($node) implements BatchKey
     {
         private string $value;
-        
+
         public function __construct(
             private Node $node
-        )
-        {
+        ) {
             $this->value = (function (): string {
-                $args = $this->node->args(); 
-                
+                $args = $this->node->args();
+
                 // Recursively sort arrays and associative arrays
                 $sortArgs = static function ($value) use (&$sortArgs) {
                     if (\is_array($value)) {
-                        // Check if associative 
-                        if (!\array_is_list($value)) {
-                            \ksort($value); 
-                        } else { 
-                            \sort($value); 
+                        // Check if associative
+                        if (! \array_is_list($value)) {
+                            \ksort($value);
+                        } else {
+                            \sort($value);
                         }
-                        
+
                         foreach ($value as &$v) {
-                            $v = $sortArgs($v); 
+                            $v = $sortArgs($v);
                         }
                     }
-                    
-                    return $value; 
+
+                    return $value;
                 };
-                
+
                 $sortedArgs = $sortArgs($args);
-                
-                return $this->node->unwrappedParentType() . '|' . $this->node->name() . '|' . \json_encode($sortedArgs);
+
+                return $this->node->unwrappedParentType().'|'.$this->node->name().'|'.\json_encode($sortedArgs);
             })();
         }
-        
-        public function value(): string {
+
+        public function value(): string
+        {
             return $this->value;
         }
     };

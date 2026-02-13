@@ -17,7 +17,7 @@ trait AuthorizedResult
         private Plugins $plugins,
         private mixed $value,
         private bool $isWorkable
-    ){
+    ) {
         if ($this->isWorkable) {
             $authorize = function (): void {
                 $rootAuthorizorPlugin = RootAuthorizorPlugin();
@@ -32,7 +32,7 @@ trait AuthorizedResult
                     nodeType: $this->node->unwrappedType(),
                     isForCollections: $this->node->isACollection()
                 );
-        
+
                 if ($this->plugins->contains($authorizorPlugin)) {
                     require_once $this->plugins->filePath($authorizorPlugin);
 
@@ -46,7 +46,7 @@ trait AuthorizedResult
                 $this->value = $this->value->then(
                     static function ($resolvedValue) use ($authorize, $result): mixed {
                         $result->value = $resolvedValue;
-                        
+
                         \Closure::fromCallable($authorize)->call($result);
 
                         return $resolvedValue;

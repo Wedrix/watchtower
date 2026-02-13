@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\ScalarTypeDefinition;
-
-use function Wedrix\Watchtower\classify;
-
 trait GenericScalarTypeDefinition
 {
     private string $namespace;
@@ -16,8 +12,7 @@ trait GenericScalarTypeDefinition
 
     public function __construct(
         private string $typeName
-    )
-    {
+    ) {
         $this->namespace = __NAMESPACE__.'\\'.classify($this->typeName).'TypeDefinition';
 
         $this->template = <<<EOD
@@ -77,9 +72,8 @@ function GenericScalarTypeDefinition(
      */
     static $instances = [];
 
-    return $instances[$typeName] ??= new class(
-        typeName: $typeName,
-    ) implements ScalarTypeDefinition {
+    return $instances[$typeName] ??= new class(typeName: $typeName) implements ScalarTypeDefinition
+    {
         use GenericScalarTypeDefinition;
     };
 }

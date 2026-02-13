@@ -7,8 +7,6 @@ namespace Wedrix\Watchtower;
 use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Language\AST\SchemaDefinitionNode;
 use GraphQL\Type\Definition\AbstractType;
-use GraphQL\Type\Definition\ScalarType;
-use GraphQL\Type\Schema as GraphQLSchema;
 use GraphQL\Type\Definition\CustomScalarType;
 use GraphQL\Type\Definition\Directive;
 use GraphQL\Type\Definition\ImplementingType;
@@ -16,12 +14,11 @@ use GraphQL\Type\Definition\InputObjectType;
 use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\NullableType;
 use GraphQL\Type\Definition\ObjectType;
+use GraphQL\Type\Definition\ScalarType;
 use GraphQL\Type\Definition\Type;
+use GraphQL\Type\Schema as GraphQLSchema;
 use GraphQL\Type\SchemaConfig;
 use GraphQL\Utils\InterfaceImplementations;
-
-use function Wedrix\Watchtower\camelize;
-use function Wedrix\Watchtower\pluralize;
 
 final class SyncedQuerySchema extends GraphQLSchema
 {
@@ -29,37 +26,36 @@ final class SyncedQuerySchema extends GraphQLSchema
 
     public function __construct(
         private EntityManagerInterface $entityManager,
-    )
-    {
-        $this->schema = (function(): GraphQLSchema {
+    ) {
+        $this->schema = (function (): GraphQLSchema {
             $scalars = [
                 'DateTime' => new CustomScalarType([
-                    'name' => 'DateTime'
+                    'name' => 'DateTime',
                 ]),
                 'Limit' => new CustomScalarType([
-                    'name' => 'Limit'
+                    'name' => 'Limit',
                 ]),
                 'Page' => new CustomScalarType([
-                    'name' => 'Page'
-                ])
+                    'name' => 'Page',
+                ]),
             ];
 
             /**
-             * @var array<string,NullableType>
+             * @var array<string,NullableType&Type>
              */
             $types = [];
 
-            $addEntityType = function(Entity $entity) use (&$types, &$scalars, &$addEntityType): void {
+            $addEntityType = function (Entity $entity) use (&$types, &$scalars, &$addEntityType): void {
                 $types[$entity->name()] ??= new ObjectType([
                     'name' => $entity->name(),
-                    'fields' => (function() use ($entity, &$types, &$scalars, &$addEntityType): array {
+                    'fields' => (function () use ($entity, &$types, &$scalars, &$addEntityType): array {
                         /**
                          * @var array<string,Type>
                          */
                         $fields = [];
 
                         /**
-                         * @var array<string,string|array<string,mixed>>
+                         * @var array<string,string|array{embedded_fields: array<string,string>}>
                          */
                         $entityFields = [];
 
@@ -67,28 +63,26 @@ final class SyncedQuerySchema extends GraphQLSchema
                             if (\str_contains($field, '.')) {
                                 [$fieldName, $embeddedFieldName] = \explode('.', $field);
 
-                                if (isset($entityFields[$fieldName])) {
+                                if (isset($entityFields[$fieldName]) && \is_array($entityFields[$fieldName])) {
                                     $entityFields[$fieldName]['embedded_fields'][$embeddedFieldName] = $entity->fieldType($field);
-                                }
-                                else {
+                                } else {
                                     $entityFields[$fieldName] = [
                                         'embedded_fields' => [
-                                            $embeddedFieldName => $entity->fieldType($field)
-                                        ]
+                                            $embeddedFieldName => $entity->fieldType($field),
+                                        ],
                                     ];
                                 }
-                            }
-                            else {
+                            } else {
                                 $entityFields[$field] = $entity->fieldType($field);
                             }
                         }
 
-                        $mapScalarType = static function(string $scalarType) use (&$scalars): ScalarType|null {
-                            if (\in_array($scalarType, ['smallint','integer','bigint'])) {
+                        $mapScalarType = static function (string $scalarType) use (&$scalars): ScalarType|null {
+                            if (\in_array($scalarType, ['smallint', 'integer', 'bigint'])) {
                                 return Type::int();
                             }
 
-                            if (\in_array($scalarType, ['decimal','float'])) {
+                            if (\in_array($scalarType, ['decimal', 'float'])) {
                                 return Type::float();
                             }
 
@@ -96,13 +90,13 @@ final class SyncedQuerySchema extends GraphQLSchema
                                 return Type::boolean();
                             }
 
-                            if (\in_array($scalarType, ['string','ascii_string','text','guid'])) {
+                            if (\in_array($scalarType, ['string', 'ascii_string', 'text', 'guid'])) {
                                 return Type::string();
                             }
 
                             if (\in_array($scalarType, [
-                                'date','date_immutable','datetime','datetime_immutable',
-                                'datetimetz','datetimetz_immutable','time','time_immutable'
+                                'date', 'date_immutable', 'datetime', 'datetime_immutable',
+                                'datetimetz', 'datetimetz_immutable', 'time', 'time_immutable',
                             ])) {
                                 return $scalars['DateTime'];
                             }
@@ -111,15 +105,15 @@ final class SyncedQuerySchema extends GraphQLSchema
                         };
 
                         foreach ($entityFields as $fieldName => $fieldTypeOrInfo) {
-                            if (\is_array($fieldTypeOrInfo) && isset($fieldTypeOrInfo['embedded_fields'])) {
+                            if (\is_array($fieldTypeOrInfo)) {
                                 $embeddedClass = $entity->embeddedFieldClass($fieldName);
 
                                 $embeddedTypeName = \array_slice(\explode('\\', $embeddedClass), -1)[0];
 
-                                //TODO: Handle Non-Nullable Embeddables
+                                // TODO: Handle Non-Nullable Embeddables
                                 $types[$embeddedTypeName] ??= new ObjectType([
                                     'name' => $embeddedTypeName,
-                                    'fields' => (static function() use ($entity, $fieldName, $fieldTypeOrInfo, &$mapScalarType): array {
+                                    'fields' => (static function () use ($entity, $fieldName, $fieldTypeOrInfo, &$mapScalarType): array {
                                         $embeddedFields = [];
 
                                         $embeddedFieldTypes = $fieldTypeOrInfo['embedded_fields'];
@@ -127,30 +121,30 @@ final class SyncedQuerySchema extends GraphQLSchema
                                         foreach ($embeddedFieldTypes as $embeddedFieldName => $embeddedFieldType) {
                                             $fieldType = $mapScalarType($embeddedFieldType);
 
-                                            if (!\is_null($fieldType)) {
-                                                if (!$entity->fieldIsNullable("$fieldName.$embeddedFieldName")) {
+                                            if (! \is_null($fieldType)) {
+                                                if (! $entity->fieldIsNullable("$fieldName.$embeddedFieldName")) {
                                                     $fieldType = Type::nonNull($fieldType);
                                                 }
-    
+
                                                 $embeddedFields[$embeddedFieldName] = $fieldType;
                                             }
                                         }
 
                                         return $embeddedFields;
-                                    })()
+                                    })(),
                                 ]);
 
                                 $fields[$fieldName] = $types[$embeddedTypeName];
                             }
-                            
-                            if (\is_string($fieldTypeOrInfo)){
+
+                            if (\is_string($fieldTypeOrInfo)) {
                                 $fieldType = $mapScalarType($fieldTypeOrInfo);
 
-                                if (!\is_null($fieldType)) {
-                                    if (!$entity->fieldIsNullable($fieldName)) {
+                                if (! \is_null($fieldType)) {
+                                    if (! $entity->fieldIsNullable($fieldName)) {
                                         $fieldType = Type::nonNull($fieldType);
                                     }
-    
+
                                     $fields[$fieldName] = $fieldType;
                                 }
                             }
@@ -159,8 +153,8 @@ final class SyncedQuerySchema extends GraphQLSchema
                         foreach ($entity->associationFieldNames() as $associationName) {
                             $associatedEntityName = $entity->associationTargetEntity($associationName);
 
-                            $associatedEntityType = function() use (&$types, $associatedEntityName, $addEntityType): NullableType {
-                                if (!isset($types[$associatedEntityName])) {
+                            $associatedEntityType = function () use (&$types, $associatedEntityName, $addEntityType): ObjectType {
+                                if (! isset($types[$associatedEntityName])) {
                                     $addEntityType(
                                         Entity(
                                             name: $associatedEntityName,
@@ -169,37 +163,43 @@ final class SyncedQuerySchema extends GraphQLSchema
                                     );
                                 }
 
-                                return $types[$associatedEntityName];
+                                $associatedType = $types[$associatedEntityName];
+
+                                if (! $associatedType instanceof ObjectType) {
+                                    throw new \LogicException("Invalid associated entity type '{$associatedEntityName}'.");
+                                }
+
+                                return $associatedType;
                             };
 
-                            if (!$entity->associationIsSingleValued($associationName)) {
+                            if (! $entity->associationIsSingleValued($associationName)) {
                                 $associatedEntityType = Type::listOf(Type::nonNull($associatedEntityType));
                             }
 
-                            if (!$entity->associationIsNullable($associationName)) {
+                            if (! $entity->associationIsNullable($associationName)) {
                                 $associatedEntityType = Type::nonNull($associatedEntityType);
                             }
 
-                            $fields[$associationName] = $entity->associationIsSingleValued($associationName) 
-                                        ? $associatedEntityType
-                                        : [
-                                            'type' => $associatedEntityType,
-                                            'args' => [
-                                                'queryParams' => [
-                                                    'type' => static function() use (&$types, $associatedEntityName): NullableType {
-                                                        return $types[pluralize($associatedEntityName).'QueryParams'];
-                                                    }
-                                                ]
-                                            ]
-                                        ];
+                            $fields[$associationName] = $entity->associationIsSingleValued($associationName)
+                                ? $associatedEntityType
+                                : [
+                                    'type' => $associatedEntityType,
+                                    'args' => [
+                                        'queryParams' => [
+                                            'type' => static function () use (&$types, $associatedEntityName): Type {
+                                                return $types[pluralize($associatedEntityName).'QueryParams'];
+                                            },
+                                        ],
+                                    ],
+                                ];
                         }
 
                         return $fields;
-                    })()
+                    })(),
                 ]);
             };
-            
-            $entityClassNames = $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
+
+            $entityClassNames = $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames()
                     ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.');
 
             foreach ($entityClassNames as $entityClassName) {
@@ -212,7 +212,7 @@ final class SyncedQuerySchema extends GraphQLSchema
             }
 
             $queries = [];
-    
+
             foreach ($entityClassNames as $entityClassName) {
                 $singleQueryName = camelize($entityName = \array_slice(\explode('\\', $entityClassName), -1)[0]);
 
@@ -222,46 +222,46 @@ final class SyncedQuerySchema extends GraphQLSchema
                     name: \array_slice(\explode('\\', $entityClassName), -1)[0],
                     entityManager: $this->entityManager
                 );
-    
+
                 $queries[$singleQueryName] = [
                     'type' => $type = Type::nonNull($types[$entityName]),
                     'args' => \array_reduce(
                         $entity->idFieldNames(),
-                        static function(array $args, string $idField): array {
+                        static function (array $args, string $idField): array {
                             $args[$idField] = [
-                                'type' => Type::nonNull(Type::id())
+                                'type' => Type::nonNull(Type::id()),
                             ];
-    
+
                             return $args;
                         },
                         []
-                    )
+                    ),
                 ];
-    
+
                 $types[$queryParamsTypeName = pluralize($entityName).'QueryParams'] = new InputObjectType([
                     'name' => $queryParamsTypeName,
                     'fields' => [
                         'limit' => $scalars['Limit'],
                         'page' => $scalars['Page'],
-                        'distinct' => Type::boolean()
-                    ]
+                        'distinct' => Type::boolean(),
+                    ],
                 ]);
-    
+
                 $queries[$collectionQueryName] = [
                     'type' => Type::nonNull(Type::listOf($type)),
                     'args' => [
                         'queryParams' => [
-                            'type' => $types[$queryParamsTypeName]
-                        ]
-                    ]
+                            'type' => $types[$queryParamsTypeName],
+                        ],
+                    ],
                 ];
             }
-   
+
             return new GraphQLSchema([
                 'query' => new ObjectType([
                     'name' => 'Query',
-                    'fields' => $queries
-                ])
+                    'fields' => $queries,
+                ]),
             ]);
         })();
 
@@ -271,101 +271,94 @@ final class SyncedQuerySchema extends GraphQLSchema
     public function getTypeMap(): array
     {
         return $this->schema
-                    ->getTypeMap();
+            ->getTypeMap();
     }
 
     public function getDirectives(): array
     {
         return $this->schema
-                    ->getDirectives();
+            ->getDirectives();
     }
 
     public function getOperationType(
         string $operation
-    ): ?ObjectType
-    {
+    ): ?ObjectType {
         return $this->schema
-                    ->getOperationType($operation);
+            ->getOperationType($operation);
     }
 
     public function getQueryType(): ?ObjectType
     {
         return $this->schema
-                    ->getQueryType();
+            ->getQueryType();
     }
 
     public function getMutationType(): ?ObjectType
     {
         return $this->schema
-                    ->getMutationType();
+            ->getMutationType();
     }
 
     public function getSubscriptionType(): ?ObjectType
     {
         return $this->schema
-                    ->getSubscriptionType();
+            ->getSubscriptionType();
     }
 
     public function getConfig(): SchemaConfig
     {
         return $this->schema
-                    ->getConfig();
+            ->getConfig();
     }
 
     public function getType(
         string $name
-    ): ?Type
-    {
+    ): ?Type {
         return $this->schema
-                    ->getType($name);
+            ->getType($name);
     }
 
     public function hasType(
         string $name
-    ): bool
-    {
+    ): bool {
         return $this->schema
-                    ->hasType($name);
+            ->hasType($name);
     }
 
     public function getPossibleTypes(
         AbstractType $abstractType
-    ): array
-    {
+    ): array {
         return $this->schema
-                    ->getPossibleTypes($abstractType);
+            ->getPossibleTypes($abstractType);
     }
 
     public function getImplementations(
         InterfaceType $abstractType
-    ): InterfaceImplementations
-    {
+    ): InterfaceImplementations {
         return $this->schema
-                    ->getImplementations($abstractType);
+            ->getImplementations($abstractType);
     }
 
     public function isSubType(
-        AbstractType $abstractType, 
+        AbstractType $abstractType,
         ImplementingType $maybeSubType
-    ): bool
-    {
+    ): bool {
         return $this->schema
-                    ->isSubType($abstractType, $maybeSubType);
+            ->isSubType($abstractType, $maybeSubType);
     }
 
     public function getDirective(
         string $name
-    ): ?Directive
-    {
+    ): ?Directive {
         return $this->schema
-                    ->getDirective($name);
+            ->getDirective($name);
     }
 
     public function getAstNode(): ?SchemaDefinitionNode
     {
         return $this->schema
-                    ->getConfig()
-                    ->getAstNode();
+            ->getConfig()
+            ->getAstNode();
     }
 
     public function assertValid(): void
@@ -377,6 +370,6 @@ final class SyncedQuerySchema extends GraphQLSchema
     public function validate(): array
     {
         return $this->schema
-                    ->validate();
+            ->validate();
     }
 }

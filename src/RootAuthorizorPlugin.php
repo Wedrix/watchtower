@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
 trait RootAuthorizorPlugin
 {
     private string $type;
@@ -72,7 +70,8 @@ trait RootAuthorizorPlugin
 
 function RootAuthorizorPlugin(): Plugin
 {
-    static $instance = new class() implements Plugin {
+    static $instance = new class implements Plugin
+    {
         use RootAuthorizorPlugin;
     };
 

@@ -8,7 +8,7 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartResult
 {
-    use ScalarResult, QueryResult, MutationResult, SubscriptionResult, ResolverResult {
+    use MutationResult, QueryResult, ResolverResult, ScalarResult, SubscriptionResult {
         ScalarResult::__construct as private _constructScalarResult;
         QueryResult::__construct as private _constructQueryResult;
         MutationResult::__construct as private _constructMutationResult;
@@ -24,8 +24,7 @@ trait SmartResult
         private Node $node,
         private EntityManager $entityManager,
         private Plugins $plugins
-    )
-    {
+    ) {
         $this->_constructScalarResult(
             node: $this->node,
             entityManager: $this->entityManager,
@@ -46,6 +45,7 @@ trait SmartResult
             entityManager: $this->entityManager,
         );
 
+        // @phpstan-ignore if.alwaysFalse
         if ($this->isWorkable) {
             return;
         }
@@ -55,6 +55,7 @@ trait SmartResult
             plugins: $this->plugins
         );
 
+        // @phpstan-ignore if.alwaysFalse
         if ($this->isWorkable) {
             return;
         }
@@ -64,6 +65,7 @@ trait SmartResult
             plugins: $this->plugins
         );
 
+        // @phpstan-ignore if.alwaysFalse
         if ($this->isWorkable) {
             return;
         }
@@ -73,11 +75,12 @@ trait SmartResult
             plugins: $this->plugins
         );
 
+        // @phpstan-ignore if.alwaysFalse
         if ($this->isWorkable) {
             return;
         }
 
-        throw new \Exception("Unable to resolve the node. None of the result strategies were workable.");
+        throw new \Exception('Unable to resolve the node. None of the result strategies were workable.');
     }
 
     public function value(): mixed

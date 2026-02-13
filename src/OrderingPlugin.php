@@ -4,11 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
-use function Wedrix\Watchtower\pluralize;
-use function Wedrix\Watchtower\tableize;
-
 trait OrderingPlugin
 {
     private string $type;
@@ -24,8 +19,7 @@ trait OrderingPlugin
     public function __construct(
         private string $nodeType,
         private string $orderingName
-    )
-    {
+    ) {
         $this->type = 'ordering';
 
         $this->name = 'apply_'.tableize(pluralize($this->nodeType))
@@ -80,17 +74,14 @@ trait OrderingPlugin
 function OrderingPlugin(
     string $nodeType,
     string $orderingName
-): Plugin
-{
+): Plugin {
     /**
      * @var array<string,array<string,Plugin>>
      */
     static $instances = [];
 
-    return $instances[$nodeType][$orderingName] ??= new class(
-        nodeType: $nodeType, 
-        orderingName: $orderingName
-    ) implements Plugin {
+    return $instances[$nodeType][$orderingName] ??= new class(nodeType: $nodeType, orderingName: $orderingName) implements Plugin
+    {
         use OrderingPlugin;
     };
 }

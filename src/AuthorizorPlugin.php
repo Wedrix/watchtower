@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use function Wedrix\Watchtower\pluralize;
-use function Wedrix\Watchtower\tableize;
-
 trait AuthorizorPlugin
 {
     private string $type;
@@ -22,8 +19,7 @@ trait AuthorizorPlugin
     public function __construct(
         private string $nodeType,
         private bool $isForCollections
-    )
-    {
+    ) {
         $this->type = 'authorizor';
 
         $this->name = 'authorize_'.tableize(
@@ -81,17 +77,14 @@ trait AuthorizorPlugin
 function AuthorizorPlugin(
     string $nodeType,
     bool $isForCollections
-): Plugin
-{
+): Plugin {
     /**
      * @var array<string,array<string,Plugin>>
      */
     static $instances = [];
 
-    return $instances[$nodeType][$isForCollections ? 'true' : 'false'] ??= new class(
-        nodeType: $nodeType, 
-        isForCollections: $isForCollections
-    ) implements Plugin {
+    return $instances[$nodeType][$isForCollections ? 'true' : 'false'] ??= new class(nodeType: $nodeType, isForCollections: $isForCollections) implements Plugin
+    {
         use AuthorizorPlugin;
     };
 }

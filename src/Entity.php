@@ -72,157 +72,146 @@ interface Entity
 function Entity(
     string $name,
     EntityManagerInterface $entityManager
-): Entity
-{
+): Entity {
     /**
      * @var \WeakMap<EntityManagerInterface,array<string,Entity>>
      */
-    static $instances = new \WeakMap();
-    
-    if (!isset($instances[$entityManager])) {
+    static $instances = new \WeakMap;
+
+    if (! isset($instances[$entityManager])) {
         $instances[$entityManager] = [];
     }
 
-    return $instances[$entityManager][$name] ??= new class(
-        name: $name,
-        entityManager: $entityManager
-    ) implements Entity {
+    return $instances[$entityManager][$name] ??= new class(name: $name, entityManager: $entityManager) implements Entity
+    {
         private string $class;
-    
+
+        /**
+         * @var ClassMetadata<object>
+         */
         private ClassMetadata $metadata;
-    
+
         /**
          * @var array<string>
          */
         private array $scalarFieldNames;
-    
+
         /**
          * @var array<string>
          */
         private array $idFieldNames;
-    
+
         /**
          * @var array<string>
          */
         private array $associationFieldNames;
-    
+
         public function __construct(
             private string $name,
             private EntityManagerInterface $entityManager
-        )
-        {
+        ) {
             $this->class = (function (): string {
                 $matchingRegisteredClasses = \array_filter(
-                    $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames() 
+                    $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames()
                         ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
                     fn (string $className) => \str_ends_with($className, "\\{$this->name}")
                 );
-    
-                return \array_shift($matchingRegisteredClasses) 
+
+                return \array_shift($matchingRegisteredClasses)
                     ?? throw new \Exception("No entity with the name '{$this->name}' exists for the given entity manager instance.");
             })();
-    
+
             $this->metadata = $this->entityManager->getClassMetadata($this->class);
-    
+
             $this->scalarFieldNames = $this->metadata->getFieldNames();
-    
+
             $this->idFieldNames = $this->metadata->getIdentifierFieldNames();
-    
+
             $this->associationFieldNames = $this->metadata->getAssociationNames();
         }
-    
+
         public function name(): string
         {
             return $this->name;
         }
-    
+
         public function class(): string
         {
             return $this->class;
         }
-    
+
         public function scalarFieldNames(): array
         {
             return $this->scalarFieldNames;
         }
-    
+
         public function idFieldNames(): array
         {
             return $this->idFieldNames;
         }
-    
+
         public function associationFieldNames(): array
         {
             return $this->associationFieldNames;
         }
-    
+
         public function hasEmbeddedField(
             string $fieldName
-        ): bool
-        {
+        ): bool {
             return isset($this->metadata->embeddedClasses[$fieldName]);
         }
-    
+
         public function fieldType(
             string $fieldName
-        ): string
-        {
+        ): string {
             return $this->metadata->getFieldMapping($fieldName)['type'];
         }
-    
+
         public function fieldIsNullable(
             string $fieldName
-        ): bool
-        {
+        ): bool {
             return $this->metadata->isNullable($fieldName);
         }
-    
+
         public function associationTargetEntity(
             string $associationName
-        ): string
-        {
+        ): string {
             return \basename(\str_replace('\\', '/', $this->metadata->getAssociationMapping($associationName)['targetEntity']));
         }
-    
+
         public function embeddedFieldClass(
             string $fieldName
-        ): string
-        {
+        ): string {
             return $this->metadata->embeddedClasses[$fieldName]['class'];
         }
-    
+
         public function associationIsInverseSide(
             string $associationName
-        ): bool
-        {
+        ): bool {
             return $this->metadata->isAssociationInverseSide($associationName);
         }
-    
+
         public function associationMappedByTargetField(
             string $fieldName
-        ): string
-        {
+        ): string {
             return $this->metadata->getAssociationMappedByTargetField($fieldName);
         }
 
         public function associationInversedByTargetField(
             string $fieldName
-        ): string
-        {
+        ): string {
             return $this->metadata->associationMappings[$fieldName]['inversedBy'];
         }
-    
+
         public function associationIsSingleValued(
             string $associationName
-        ): bool
-        {
+        ): bool {
             return $this->metadata->isSingleValuedAssociation($associationName);
         }
-    
+
         public function associationIsNullable(
             string $associationName
-        ): bool
-        {
+        ): bool {
             return false; // TODO: Implement method
         }
     };

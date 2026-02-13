@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower;
 
 /**
- * @param array<int|string,mixed> $needles
- * @param array<int|string,mixed> $haystack
+ * @param  array<int|string,mixed>  $needles
+ * @param  array<int|string,mixed>  $haystack
  */
 function any_in_array(array $needles, array $haystack): bool
 {
@@ -20,13 +20,13 @@ function any_in_array(array $needles, array $haystack): bool
 }
 
 /**
- * @param array<int|string,mixed> $needles
- * @param array<int|string,mixed> $haystack
+ * @param  array<int|string,mixed>  $needles
+ * @param  array<int|string,mixed>  $haystack
  */
 function all_in_array(array $needles, array $haystack): bool
 {
     foreach ($needles as $needle) {
-        if (!\in_array($needle, $haystack)) {
+        if (! \in_array($needle, $haystack)) {
             return false;
         }
     }

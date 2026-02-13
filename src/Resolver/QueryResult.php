@@ -22,9 +22,8 @@ trait QueryResult
         private Node $node,
         private Plugins $plugins,
         private EntityManager $entityManager,
-    )
-    {
-        $this->isWorkable = !$this->plugins
+    ) {
+        $this->isWorkable = ! $this->plugins
             ->contains(
                 ResolverPlugin(
                     nodeType: $this->node->unwrappedParentType(),
@@ -34,7 +33,7 @@ trait QueryResult
             && $this->query->isWorkable();
 
         $this->value = (function (): mixed {
-            if (!$this->isWorkable) {
+            if (! $this->isWorkable) {
                 return null;
             }
 
@@ -49,8 +48,7 @@ trait QueryResult
 
                 if (ResultBuffer()->has($batchKey)) {
                     $batchResult = ResultBuffer()->get($batchKey);
-                }
-                else {
+                } else {
                     $doctrineQuery = $this->query->builder()->getQuery();
 
                     $batchResult = $doctrineQuery->getResult();
@@ -63,13 +61,13 @@ trait QueryResult
 
                 // Filter the batch to only include results for the current node (only if node has a parent)
                 $filteredBatch = (function () use ($batchResult): array {
-                    if (!$this->node->isTopLevel()) {
+                    if (! $this->node->isTopLevel()) {
                         $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
 
                         $parentEntityAlias = $this->query->builder()->parentEntityAlias();
 
                         $identifierAlias = $this->query->builder()->identifierAlias();
-                        
+
                         // Extract this node's parent ID
                         $parentIds = \array_reduce(
                             $parentEntity->idFieldNames(),
@@ -99,7 +97,7 @@ trait QueryResult
                             },
                             []
                         );
-                        
+
                         // Filter batch to get only results for this node's parent
                         $batchResult = \array_filter($batchResult, function ($resultRecord) use ($parentEntity, $parentEntityAlias, $parentIds): bool {
                             // Check parent ID fields that were added to the query
@@ -113,20 +111,21 @@ trait QueryResult
 
                                     foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
                                         $parentIdKey = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
-                                        if (!isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName][$targetIdFieldName]) {
+                                        if (! isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName][$targetIdFieldName]) {
                                             return false;
                                         }
                                     }
                                 } else {
                                     $parentIdKey = "{$parentEntityAlias}_$idFieldName";
-                                    if (!isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName]) {
+                                    if (! isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName]) {
                                         return false;
                                     }
                                 }
                             }
+
                             return true;
                         });
-                        
+
                         $batchResult = \array_values($batchResult);
                     }
 
@@ -135,13 +134,13 @@ trait QueryResult
 
                 $value = $filteredBatch;
 
-                if (!$this->node->isACollection()) {
+                if (! $this->node->isACollection()) {
                     if (count($filteredBatch) > 1) {
-                        throw new NonUniqueResultException();
+                        throw new NonUniqueResultException;
                     }
 
-                    if (!$this->node->isNullable() && (count($filteredBatch) == 0)) {
-                        throw new NoResultException();
+                    if (! $this->node->isNullable() && (count($filteredBatch) == 0)) {
+                        throw new NoResultException;
                     }
 
                     $value = $filteredBatch[0] ?? null;

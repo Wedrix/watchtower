@@ -30,8 +30,7 @@ class AuthorProfile
 
     public function setAuthor(
         Author $author
-    ): void
-    {
+    ): void {
         if ($this->author === $author) {
             return;
         }

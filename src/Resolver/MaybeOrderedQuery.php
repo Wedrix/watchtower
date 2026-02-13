@@ -15,30 +15,29 @@ trait MaybeOrderedQuery
         private Plugins $plugins,
         private QueryBuilder $queryBuilder,
         private bool $isWorkable
-    )
-    {
+    ) {
         if ($this->isWorkable) {
             $queryParams = $this->node->args()['queryParams'] ?? [];
-    
-            if (!empty($queryParams)) {
+
+            if (! empty($queryParams)) {
                 $ordering = $queryParams['ordering'] ?? [];
-    
+
                 \uasort(
-                    $ordering, 
+                    $ordering,
                     /**
-                     * @param array{rank:int,params:null|array<string,mixed>} $a
-                     * @param array{rank:int,params:null|array<string,mixed>} $b
+                     * @param  array{rank:int,params:null|array<string,mixed>}  $a
+                     * @param  array{rank:int,params:null|array<string,mixed>}  $b
                      */
                     static fn (array $a, array $b): int => $a['rank'] - $b['rank']
                 );
-        
+
                 foreach ($ordering as $orderingName => $_) {
                     $orderingPlugin = OrderingPlugin(
                         nodeType: $this->node->unwrappedType(),
                         orderingName: $orderingName
                     );
-    
-                    if (!$this->plugins->contains($orderingPlugin)) {
+
+                    if (! $this->plugins->contains($orderingPlugin)) {
                         throw new \Exception("Invalid query. No ordering plugin exists for '$orderingName'.");
                     }
 

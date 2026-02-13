@@ -95,8 +95,7 @@ final class FixtureWorkspace
 
     public function writeSchema(
         string $schemaSource
-    ): void
-    {
+    ): void {
         \file_put_contents($this->schemaFile(), $schemaSource);
     }
 
@@ -121,8 +120,7 @@ final class FixtureWorkspace
      */
     public function seedLibraryData(
         EntityManagerInterface $entityManager
-    ): array
-    {
+    ): array {
         $authorOne = new Author('Ada Lovelace');
         $authorTwo = new Author('Alan Turing');
 
@@ -194,7 +192,7 @@ final class FixtureWorkspace
 
     public function cleanup(): void
     {
-        if ($this->cleaned || !\is_dir($this->rootDirectory)) {
+        if ($this->cleaned || ! \is_dir($this->rootDirectory)) {
             return;
         }
 
@@ -204,22 +202,20 @@ final class FixtureWorkspace
 
     private static function ensureDirectory(
         string $directory
-    ): void
-    {
+    ): void {
         if (\is_dir($directory)) {
             return;
         }
 
-        if (!\mkdir($directory, 0777, true) && !\is_dir($directory)) {
+        if (! \mkdir($directory, 0777, true) && ! \is_dir($directory)) {
             throw new \RuntimeException("Unable to create fixture directory '{$directory}'.");
         }
     }
 
     private static function deleteDirectory(
         string $directory
-    ): void
-    {
-        if (!\is_dir($directory)) {
+    ): void {
+        if (! \is_dir($directory)) {
             return;
         }
 

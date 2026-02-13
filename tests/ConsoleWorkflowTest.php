@@ -10,8 +10,8 @@ use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
 use Watchtower\Tests\Support\FixtureWorkspace;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
-use function Wedrix\Watchtower\ConstraintPlugin;
 use function Wedrix\Watchtower\Console;
+use function Wedrix\Watchtower\ConstraintPlugin;
 use function Wedrix\Watchtower\FilterPlugin;
 use function Wedrix\Watchtower\MutationPlugin;
 use function Wedrix\Watchtower\OrderingPlugin;
@@ -47,7 +47,7 @@ final class ConsoleWorkflowTest extends TestCase
         parent::tearDown();
     }
 
-    public function testGenerateSchemaCreatesSchemaAndDefaultScalarDefinitions(): void
+    public function test_generate_schema_creates_schema_and_default_scalar_definitions(): void
     {
         $console = $this->createConsole();
 
@@ -63,7 +63,7 @@ final class ConsoleWorkflowTest extends TestCase
         self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/page_type_definition.php');
     }
 
-    public function testGenerateSchemaThrowsWhenSchemaAlreadyExists(): void
+    public function test_generate_schema_throws_when_schema_already_exists(): void
     {
         $console = $this->createConsole();
         $console->generateSchema();
@@ -74,7 +74,7 @@ final class ConsoleWorkflowTest extends TestCase
         $console->generateSchema();
     }
 
-    public function testPluginGeneratorsCreateFilesInExpectedDirectories(): void
+    public function test_plugin_generators_create_files_in_expected_directories(): void
     {
         $console = $this->createConsole();
 
@@ -101,7 +101,7 @@ final class ConsoleWorkflowTest extends TestCase
         self::assertFileExists($plugins->filePath(MutationPlugin('renameBook')));
     }
 
-    public function testGenerateCacheCreatesSchemaPluginsAndScalarTypeDefinitionCacheFiles(): void
+    public function test_generate_cache_creates_schema_plugins_and_scalar_type_definition_cache_files(): void
     {
         $console = $this->createConsole();
         $console->generateSchema();
@@ -114,7 +114,7 @@ final class ConsoleWorkflowTest extends TestCase
         self::assertFileExists($this->workspace->cacheDirectory().'/scalar_type_definitions.php');
     }
 
-    public function testUpdateSchemaInvalidatesExistingSchemaCacheFile(): void
+    public function test_update_schema_invalidates_existing_schema_cache_file(): void
     {
         $console = $this->createConsole();
         $console->generateSchema();

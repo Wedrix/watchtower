@@ -20,13 +20,12 @@ trait SubscriptionResult
     public function __construct(
         private Node $node,
         private Plugins $plugins
-    )
-    {
+    ) {
         $this->plugin = SubscriptionPlugin(
             fieldName: $this->node->name()
         );
 
-        $this->isWorkable = $this->node->operation() === 'subscription' 
+        $this->isWorkable = $this->node->operation() === 'subscription'
             && $this->node->isTopLevel()
             && $this->plugins->contains($this->plugin);
 

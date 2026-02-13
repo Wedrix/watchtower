@@ -4,9 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use function Wedrix\Watchtower\pluralize;
-use function Wedrix\Watchtower\tableize;
-
 trait FilterPlugin
 {
     private string $type;
@@ -22,14 +19,13 @@ trait FilterPlugin
     public function __construct(
         private string $nodeType,
         private string $filterName
-    )
-    {
+    ) {
         $this->type = 'filter';
 
         $this->name = 'apply_'.tableize(pluralize($this->nodeType))
         .'_'.tableize($this->filterName).'_filter';
 
-        $this->namespace = __NAMESPACE__."\\FilterPlugin";
+        $this->namespace = __NAMESPACE__.'\\FilterPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -84,10 +80,8 @@ function FilterPlugin(
      */
     static $instances = [];
 
-    return $instances[$nodeType][$filterName] ??= new class(
-        nodeType: $nodeType, 
-        filterName: $filterName
-    ) implements Plugin {
+    return $instances[$nodeType][$filterName] ??= new class(nodeType: $nodeType, filterName: $filterName) implements Plugin
+    {
         use FilterPlugin;
     };
 }

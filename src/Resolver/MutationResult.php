@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Wedrix\Watchtower\Resolver;
 
 use GraphQL\Deferred;
-use Wedrix\Watchtower\Plugins;
 use Wedrix\Watchtower\Plugin;
+use Wedrix\Watchtower\Plugins;
 
 use function Wedrix\Watchtower\MutationPlugin;
 
@@ -21,21 +21,20 @@ trait MutationResult
     public function __construct(
         private Node $node,
         private Plugins $plugins
-    )
-    {
+    ) {
         $this->plugin = MutationPlugin(
             fieldName: $this->node->name()
         );
 
-        $this->isWorkable = $this->node->operation() === 'mutation' 
+        $this->isWorkable = $this->node->operation() === 'mutation'
             && $this->node->isTopLevel()
             && $this->plugins->contains($this->plugin);
 
         $this->value = (function (): mixed {
-            if (!$this->isWorkable) {
+            if (! $this->isWorkable) {
                 return null;
             }
-            
+
             NodeBuffer()->add(
                 node: $this->node
             );

@@ -18,9 +18,8 @@ trait BaseQuery
         private Node $node,
         private EntityManager $entityManager,
         private Plugins $plugins
-    )
-    {
-        $this->isWorkable = !$this->node->isAbstract()
+    ) {
+        $this->isWorkable = ! $this->node->isAbstract()
             && $this->entityManager->hasEntity(name: $this->node->unwrappedType());
 
         $this->queryBuilder = (function (): QueryBuilder {
@@ -30,9 +29,9 @@ trait BaseQuery
                 $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
                 $rootEntityAlias = $queryBuilder->rootEntityAlias();
-                
+
                 $nodeFieldsSelection = $this->node->concreteFieldsSelection();
-        
+
                 $selectedNodeFields = \array_keys($nodeFieldsSelection);
 
                 $queryBuilder->from(
@@ -44,30 +43,30 @@ trait BaseQuery
                  * @var array<string>
                  */
                 $selectedScalarEntityFields = \array_filter(
-                    $rootEntity->scalarFieldNames(), 
+                    $rootEntity->scalarFieldNames(),
                     static fn (string $selectedScalarEntityField) => \in_array($selectedScalarEntityField, $rootEntity->idFieldNames())
                         || \in_array($selectedScalarEntityField, $selectedNodeFields)
                         || \array_reduce(
-                            $selectedNodeFields, 
-                            static function(bool $isSelectedEmbeddedField, string $selectedNodeField) use ($selectedScalarEntityField, $nodeFieldsSelection) {
+                            $selectedNodeFields,
+                            static function (bool $isSelectedEmbeddedField, string $selectedNodeField) use ($selectedScalarEntityField, $nodeFieldsSelection) {
                                 /**
                                  * @var array<string,mixed>
                                  */
                                 $subFieldsSelection = $nodeFieldsSelection[$selectedNodeField]['fields'] ?? [];
-        
-                                if (!empty($subFieldsSelection)) {
+
+                                if (! empty($subFieldsSelection)) {
                                     $requestedSubFields = \array_keys($subFieldsSelection);
-        
+
                                     $selectedEmbeddedFields = \array_map(
-                                        static fn (string $requestedSubField) => "$selectedNodeField.$requestedSubField", 
+                                        static fn (string $requestedSubField) => "$selectedNodeField.$requestedSubField",
                                         $requestedSubFields
                                     );
-        
+
                                     return $isSelectedEmbeddedField || \in_array($selectedScalarEntityField, $selectedEmbeddedFields);
                                 }
-        
+
                                 return $isSelectedEmbeddedField;
-                            }, 
+                            },
                             false
                         )
                 );
@@ -76,7 +75,7 @@ trait BaseQuery
                  * @var array<string>
                  */
                 $selectedSelectorFields = \array_filter(
-                    $selectedNodeFields, 
+                    $selectedNodeFields,
                     fn (string $selectedNodeField) => $this->plugins->contains(
                         SelectorPlugin(
                             nodeType: $this->node->unwrappedType(),
@@ -84,7 +83,7 @@ trait BaseQuery
                         )
                     )
                 );
-        
+
                 foreach ($selectedScalarEntityFields as $fieldName) {
                     $queryBuilder->addSelect("{$rootEntityAlias}.$fieldName");
                 }
@@ -94,7 +93,7 @@ trait BaseQuery
                         nodeType: $this->node->unwrappedType(),
                         fieldName: $fieldName
                     );
-                    
+
                     require_once $this->plugins->filePath($selectorPlugin);
 
                     $selectorPlugin->callback()($queryBuilder, $this->node);
@@ -120,7 +119,7 @@ trait BaseQuery
                     }
                 }
             }
-    
+
             return $queryBuilder;
         })();
     }

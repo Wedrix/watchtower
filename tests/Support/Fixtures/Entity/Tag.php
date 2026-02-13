@@ -20,7 +20,7 @@ class Tag
         string $name
     ) {
         $this->name = $name;
-        $this->books = new ArrayCollection();
+        $this->books = new ArrayCollection;
     }
 
     public function getId(): ?int
@@ -35,8 +35,7 @@ class Tag
 
     public function addBook(
         Book $book
-    ): void
-    {
+    ): void {
         if ($this->books->contains($book)) {
             return;
         }

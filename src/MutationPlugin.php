@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
-use function Wedrix\Watchtower\tableize;
-
 trait MutationPlugin
 {
     private string $type;
@@ -22,8 +18,7 @@ trait MutationPlugin
 
     public function __construct(
         private string $fieldName
-    )
-    {
+    ) {
         $this->type = 'mutation';
 
         $this->name = 'call_'.tableize($this->fieldName).'_mutation';
@@ -80,9 +75,8 @@ function MutationPlugin(
      */
     static $instances = [];
 
-    return $instances[$fieldName] ??= new class(
-        fieldName: $fieldName
-    ) implements Plugin {
+    return $instances[$fieldName] ??= new class(fieldName: $fieldName) implements Plugin
+    {
         use MutationPlugin;
     };
 }

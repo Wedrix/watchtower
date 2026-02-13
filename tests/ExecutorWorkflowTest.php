@@ -8,9 +8,9 @@ use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Error\DebugFlag;
 use PHPUnit\Framework\TestCase;
 use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
-use Watchtower\Tests\Support\FixtureWorkspace;
 use Watchtower\Tests\Support\Fixtures\Entity\Author;
 use Watchtower\Tests\Support\Fixtures\Entity\Book;
+use Watchtower\Tests\Support\FixtureWorkspace;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
@@ -63,7 +63,7 @@ final class ExecutorWorkflowTest extends TestCase
         parent::tearDown();
     }
 
-    public function testQueryWorkflowCoversRelationsFiltersOrderingPaginationSelectorAndResolver(): void
+    public function test_query_workflow_covers_relations_filters_ordering_pagination_selector_and_resolver(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -109,7 +109,7 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertSame('Alan Turing', $books[1]['author']['name']);
     }
 
-    public function testManyToManyRelationResolutionFromBooksToTags(): void
+    public function test_many_to_many_relation_resolution_from_books_to_tags(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -186,7 +186,7 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
-    public function testOneToManyRelationResolutionFromAuthorsToBooks(): void
+    public function test_one_to_many_relation_resolution_from_authors_to_books(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -237,7 +237,7 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
-    public function testOneToOneRelationResolutionOnOwningAndInverseSides(): void
+    public function test_one_to_one_relation_resolution_on_owning_and_inverse_sides(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -307,7 +307,7 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
-    public function testEnumInputAndOutputResolution(): void
+    public function test_enum_input_and_output_resolution(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -325,7 +325,7 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertSame('AUTHOR', $result['data']['echoContentKind'] ?? null);
     }
 
-    public function testInterfaceResolutionRequiresAndUsesTypename(): void
+    public function test_interface_resolution_requires_and_uses_typename(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -374,7 +374,7 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
-    public function testUnionResolutionUsesTypenameWithInlineFragments(): void
+    public function test_union_resolution_uses_typename_with_inline_fragments(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -426,7 +426,7 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
-    public function testMutationWorkflowMutatesPersistedStateAndIsVisibleToFollowUpQuery(): void
+    public function test_mutation_workflow_mutates_persisted_state_and_is_visible_to_follow_up_query(): void
     {
         $mutationResult = $this->executeQuery(
             <<<'GRAPHQL'
@@ -466,7 +466,7 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertSame('Renamed with Mutation', $queryResult['data']['book']['title']);
     }
 
-    public function testCollectionAuthorizorBlocksUnauthorizedResults(): void
+    public function test_collection_authorizor_blocks_unauthorized_results(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -484,7 +484,7 @@ final class ExecutorWorkflowTest extends TestCase
         $this->assertErrorContains($result, 'Unauthorized books collection');
     }
 
-    public function testRootAuthorizorBlocksAllResultsWhenEnabledInContext(): void
+    public function test_root_authorizor_blocks_all_results_when_enabled_in_context(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -502,7 +502,7 @@ final class ExecutorWorkflowTest extends TestCase
         $this->assertErrorContains($result, 'Blocked by root authorizor');
     }
 
-    public function testMissingFilterPluginReturnsMeaningfulError(): void
+    public function test_missing_filter_plugin_returns_meaningful_error(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -517,7 +517,7 @@ final class ExecutorWorkflowTest extends TestCase
         $this->assertErrorContains($result, "No filter plugin exists for 'unimplemented'");
     }
 
-    public function testMissingOrderingPluginReturnsMeaningfulError(): void
+    public function test_missing_ordering_plugin_returns_meaningful_error(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -536,7 +536,7 @@ final class ExecutorWorkflowTest extends TestCase
         $this->assertErrorContains($result, "No ordering plugin exists for 'unimplemented'");
     }
 
-    public function testPaginationFailsWhenPageIsProvidedWithoutLimit(): void
+    public function test_pagination_fails_when_page_is_provided_without_limit(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -551,7 +551,7 @@ final class ExecutorWorkflowTest extends TestCase
         $this->assertErrorContains($result, 'limit parameter is required');
     }
 
-    public function testOptimizeModeExecutesUsingGeneratedCache(): void
+    public function test_optimize_mode_executes_using_generated_cache(): void
     {
         $this->createConsole()->generateCache();
 
@@ -573,7 +573,7 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertCount(4, $result['data']['books'] ?? []);
     }
 
-    public function testOptimizeModeFailsWhenCacheWasNotGenerated(): void
+    public function test_optimize_mode_fails_when_cache_was_not_generated(): void
     {
         $this->expectException(\Exception::class);
         $this->expectExceptionMessage('cache');
@@ -581,7 +581,7 @@ final class ExecutorWorkflowTest extends TestCase
         $this->createExecutor(true);
     }
 
-    public function testBuffersAreClearedBetweenExecutorCalls(): void
+    public function test_buffers_are_cleared_between_executor_calls(): void
     {
         $executor = $this->createExecutor(false);
 
@@ -967,8 +967,7 @@ final class ExecutorWorkflowTest extends TestCase
         array $context = [],
         ?array $variableValues = null,
         bool $optimize = false
-    ): array
-    {
+    ): array {
         $result = $this->createExecutor($optimize)
             ->executeQuery(
                 source: $source,
@@ -1006,8 +1005,7 @@ final class ExecutorWorkflowTest extends TestCase
 
     private function createExecutor(
         bool $optimize
-    ): \Wedrix\Watchtower\Executor
-    {
+    ): \Wedrix\Watchtower\Executor {
         return Executor(
             entityManager: $this->entityManager,
             schemaFile: $this->workspace->schemaFile(),
@@ -1021,8 +1019,7 @@ final class ExecutorWorkflowTest extends TestCase
     private function writePluginFile(
         string $filePath,
         string $source
-    ): void
-    {
+    ): void {
         if (\file_put_contents($filePath, $source) === false) {
             throw new \RuntimeException("Unable to write plugin fixture '{$filePath}'.");
         }
@@ -1030,8 +1027,7 @@ final class ExecutorWorkflowTest extends TestCase
 
     private function assertNoErrors(
         array $result
-    ): void
-    {
+    ): void {
         if (\array_key_exists('errors', $result)) {
             self::assertSame(
                 [],
@@ -1044,8 +1040,7 @@ final class ExecutorWorkflowTest extends TestCase
     private function assertErrorContains(
         array $result,
         string $expectedFragment
-    ): void
-    {
+    ): void {
         $errors = $result['errors'] ?? [];
 
         self::assertNotEmpty($errors, 'Expected GraphQL errors but result had none.');

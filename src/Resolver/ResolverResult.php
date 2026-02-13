@@ -21,8 +21,7 @@ trait ResolverResult
     public function __construct(
         private Node $node,
         private Plugins $plugins
-    )
-    {
+    ) {
         $this->plugin = ResolverPlugin(
             nodeType: $this->node->unwrappedParentType(),
             fieldName: $this->node->name()
@@ -31,17 +30,17 @@ trait ResolverResult
         $this->isWorkable = $this->plugins->contains($this->plugin);
 
         $this->value = (function (): mixed {
-            if (!$this->isWorkable) {
+            if (! $this->isWorkable) {
                 return null;
             }
-            
+
             NodeBuffer()->add(
                 node: $this->node
             );
 
             return new Deferred(function (): mixed {
                 require_once $this->plugins->filePath($this->plugin);
-                
+
                 return $this->plugin->callback()($this->node);
             });
         })();

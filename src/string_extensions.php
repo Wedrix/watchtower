@@ -16,35 +16,30 @@ function Inflector(): Inflector
 
 function singularize(
     string $word
-): string
-{
+): string {
     return Inflector()->singularize($word);
 }
 
 function pluralize(
     string $word
-): string
-{
+): string {
     return Inflector()->pluralize($word);
 }
 
 function tableize(
     string $word
-): string
-{
+): string {
     return Inflector()->tableize($word);
 }
 
 function classify(
     string $word
-): string
-{
+): string {
     return Inflector()->classify($word);
 }
 
 function camelize(
     string $word
-): string
-{
+): string {
     return Inflector()->camelize($word);
 }

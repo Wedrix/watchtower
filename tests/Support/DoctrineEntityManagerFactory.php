@@ -17,9 +17,8 @@ final class DoctrineEntityManagerFactory
     public static function create(
         string $mappingDirectory,
         string $mappingNamespace = 'Watchtower\\Tests\\Support\\Fixtures\\Entity'
-    ): EntityManagerInterface
-    {
-        $configuration = new Configuration();
+    ): EntityManagerInterface {
+        $configuration = new Configuration;
         $configuration->setMetadataDriverImpl(
             new XmlDriver(
                 new SymfonyFileLocator(
@@ -62,8 +61,7 @@ final class DoctrineEntityManagerFactory
 
     private static function createSchema(
         EntityManagerInterface $entityManager
-    ): void
-    {
+    ): void {
         $metadata = $entityManager->getMetadataFactory()->getAllMetadata();
 
         (new SchemaTool($entityManager))->createSchema($metadata);

@@ -10,14 +10,13 @@ trait MaybeDistinctQuery
         private Node $node,
         private QueryBuilder $queryBuilder,
         private bool $isWorkable
-    )
-    {
+    ) {
         if ($this->isWorkable) {
             $queryParams = $this->node->args()['queryParams'] ?? [];
-    
-            if (!empty($queryParams)) {
+
+            if (! empty($queryParams)) {
                 $distinct = $queryParams['distinct'] ?? false;
-    
+
                 $this->queryBuilder->distinct($distinct);
             }
         }

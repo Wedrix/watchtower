@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
-use function Wedrix\Watchtower\tableize;
-
 trait SubscriptionPlugin
 {
     private string $type;
@@ -22,8 +18,7 @@ trait SubscriptionPlugin
 
     public function __construct(
         private string $fieldName
-    )
-    {
+    ) {
         $this->type = 'subscription';
 
         $this->name = 'call_'.tableize($this->fieldName).'_subscription';
@@ -74,16 +69,14 @@ trait SubscriptionPlugin
 
 function SubscriptionPlugin(
     string $fieldName
-): Plugin
-{
+): Plugin {
     /**
      * @var array<string,Plugin>
      */
     static $instances = [];
 
-    return $instances[$fieldName] ??= new class(
-        fieldName: $fieldName
-    ) implements Plugin {
+    return $instances[$fieldName] ??= new class(fieldName: $fieldName) implements Plugin
+    {
         use SubscriptionPlugin;
     };
 }

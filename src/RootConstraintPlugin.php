@@ -22,7 +22,7 @@ trait RootConstraintPlugin
 
         $this->name = 'apply_constraint';
 
-        $this->namespace = __NAMESPACE__."\\ConstraintPlugin";
+        $this->namespace = __NAMESPACE__.'\\ConstraintPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -70,7 +70,8 @@ trait RootConstraintPlugin
 
 function RootConstraintPlugin(): Plugin
 {
-    static $instance = new class() implements Plugin {
+    static $instance = new class implements Plugin
+    {
         use RootConstraintPlugin;
     };
 

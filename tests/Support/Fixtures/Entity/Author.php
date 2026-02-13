@@ -22,7 +22,7 @@ class Author
         string $name
     ) {
         $this->name = $name;
-        $this->books = new ArrayCollection();
+        $this->books = new ArrayCollection;
     }
 
     public function getId(): ?int
@@ -37,9 +37,8 @@ class Author
 
     public function addBook(
         Book $book
-    ): void
-    {
-        if (!$this->books->contains($book)) {
+    ): void {
+        if (! $this->books->contains($book)) {
             $this->books->add($book);
         }
     }
@@ -54,8 +53,7 @@ class Author
 
     public function setProfile(
         AuthorProfile $profile
-    ): void
-    {
+    ): void {
         if ($this->profile === $profile) {
             return;
         }

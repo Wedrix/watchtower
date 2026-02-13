@@ -4,10 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\Plugin;
-
-use function Wedrix\Watchtower\tableize;
-
 trait SelectorPlugin
 {
     private string $type;
@@ -23,8 +19,7 @@ trait SelectorPlugin
     public function __construct(
         private string $nodeType,
         private string $fieldName
-    )
-    {
+    ) {
         $this->type = 'selector';
 
         $this->name = 'apply_'.tableize($this->nodeType)
@@ -79,17 +74,14 @@ trait SelectorPlugin
 function SelectorPlugin(
     string $nodeType,
     string $fieldName
-): Plugin
-{
+): Plugin {
     /**
      * @var array<string,array<string,Plugin>>
      */
     static $instances = [];
 
-    return $instances[$nodeType][$fieldName] ??= new class(
-        nodeType: $nodeType,
-        fieldName: $fieldName
-    ) implements Plugin {
+    return $instances[$nodeType][$fieldName] ??= new class(nodeType: $nodeType, fieldName: $fieldName) implements Plugin
+    {
         use SelectorPlugin;
     };
 }

@@ -15,26 +15,25 @@ trait MaybeFilteredQuery
         private Plugins $plugins,
         private QueryBuilder $queryBuilder,
         private bool $isWorkable
-    )
-    {
+    ) {
         if ($this->isWorkable) {
             $queryParams = $this->node->args()['queryParams'] ?? [];
-    
-            if (!empty($queryParams)) {
+
+            if (! empty($queryParams)) {
                 $filters = $queryParams['filters'] ?? [];
-    
+
                 foreach ($filters as $filterName => $_) {
                     $filterPlugin = FilterPlugin(
                         nodeType: $this->node->unwrappedType(),
                         filterName: $filterName
                     );
-    
-                    if (!$this->plugins->contains($filterPlugin)) {
+
+                    if (! $this->plugins->contains($filterPlugin)) {
                         throw new \Exception("Invalid query. No filter plugin exists for '$filterName'.");
                     }
 
                     require_once $this->plugins->filePath($filterPlugin);
-                    
+
                     $filterPlugin->callback()($this->queryBuilder, $this->node);
                 }
             }

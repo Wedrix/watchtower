@@ -8,7 +8,7 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartQuery
 {
-    use BaseQuery, ConstrainedQuery, MaybePaginatedQuery, MaybeOrderedQuery, MaybeFilteredQuery, MaybeDistinctQuery, FindQuery, ParentAssociatedQuery {
+    use BaseQuery, ConstrainedQuery, FindQuery, MaybeDistinctQuery, MaybeFilteredQuery, MaybeOrderedQuery, MaybePaginatedQuery, ParentAssociatedQuery {
         BaseQuery::__construct as private _constructBaseQuery;
         ConstrainedQuery::__construct as private _constructConstrainedQuery;
         MaybePaginatedQuery::__construct as private _constructMaybePaginatedQuery;
@@ -28,11 +28,10 @@ trait SmartQuery
         private Node $node,
         private EntityManager $entityManager,
         private Plugins $plugins
-    )
-    {
+    ) {
         $this->_constructBaseQuery(
-            node: $this->node, 
-            entityManager: $this->entityManager, 
+            node: $this->node,
+            entityManager: $this->entityManager,
             plugins: $this->plugins
         );
 
@@ -58,7 +57,7 @@ trait SmartQuery
             );
 
             $this->_constructMaybeOrderedQuery(
-                node: $this->node, 
+                node: $this->node,
                 plugins: $this->plugins,
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
@@ -69,8 +68,7 @@ trait SmartQuery
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
             );
-        } 
-        else if ($this->node->isTopLevel()) {
+        } elseif ($this->node->isTopLevel()) {
             $this->_constructFindQuery(
                 node: $this->node,
                 queryBuilder: $this->queryBuilder,
@@ -78,7 +76,7 @@ trait SmartQuery
             );
         }
 
-        if (!$this->node->isTopLevel()) {
+        if (! $this->node->isTopLevel()) {
             $this->_constructParentAssociatedQuery(
                 node: $this->node,
                 entityManager: $this->entityManager,
@@ -90,7 +88,7 @@ trait SmartQuery
 
     public function builder(): QueryBuilder
     {
-        if (!$this->node->isTopLevel()) {
+        if (! $this->node->isTopLevel()) {
             return $this->_parentAssociatedBuilder();
         }
 
@@ -108,11 +106,8 @@ function SmartQuery(
     EntityManager $entityManager,
     Plugins $plugins
 ): Query {
-    return new class(
-        node: $node,
-        entityManager: $entityManager,
-        plugins: $plugins
-    ) implements Query {
+    return new class(node: $node, entityManager: $entityManager, plugins: $plugins) implements Query
+    {
         use SmartQuery;
     };
 }

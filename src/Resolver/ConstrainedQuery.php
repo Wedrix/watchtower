@@ -16,14 +16,13 @@ trait ConstrainedQuery
         private Plugins $plugins,
         private QueryBuilder $queryBuilder,
         private bool $isWorkable
-    )
-    {
+    ) {
         if ($this->isWorkable) {
             $rootConstraintPlugin = RootConstraintPlugin();
 
-            if ($this->plugins->contains($rootConstraintPlugin)){
+            if ($this->plugins->contains($rootConstraintPlugin)) {
                 require_once $this->plugins->filePath($rootConstraintPlugin);
-                
+
                 $rootConstraintPlugin->callback()($this->queryBuilder, $this->node);
             }
 
@@ -33,7 +32,7 @@ trait ConstrainedQuery
 
             if ($this->plugins->contains($constraintPlugin)) {
                 require_once $this->plugins->filePath($constraintPlugin);
-                
+
                 $constraintPlugin->callback()($this->queryBuilder, $this->node);
             }
         }

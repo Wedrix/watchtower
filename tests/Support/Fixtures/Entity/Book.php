@@ -32,7 +32,7 @@ class Book
         $this->title = $title;
         $this->price = $price;
         $this->publishedAt = $publishedAt;
-        $this->tags = new ArrayCollection();
+        $this->tags = new ArrayCollection;
 
         $this->author->addBook($this);
     }
@@ -49,8 +49,7 @@ class Book
 
     public function setTitle(
         string $title
-    ): void
-    {
+    ): void {
         $this->title = $title;
     }
 
@@ -71,8 +70,7 @@ class Book
 
     public function addTag(
         Tag $tag
-    ): void
-    {
+    ): void {
         if ($this->tags->contains($tag)) {
             return;
         }

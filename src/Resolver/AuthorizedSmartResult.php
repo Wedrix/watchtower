@@ -8,7 +8,7 @@ use Wedrix\Watchtower\Plugins;
 
 trait AuthorizedSmartResult
 {
-    use SmartResult, AuthorizedResult {
+    use AuthorizedResult, SmartResult {
         SmartResult::__construct as private _constructSmartResult;
         AuthorizedResult::__construct as private _constructAuthorizedResult;
     }
@@ -21,18 +21,17 @@ trait AuthorizedSmartResult
         private Node $node,
         private EntityManager $entityManager,
         private Plugins $plugins
-    )
-    {
+    ) {
         $this->_constructSmartResult(
-            node: $this->node, 
-            entityManager: $this->entityManager, 
+            node: $this->node,
+            entityManager: $this->entityManager,
             plugins: $this->plugins
         );
 
         $this->_constructAuthorizedResult(
             node: $this->node,
-            plugins: $this->plugins, 
-            value: $this->value, 
+            plugins: $this->plugins,
+            value: $this->value,
             isWorkable: $this->isWorkable
         );
     }
@@ -53,11 +52,8 @@ function AuthorizedSmartResult(
     EntityManager $entityManager,
     Plugins $plugins
 ): Result {
-    return new class(
-        node: $node,
-        entityManager: $entityManager,
-        plugins: $plugins
-    ) implements Result {
+    return new class(node: $node, entityManager: $entityManager, plugins: $plugins) implements Result
+    {
         use AuthorizedSmartResult;
     };
 }

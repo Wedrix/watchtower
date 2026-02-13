@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-use Wedrix\Watchtower\ScalarTypeDefinition;
-
 trait LimitScalarTypeDefinition
 {
     private ScalarTypeDefinition $scalarTypeDefinition;
@@ -74,13 +72,13 @@ trait LimitScalarTypeDefinition
     public function typeName(): string
     {
         return $this->scalarTypeDefinition
-                    ->typeName();
+            ->typeName();
     }
 
     public function namespace(): string
     {
         return $this->scalarTypeDefinition
-                    ->namespace();
+            ->namespace();
     }
 
     public function template(): string
@@ -91,7 +89,8 @@ trait LimitScalarTypeDefinition
 
 function LimitScalarTypeDefinition(): ScalarTypeDefinition
 {
-    static $instance = new class() implements ScalarTypeDefinition {
+    static $instance = new class implements ScalarTypeDefinition
+    {
         use LimitScalarTypeDefinition;
     };
 
