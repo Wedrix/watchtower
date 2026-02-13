@@ -26,11 +26,13 @@ function QueryBuilder(
     DoctrineQueryBuilder $doctrineQueryBuilder
 ): QueryBuilder {
     /**
-     * @var \WeakMap<DoctrineQueryBuilder,?QueryBuilder>
+     * @var \WeakMap<DoctrineQueryBuilder,?QueryBuilder>|null
      */
-    static $instances;
+    static $instances = null;
 
-    $instances ??= new \WeakMap;
+    if ($instances === null) {
+        $instances = new \WeakMap;
+    }
 
     if (! isset($instances[$doctrineQueryBuilder])) {
         $instances[$doctrineQueryBuilder] = null;

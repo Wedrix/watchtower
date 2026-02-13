@@ -33,3 +33,15 @@ function all_in_array(array $needles, array $haystack): bool
 
     return true;
 }
+
+/**
+ * @param  array<int|string,mixed>  $array
+ */
+function array_is_list(array $array): bool
+{
+    if (\function_exists('array_is_list')) {
+        return \array_is_list($array);
+    }
+
+    return $array === [] || \array_keys($array) === \range(0, \count($array) - 1);
+}

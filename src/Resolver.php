@@ -32,11 +32,13 @@ function Resolver(
     Plugins $plugins
 ): Resolver {
     /**
-     * @var \WeakMap<DoctrineEntityManager,\WeakMap<Plugins,?Resolver>>
+     * @var \WeakMap<DoctrineEntityManager,\WeakMap<Plugins,?Resolver>>|null
      */
-    static $instances;
+    static $instances = null;
 
-    $instances ??= new \WeakMap;
+    if ($instances === null) {
+        $instances = new \WeakMap;
+    }
 
     if (! isset($instances[$doctrineEntityManager])) {
         $instances[$doctrineEntityManager] = new \WeakMap; // @phpstan-ignore-line

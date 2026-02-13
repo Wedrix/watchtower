@@ -56,11 +56,13 @@ function Executor(
     bool $optimize
 ): Executor {
     /**
-     * @var \WeakMap<EntityManagerInterface,array<string,mixed>>
+     * @var \WeakMap<EntityManagerInterface,array<string,mixed>>|null
      */
-    static $instances;
+    static $instances = null;
 
-    $instances ??= new \WeakMap;
+    if ($instances === null) {
+        $instances = new \WeakMap;
+    }
 
     if (! isset($instances[$entityManager])) {
         $instances[$entityManager] = [];

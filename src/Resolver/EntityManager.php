@@ -32,11 +32,13 @@ function EntityManager(
     DoctrineEntityManager $doctrineEntityManager
 ): EntityManager {
     /**
-     * @var \WeakMap<DoctrineEntityManager,?EntityManager>
+     * @var \WeakMap<DoctrineEntityManager,?EntityManager>|null
      */
-    static $instances;
+    static $instances = null;
 
-    $instances ??= new \WeakMap;
+    if ($instances === null) {
+        $instances = new \WeakMap;
+    }
 
     if (! isset($instances[$doctrineEntityManager])) {
         $instances[$doctrineEntityManager] = null;

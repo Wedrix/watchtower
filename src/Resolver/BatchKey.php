@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use function Wedrix\Watchtower\array_is_list;
+
 interface BatchKey
 {
     public function value(): string;
@@ -25,8 +27,10 @@ function BatchKey(
                 // Recursively sort arrays and associative arrays
                 $sortArgs = static function ($value) use (&$sortArgs) {
                     if (\is_array($value)) {
+                        $isList = array_is_list($value);
+
                         // Check if associative
-                        if (! \array_is_list($value)) {
+                        if (! $isList) {
                             \ksort($value);
                         } else {
                             \sort($value);

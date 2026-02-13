@@ -15,11 +15,13 @@ function PluginInfo(
     \SplFileInfo $pluginFile
 ): PluginInfo {
     /**
-     * @var \WeakMap<\SplFileInfo,?PluginInfo>
+     * @var \WeakMap<\SplFileInfo,?PluginInfo>|null
      */
-    static $instances;
+    static $instances = null;
 
-    $instances ??= new \WeakMap;
+    if ($instances === null) {
+        $instances = new \WeakMap;
+    }
 
     if (! isset($instances[$pluginFile])) {
         $instances[$pluginFile] = null;

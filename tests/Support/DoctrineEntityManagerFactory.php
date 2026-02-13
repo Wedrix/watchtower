@@ -30,7 +30,7 @@ final class DoctrineEntityManagerFactory
         $configuration->setProxyDir(\sys_get_temp_dir().'/watchtower_tests_proxies');
         $configuration->setProxyNamespace('WatchtowerTests\\Proxy');
 
-        if (\method_exists($configuration, 'enableNativeLazyObjects')) {
+        if (\method_exists($configuration, 'enableNativeLazyObjects') && \PHP_VERSION_ID >= 80400) {
             $configuration->enableNativeLazyObjects(true);
         }
 
