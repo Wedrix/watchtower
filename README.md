@@ -53,7 +53,7 @@ These projects have proven the immense value of automatically generating GraphQL
 
 - php >= v8.0
 - doctrine/orm ^2.8 || ^3.0
-- webonyx/graphql-php ^14.4
+- webonyx/graphql-php ^15.30.2
 
 # Installation
 
@@ -83,7 +83,24 @@ Run the full local matrix:
 
     composer test:matrix
 
-## Symfony
+Run static checks:
+
+    composer lint:check
+    composer rector:check
+    composer phpstan:check
+
+## Symfony Compatibility
+
+Watchtower has no direct dependency on Symfony. Compatibility is determined by your application's PHP + Doctrine ORM stack.
+
+- Minimum Watchtower baseline: PHP 8.0 + Doctrine ORM 2.8
+- Doctrine ORM 3.x requires PHP 8.1+
+- In practice, this means Symfony `5.4+` can work when your Symfony/Doctrine bridge versions match those constraints.
+
+If you use Symfony, use a Symfony release that supports your PHP version and Doctrine integration.  
+As of February 13, 2026, Symfony's maintained branches are `6.4`, `7.4`, and `8.0`: [https://symfony.com/releases](https://symfony.com/releases).
+
+## Symfony Bundle
 
 The documentation for the Symfony bundle is available [here](https://github.com/Wedrix/watchtower-symfony-bundle). Kindly view it for the appropriate installation steps for Symfony.
 
@@ -408,7 +425,8 @@ Kindly take note of the following when using the schema generator:
 
 ## Updating the Schema
 
-The console component comes with the helper method `updateSchema()` which may be used to update queries in the schema file to match the project's Doctrine models. Updates are merged with the original schema and do not overwrite schema definitions for scalars, mutations, subscriptions, directives etc.
+The console component exposes `updateSchema()`, but schema merge/update behavior is not yet implemented.  
+At the moment, the method only invalidates the schema cache file (if present).
 
 ## Using Multiple Schemas
 
@@ -837,11 +855,11 @@ function function_name(
 
 ### Valid Return Types
 
-Kindly note that values returned from a resolver function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float,` `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list.
+Kindly note that values returned from a resolver function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float`, `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list.
 
 ## Resolving Abstract Types
 
-Use the utility functions `$node->type()`, `$node->isAbstractType()`, `$node->concreteFieldSelection()`, and `$node->abstractFieldSelection()` to determine what type you are resolving: whether it's an abstract type, and the concrete and abstract fields selected, respectively.
+Use the utility functions `$node->unwrappedType()`, `$node->isAbstract()`, `$node->concreteFieldsSelection()`, and `$node->abstractFieldsSelection()` to determine what type you are resolving: whether it's an abstract type, and the concrete and abstract fields selected, respectively.
 
 When resolving an abstract type, always add a `__typename` field to the result indicating the concrete type being resolved. For example:
 
@@ -1241,7 +1259,7 @@ function function_name(
 
 ### Valid Return Types
 
-Like with Resolver plugin functions, values returned from a mutation function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float,` `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list.
+Like with Resolver plugin functions, values returned from a mutation function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float`, `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list.
 
 # Subscriptions
 
@@ -1289,7 +1307,7 @@ use App\Server\Session;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\Result;
 
-use function array\any_in_array;
+use function Wedrix\Watchtower\any_in_array;
 
 function authorize_customer_result(
     Result $result,
@@ -1348,7 +1366,7 @@ use App\Server\Session;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\Resolver\Result;
 
-use function array\any_in_array;
+use function Wedrix\Watchtower\any_in_array;
 
 function authorize_result(
     Result $result,
@@ -1504,7 +1522,7 @@ GraphQL names are case-sensitive as detailed by the [spec](https://spec.graphql.
 
 ## Aliasing Parameterized Fields
 
-There is currently an [open issue](https://github.com/webonyx/graphql-php/issues/1072) in graphql-php that prevents this library from properly resolving a parameterized field passed different arguments. This should probably be fixed in the next major release of graphql-php. Until then, kindly take note of this issue when using aliases.
+Aliasing the same parameterized field with different arguments may still produce unexpected behaviour in some setups. Track upstream context here: [webonyx/graphql-php#1072](https://github.com/webonyx/graphql-php/issues/1072).
 
 ## Entity Naming Constraints
 
