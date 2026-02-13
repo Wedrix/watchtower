@@ -94,9 +94,13 @@ trait ParentAssociatedQuery
 
                         foreach ($idFieldNames as $idFieldName) {
                             $paramName = "{$parentEntityAlias}_{$idFieldName}_{$index}";
+                            $identityExpression = \count($idFieldNames) === 1
+                                ? "IDENTITY($rootEntityAlias.$association)"
+                                : "IDENTITY($rootEntityAlias.$association, '$idFieldName')";
+
                             $andConditions->add(
                                 $this->queryBuilder->expr()
-                                    ->eq("IDENTITY($rootEntityAlias.$association, '$idFieldName')", ":$paramName")
+                                    ->eq($identityExpression, ":$paramName")
                             );
                             $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
                         }
@@ -108,7 +112,10 @@ trait ParentAssociatedQuery
 
                     foreach ($idFieldNames as $idFieldName) {
                         $idNameAlias = "{$parentEntityAlias}_$idFieldName";
-                        $this->queryBuilder->addSelect("IDENTITY($rootEntityAlias.$association, '$idFieldName') AS $idNameAlias");
+                        $identityExpression = \count($idFieldNames) === 1
+                            ? "IDENTITY($rootEntityAlias.$association)"
+                            : "IDENTITY($rootEntityAlias.$association, '$idFieldName')";
+                        $this->queryBuilder->addSelect("$identityExpression AS $idNameAlias");
                     }
                 } else {
                     $this->queryBuilder->join(
