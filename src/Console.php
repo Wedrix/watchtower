@@ -88,7 +88,9 @@ function Console(
     /**
      * @var \WeakMap<EntityManagerInterface,array<string,mixed>>
      */
-    static $instances = new \WeakMap;
+    static $instances;
+
+    $instances ??= new \WeakMap;
 
     if (! isset($instances[$entityManager])) {
         $instances[$entityManager] = [];

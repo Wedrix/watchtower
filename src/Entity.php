@@ -76,7 +76,9 @@ function Entity(
     /**
      * @var \WeakMap<EntityManagerInterface,array<string,Entity>>
      */
-    static $instances = new \WeakMap;
+    static $instances;
+
+    $instances ??= new \WeakMap;
 
     if (! isset($instances[$entityManager])) {
         $instances[$entityManager] = [];

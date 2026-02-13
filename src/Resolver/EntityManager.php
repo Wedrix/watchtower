@@ -34,7 +34,9 @@ function EntityManager(
     /**
      * @var \WeakMap<DoctrineEntityManager,?EntityManager>
      */
-    static $instances = new \WeakMap;
+    static $instances;
+
+    $instances ??= new \WeakMap;
 
     if (! isset($instances[$doctrineEntityManager])) {
         $instances[$doctrineEntityManager] = null;

@@ -17,7 +17,9 @@ function PluginInfo(
     /**
      * @var \WeakMap<\SplFileInfo,?PluginInfo>
      */
-    static $instances = new \WeakMap;
+    static $instances;
+
+    $instances ??= new \WeakMap;
 
     if (! isset($instances[$pluginFile])) {
         $instances[$pluginFile] = null;

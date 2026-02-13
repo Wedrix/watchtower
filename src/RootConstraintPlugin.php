@@ -70,10 +70,10 @@ trait RootConstraintPlugin
 
 function RootConstraintPlugin(): Plugin
 {
-    static $instance = new class implements Plugin
+    static $instance;
+
+    return $instance ??= new class implements Plugin
     {
         use RootConstraintPlugin;
     };
-
-    return $instance;
 }

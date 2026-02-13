@@ -89,10 +89,10 @@ trait LimitScalarTypeDefinition
 
 function LimitScalarTypeDefinition(): ScalarTypeDefinition
 {
-    static $instance = new class implements ScalarTypeDefinition
+    static $instance;
+
+    return $instance ??= new class implements ScalarTypeDefinition
     {
         use LimitScalarTypeDefinition;
     };
-
-    return $instance;
 }

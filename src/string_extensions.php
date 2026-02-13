@@ -9,9 +9,9 @@ use Doctrine\Inflector\InflectorFactory;
 
 function Inflector(): Inflector
 {
-    static $instance = InflectorFactory::create()->build();
+    static $instance;
 
-    return $instance;
+    return $instance ??= InflectorFactory::create()->build();
 }
 
 function singularize(

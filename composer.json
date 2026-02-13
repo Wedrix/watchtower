@@ -70,6 +70,10 @@
         "test": "vendor/bin/phpunit --configuration phpunit.xml",
         "test:console": "vendor/bin/phpunit --configuration phpunit.xml --group console",
         "test:executor": "vendor/bin/phpunit --configuration phpunit.xml --group executor",
+        "lint": "vendor/bin/pint",
+        "lint:check": "vendor/bin/pint --test",
+        "rector": "vendor/bin/rector process",
+        "rector:check": "vendor/bin/rector process --dry-run",
         "test:doctrine2:lowest": [
             "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^2.8 --prefer-lowest --prefer-stable",
             "@test"

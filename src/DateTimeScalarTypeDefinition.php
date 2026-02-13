@@ -86,10 +86,10 @@ trait DateTimeScalarTypeDefinition
 
 function DateTimeScalarTypeDefinition(): ScalarTypeDefinition
 {
-    static $instance = new class implements ScalarTypeDefinition
+    static $instance;
+
+    return $instance ??= new class implements ScalarTypeDefinition
     {
         use DateTimeScalarTypeDefinition;
     };
-
-    return $instance;
 }

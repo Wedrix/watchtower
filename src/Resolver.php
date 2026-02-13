@@ -34,7 +34,9 @@ function Resolver(
     /**
      * @var \WeakMap<DoctrineEntityManager,\WeakMap<Plugins,?Resolver>>
      */
-    static $instances = new \WeakMap;
+    static $instances;
+
+    $instances ??= new \WeakMap;
 
     if (! isset($instances[$doctrineEntityManager])) {
         $instances[$doctrineEntityManager] = new \WeakMap; // @phpstan-ignore-line

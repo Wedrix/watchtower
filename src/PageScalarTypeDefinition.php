@@ -89,10 +89,10 @@ trait PageScalarTypeDefinition
 
 function PageScalarTypeDefinition(): ScalarTypeDefinition
 {
-    static $instance = new class implements ScalarTypeDefinition
+    static $instance;
+
+    return $instance ??= new class implements ScalarTypeDefinition
     {
         use PageScalarTypeDefinition;
     };
-
-    return $instance;
 }

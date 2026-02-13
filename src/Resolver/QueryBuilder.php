@@ -28,7 +28,9 @@ function QueryBuilder(
     /**
      * @var \WeakMap<DoctrineQueryBuilder,?QueryBuilder>
      */
-    static $instances = new \WeakMap;
+    static $instances;
+
+    $instances ??= new \WeakMap;
 
     if (! isset($instances[$doctrineQueryBuilder])) {
         $instances[$doctrineQueryBuilder] = null;
