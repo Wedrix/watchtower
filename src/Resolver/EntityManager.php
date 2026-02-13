@@ -26,6 +26,11 @@ interface EntityManager
     ): bool;
 
     public function createQueryBuilder(): QueryBuilder;
+
+    public function identifiersMatch(
+        mixed $left,
+        mixed $right
+    ): bool;
 }
 
 function EntityManager(
@@ -60,6 +65,23 @@ function EntityManager(
             return QueryBuilder(
                 doctrineQueryBuilder: $this->doctrineEntityManager->createQueryBuilder()
             );
+        }
+
+        public function identifiersMatch(
+            mixed $left,
+            mixed $right
+        ): bool {
+            if ($left === $right) {
+                return true;
+            }
+
+            if ($left === null || $right === null) {
+                return false;
+            }
+
+            return \is_scalar($left)
+                && \is_scalar($right)
+                && (string) $left === (string) $right;
         }
 
         public function hasEntity(

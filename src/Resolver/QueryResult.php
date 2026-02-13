@@ -111,13 +111,25 @@ trait QueryResult
 
                                     foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
                                         $parentIdKey = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
-                                        if (! isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName][$targetIdFieldName]) {
+                                        if (
+                                            ! isset($resultRecord[$parentIdKey])
+                                            || ! $this->entityManager->identifiersMatch(
+                                                $resultRecord[$parentIdKey],
+                                                $parentIds[$idFieldName][$targetIdFieldName]
+                                            )
+                                        ) {
                                             return false;
                                         }
                                     }
                                 } else {
                                     $parentIdKey = "{$parentEntityAlias}_$idFieldName";
-                                    if (! isset($resultRecord[$parentIdKey]) || $resultRecord[$parentIdKey] !== $parentIds[$idFieldName]) {
+                                    if (
+                                        ! isset($resultRecord[$parentIdKey])
+                                        || ! $this->entityManager->identifiersMatch(
+                                            $resultRecord[$parentIdKey],
+                                            $parentIds[$idFieldName]
+                                        )
+                                    ) {
                                         return false;
                                     }
                                 }
