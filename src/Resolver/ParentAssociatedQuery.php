@@ -83,32 +83,78 @@ trait ParentAssociatedQuery
     
             if ($parentEntity->associationIsInverseSide($association)) {
                 $association = $parentEntity->associationMappedByTargetField($association);
+                $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
                 $idFieldNames = $parentEntity->idFieldNames();
 
-                // Build OR conditions for composite key matching
-                $orConditions = $this->queryBuilder->expr()->orX();
-                
-                foreach ($parentIds as $index => $parentId) {
-                    $andConditions = $this->queryBuilder->expr()->andX();
+                if ($rootEntity->associationIsSingleValued($association)) {
+                    // Build OR conditions for composite key matching
+                    $orConditions = $this->queryBuilder->expr()->orX();
                     
-                    foreach ($idFieldNames as $idFieldName) {
-                        $paramName = "{$parentEntityAlias}_{$idFieldName}_{$index}";
-                        $andConditions->add(
-                            $this->queryBuilder->expr()
-                                ->eq("IDENTITY($rootEntityAlias.$association, '$idFieldName')", ":$paramName")
-                        );
-                        $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
+                    foreach ($parentIds as $index => $parentId) {
+                        $andConditions = $this->queryBuilder->expr()->andX();
+                        
+                        foreach ($idFieldNames as $idFieldName) {
+                            $paramName = "{$parentEntityAlias}_{$idFieldName}_{$index}";
+                            $andConditions->add(
+                                $this->queryBuilder->expr()
+                                    ->eq("IDENTITY($rootEntityAlias.$association, '$idFieldName')", ":$paramName")
+                            );
+                            $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
+                        }
+                        
+                        $orConditions->add($andConditions);
                     }
                     
-                    $orConditions->add($andConditions);
-                }
-                
-                $this->queryBuilder->andWhere($orConditions);
+                    $this->queryBuilder->andWhere($orConditions);
 
-                foreach ($idFieldNames as $idFieldName) {
-                    $idNameAlias = "{$parentEntityAlias}_$idFieldName";
-                    $this->queryBuilder->addSelect("IDENTITY($rootEntityAlias.$association, '$idFieldName') AS $idNameAlias");
+                    foreach ($idFieldNames as $idFieldName) {
+                        $idNameAlias = "{$parentEntityAlias}_$idFieldName";
+                        $this->queryBuilder->addSelect("IDENTITY($rootEntityAlias.$association, '$idFieldName') AS $idNameAlias");
+                    }
+                } else {
+                    $this->queryBuilder->join(
+                        "$rootEntityAlias.$association",
+                        $parentEntityAlias
+                    );
+
+                    // Build OR conditions for composite key matching
+                    $orConditions = $this->queryBuilder->expr()->orX();
+                    
+                    foreach ($parentIds as $index => $parentId) {
+                        $andConditions = $this->queryBuilder->expr()->andX();
+                        
+                        foreach ($idFieldNames as $idFieldName) {
+                            $paramName = "{$parentEntityAlias}_{$idFieldName}_{$index}";
+                            $andConditions->add(
+                                $this->queryBuilder->expr()
+                                    ->eq("$parentEntityAlias.$idFieldName", ":$paramName")
+                            );
+                            $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
+                        }
+                        
+                        $orConditions->add($andConditions);
+                    }
+                    
+                    $this->queryBuilder->andWhere($orConditions);
+
+                    foreach ($idFieldNames as $idFieldName) {
+                        if (\in_array($idFieldName, $parentEntity->associationFieldNames())) {
+                            $targetEntity = $this->entityManager->findEntity(
+                                name: $parentEntity->associationTargetEntity(
+                                    associationName: $idFieldName
+                                )
+                            );
+
+                            foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
+                                $idNameAlias = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
+                                $this->queryBuilder->addSelect("IDENTITY($parentEntityAlias.$idFieldName, '$targetIdFieldName') AS $idNameAlias");
+                            }
+                        } else {
+                            $idNameAlias = "{$parentEntityAlias}_$idFieldName";
+                            $this->queryBuilder->addSelect("$parentEntityAlias.$idFieldName AS $idNameAlias");
+                        }
+                    }
                 }
             }
             else {

@@ -17,7 +17,9 @@ use GraphQL\Type\Definition\AbstractType;
 use GraphQL\Type\Definition\Directive;
 use GraphQL\Type\Definition\ImplementingType;
 use GraphQL\Type\Definition\InterfaceType;
+use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Schema as GraphQLSchema;
+use GraphQL\Type\SchemaConfig;
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
 use GraphQL\Utils\InterfaceImplementations;
@@ -118,6 +120,8 @@ final class Schema extends GraphQLSchema
             
             return BuildSchema::build($AST, $typeConfigDecorator);
         })();
+
+        parent::__construct($this->schema->getConfig());
     }
 
     public function getTypeMap(): array
@@ -126,39 +130,39 @@ final class Schema extends GraphQLSchema
                     ->getTypeMap();
     }
 
-    public function getDirectives()
+    public function getDirectives(): array
     {
         return $this->schema
                     ->getDirectives();
     }
 
     public function getOperationType(
-        $operation
-    )
+        string $operation
+    ): ?ObjectType
     {
         return $this->schema
                     ->getOperationType($operation);
     }
 
-    public function getQueryType(): ?Type
+    public function getQueryType(): ?ObjectType
     {
         return $this->schema
                     ->getQueryType();
     }
 
-    public function getMutationType(): ?Type
+    public function getMutationType(): ?ObjectType
     {
         return $this->schema
                     ->getMutationType();
     }
 
-    public function getSubscriptionType(): ?Type
+    public function getSubscriptionType(): ?ObjectType
     {
         return $this->schema
                     ->getSubscriptionType();
     }
 
-    public function getConfig()
+    public function getConfig(): SchemaConfig
     {
         return $this->schema
                     ->getConfig();
@@ -181,7 +185,7 @@ final class Schema extends GraphQLSchema
     }
 
     public function getPossibleTypes(
-        Type $abstractType
+        AbstractType $abstractType
     ): array
     {
         return $this->schema
@@ -216,6 +220,7 @@ final class Schema extends GraphQLSchema
     public function getAstNode(): ?SchemaDefinitionNode
     {
         return $this->schema
+                    ->getConfig()
                     ->getAstNode();
     }
 
@@ -225,7 +230,7 @@ final class Schema extends GraphQLSchema
             ->assertValid();
     }
 
-    public function validate()
+    public function validate(): array
     {
         return $this->schema
                     ->validate();

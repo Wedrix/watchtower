@@ -228,9 +228,13 @@ function Node(
     
             $this->isALeaf = Type::isLeafType(Type::getNullableType($this->info->returnType));
     
-            $this->concreteFieldsSelection = $this->info->lookAhead(['group-implementor-fields'])->queryPlan()['fields'] ?? [];
-    
-            $this->abstractFieldsSelection = $this->info->lookAhead(['group-implementor-fields'])->queryPlan()['implementors'] ?? [];
+            $queryPlan = $this->info
+                ->lookAhead(['groupImplementorFields' => true])
+                ->queryPlan();
+
+            $this->concreteFieldsSelection = $queryPlan['fields'] ?? $queryPlan;
+
+            $this->abstractFieldsSelection = $queryPlan['implementors'] ?? [];
         }
     
         public function root(): array

@@ -1,0 +1,50 @@
+name: Tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # If a true minimum bound becomes unsatisfiable, pin the nearest installable
+        # version within the major and keep the lane name intact.
+        include:
+          - lane: doctrine2-lowest
+            php: "8.0"
+            doctrine_constraint: "^2.8"
+            extra_flags: "--prefer-lowest --prefer-stable"
+          - lane: doctrine2-latest
+            php: "8.2"
+            doctrine_constraint: "^2.8"
+            extra_flags: ""
+          - lane: doctrine3-lowest
+            php: "8.1"
+            doctrine_constraint: "^3.0"
+            extra_flags: "--prefer-lowest --prefer-stable"
+          - lane: doctrine3-latest
+            php: "8.2"
+            doctrine_constraint: "^3.0"
+            extra_flags: ""
+
+    name: ${{ matrix.lane }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          tools: composer:v2
+          coverage: none
+          extensions: mbstring, sqlite3, pdo_sqlite
+
+      - name: Install dependencies for lane
+        run: |
+          composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:${{ matrix.doctrine_constraint }} ${{ matrix.extra_flags }}
+
+      - name: Run test suite
+        run: composer test

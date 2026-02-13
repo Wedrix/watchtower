@@ -17,6 +17,7 @@ use GraphQL\Type\Definition\InterfaceType;
 use GraphQL\Type\Definition\NullableType;
 use GraphQL\Type\Definition\ObjectType;
 use GraphQL\Type\Definition\Type;
+use GraphQL\Type\SchemaConfig;
 use GraphQL\Utils\InterfaceImplementations;
 
 use function Wedrix\Watchtower\camelize;
@@ -263,6 +264,8 @@ final class SyncedQuerySchema extends GraphQLSchema
                 ])
             ]);
         })();
+
+        parent::__construct($this->schema->getConfig());
     }
 
     public function getTypeMap(): array
@@ -271,39 +274,39 @@ final class SyncedQuerySchema extends GraphQLSchema
                     ->getTypeMap();
     }
 
-    public function getDirectives()
+    public function getDirectives(): array
     {
         return $this->schema
                     ->getDirectives();
     }
 
     public function getOperationType(
-        $operation
-    )
+        string $operation
+    ): ?ObjectType
     {
         return $this->schema
                     ->getOperationType($operation);
     }
 
-    public function getQueryType(): ?Type
+    public function getQueryType(): ?ObjectType
     {
         return $this->schema
                     ->getQueryType();
     }
 
-    public function getMutationType(): ?Type
+    public function getMutationType(): ?ObjectType
     {
         return $this->schema
                     ->getMutationType();
     }
 
-    public function getSubscriptionType(): ?Type
+    public function getSubscriptionType(): ?ObjectType
     {
         return $this->schema
                     ->getSubscriptionType();
     }
 
-    public function getConfig()
+    public function getConfig(): SchemaConfig
     {
         return $this->schema
                     ->getConfig();
@@ -326,7 +329,7 @@ final class SyncedQuerySchema extends GraphQLSchema
     }
 
     public function getPossibleTypes(
-        Type $abstractType
+        AbstractType $abstractType
     ): array
     {
         return $this->schema
@@ -361,6 +364,7 @@ final class SyncedQuerySchema extends GraphQLSchema
     public function getAstNode(): ?SchemaDefinitionNode
     {
         return $this->schema
+                    ->getConfig()
                     ->getAstNode();
     }
 
@@ -370,7 +374,7 @@ final class SyncedQuerySchema extends GraphQLSchema
             ->assertValid();
     }
 
-    public function validate()
+    public function validate(): array
     {
         return $this->schema
                     ->validate();
