@@ -72,6 +72,8 @@
         "test:executor": "vendor/bin/phpunit --configuration phpunit.xml --group executor",
         "lint": "vendor/bin/pint",
         "lint:check": "vendor/bin/pint --test",
+        "phpstan": "vendor/bin/phpstan analyse --memory-limit=1G",
+        "phpstan:check": "vendor/bin/phpstan analyse --memory-limit=1G",
         "rector": "vendor/bin/rector process",
         "rector:check": "vendor/bin/rector process --dry-run",
         "test:doctrine2:lowest": [
