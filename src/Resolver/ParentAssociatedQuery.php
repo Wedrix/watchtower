@@ -4,6 +4,22 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+/**
+ * Builds sub-level relation queries by matching each child row back to parent identifiers.
+ *
+ * Resolution strategy matrix:
+ * - Parent association is inverse side (`mappedBy` exists):
+ *   - Target owning field is to-one: compare `IDENTITY(__root.mappedBy, parentId)` per parent id.
+ *   - Target owning field is to-many: `JOIN __root.mappedBy __parent` and filter `__parent` ids.
+ * - Parent association is owning side:
+ *   - `inversedBy` exists (bidirectional owning): `JOIN __root.inversedBy __parent` and filter `__parent` ids.
+ *   - `inversedBy` missing (unidirectional owning):
+ *     - To-one (`OneToOne`/`ManyToOne`): add `FROM parent __parent` and constrain `__parent.association = __root`.
+ *     - To-many (`ManyToMany`): add `FROM parent __parent` and constrain `__root MEMBER OF __parent.association`.
+ *
+ * In all paths, parent id columns are selected as `__parent_*` aliases so `QueryResult`
+ * can split batched child results back to the originating parent node.
+ */
 trait ParentAssociatedQuery
 {
     public function __construct(
@@ -80,12 +96,12 @@ trait ParentAssociatedQuery
             $parentEntityAlias = $this->queryBuilder->parentEntityAlias();
 
             if ($parentEntity->associationIsInverseSide($association)) {
-                $association = $parentEntity->associationMappedByTargetField($association);
+                $mappedByAssociation = $parentEntity->associationMappedByTargetField($association);
                 $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
                 $idFieldNames = $parentEntity->idFieldNames();
 
-                if ($rootEntity->associationIsSingleValued($association)) {
+                if ($rootEntity->associationIsSingleValued($mappedByAssociation)) {
                     // Build OR conditions for composite key matching
                     $orConditions = $this->queryBuilder->expr()->orX();
 
@@ -96,7 +112,7 @@ trait ParentAssociatedQuery
                             $paramName = "{$parentEntityAlias}_{$idFieldName}_{$index}";
                             $andConditions->add(
                                 $this->queryBuilder->expr()
-                                    ->eq("IDENTITY($rootEntityAlias.$association, '$idFieldName')", ":$paramName")
+                                    ->eq("IDENTITY($rootEntityAlias.$mappedByAssociation, '$idFieldName')", ":$paramName")
                             );
                             $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
                         }
@@ -108,11 +124,11 @@ trait ParentAssociatedQuery
 
                     foreach ($idFieldNames as $idFieldName) {
                         $idNameAlias = "{$parentEntityAlias}_$idFieldName";
-                        $this->queryBuilder->addSelect("IDENTITY($rootEntityAlias.$association, '$idFieldName') AS $idNameAlias");
+                        $this->queryBuilder->addSelect("IDENTITY($rootEntityAlias.$mappedByAssociation, '$idFieldName') AS $idNameAlias");
                     }
                 } else {
                     $this->queryBuilder->join(
-                        "$rootEntityAlias.$association",
+                        "$rootEntityAlias.$mappedByAssociation",
                         $parentEntityAlias
                     );
 
@@ -155,12 +171,31 @@ trait ParentAssociatedQuery
                     }
                 }
             } else {
-                $association = $parentEntity->associationInversedByTargetField($association);
+                $inversedByAssociation = $parentEntity->associationInversedByTargetField($association);
 
-                $this->queryBuilder->join(
-                    "$rootEntityAlias.$association",
-                    $parentEntityAlias
-                );
+                if ($inversedByAssociation !== null) {
+                    $this->queryBuilder->join(
+                        "$rootEntityAlias.$inversedByAssociation",
+                        $parentEntityAlias
+                    );
+                } else {
+                    $this->queryBuilder->from(
+                        $parentEntity->class(),
+                        $parentEntityAlias
+                    );
+
+                    if ($parentEntity->associationIsSingleValued($association)) {
+                        $this->queryBuilder->andWhere(
+                            $this->queryBuilder->expr()
+                                ->eq("$parentEntityAlias.$association", $rootEntityAlias)
+                        );
+                    } else {
+                        $this->queryBuilder->andWhere(
+                            $this->queryBuilder->expr()
+                                ->isMemberOf($rootEntityAlias, "$parentEntityAlias.$association")
+                        );
+                    }
+                }
 
                 $idFieldNames = $parentEntity->idFieldNames();
 

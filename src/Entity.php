@@ -58,7 +58,7 @@ interface Entity
 
     public function associationInversedByTargetField(
         string $fieldName
-    ): string;
+    ): ?string;
 
     public function associationIsSingleValued(
         string $associationName
@@ -203,8 +203,8 @@ function Entity(
 
         public function associationInversedByTargetField(
             string $fieldName
-        ): string {
-            return $this->metadata->associationMappings[$fieldName]['inversedBy'];
+        ): ?string {
+            return $this->metadata->associationMappings[$fieldName]['inversedBy'] ?? null;
         }
 
         public function associationIsSingleValued(
