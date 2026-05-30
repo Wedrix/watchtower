@@ -36,7 +36,7 @@ trait ParentAssociatedQuery
     public function builder(): QueryBuilder
     {
         if ($this->isWorkable) {
-            $batchNodes = (function (): array {
+            $batchedNodes = (function (): array {
                 $batchKey = BatchKey(node: $this->node);
 
                 $nodes = [$this->node];
@@ -55,38 +55,8 @@ trait ParentAssociatedQuery
             $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
 
             $parentIds = \array_map(
-                fn (Node $batchNode): array => \array_reduce(
-                    $parentEntity->idFieldNames(),
-                    function (array $parentIdValue, string $idFieldName) use ($parentEntity, $batchNode): array {
-                        if (\in_array($idFieldName, $parentEntity->associationFieldNames())) {
-                            $identifierAssociationField = $idFieldName;
-
-                            $targetEntity = $this->entityManager->findEntity(
-                                name: $parentEntity->associationTargetEntity(
-                                    associationName: $identifierAssociationField
-                                )
-                            );
-
-                            $parentIdValue[$identifierAssociationField] = \array_reduce(
-                                $targetEntity->idFieldNames(),
-                                function (array $associatedIdValue, string $targetIdFieldName) use ($identifierAssociationField, $batchNode): array {
-                                    $identifierAlias = $this->queryBuilder->identifierAlias();
-                                    $rootKey = "{$identifierAlias}_{$identifierAssociationField}_{$targetIdFieldName}";
-                                    $associatedIdValue[$targetIdFieldName] = $batchNode->root()[$rootKey];
-
-                                    return $associatedIdValue;
-                                },
-                                []
-                            );
-                        } else {
-                            $parentIdValue[$idFieldName] = $batchNode->root()[$idFieldName];
-                        }
-
-                        return $parentIdValue;
-                    },
-                    []
-                ),
-                $batchNodes
+                fn (Node $batchedNode): array => $batchedNode->parentId(),
+                $batchedNodes
             );
 
             $association = $this->node->name();

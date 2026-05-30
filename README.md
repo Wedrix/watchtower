@@ -52,8 +52,10 @@ These projects have proven the immense value of automatically generating GraphQL
 # Requirements
 
 - php >= v8.0
-- doctrine/orm ^2.8 || ^3.0
+- doctrine/orm ^2.20 || ^3.3
 - webonyx/graphql-php ^15.30.2
+
+If you use nested collection pagination, your database must support SQL window functions. PostgreSQL, MySQL 8+, MariaDB 10.2+, SQLite 3.25+, SQL Server 2005+, Oracle, and DB2 are supported. MySQL 5.7 and older, MariaDB before 10.2, SQLite before 3.25, PostgreSQL before 8.4, and SQL Server before 2005 are not supported for nested collection pagination.
 
 # Installation
 
@@ -93,7 +95,7 @@ Run static checks:
 
 Watchtower has no direct dependency on Symfony. Compatibility is determined by your application's PHP + Doctrine ORM stack.
 
-- Minimum Watchtower baseline: PHP 8.0 + Doctrine ORM 2.8
+- Minimum Watchtower baseline: PHP 8.0 + Doctrine ORM 2.20
 - Doctrine ORM 3.x requires PHP 8.1+
 - In practice, this means Symfony `5.4+` can work when your Symfony/Doctrine bridge versions match those constraints.
 
@@ -574,6 +576,8 @@ input ListingsQueryParams {
 
 The type specified for the `queryParams` argument does not matter. The only requirement is that it must define the two fields `limit` and `page` as integer types. You may also choose to make them non-nullable to force pagination for the particular query field.
 
+Pagination on nested collections is applied per parent. For example, `authors { books(queryParams: { limit: 3 }) }` returns up to three books for each author, not three books across the whole batched query. This requires a database that supports window functions. See [Requirements](#requirements) for supported database versions.
+
 ### Query Pagination
 
 `queryParams` may also be used to paginate the results of a query. For instance, given the following schema:
@@ -696,6 +700,7 @@ Here's a quick reference guide for all plugin types and their naming conventions
 |---|---|---|---|---|---|
 | **Selector** | `selectors/` | `apply_{type}_{field}_selector.php` | `apply_{type}_{field}_selector` | `Wedrix\Watchtower\SelectorPlugin` | Compute fields using database queries |
 | **Resolver** | `resolvers/` | `resolve_{type}_{field}_field.php` | `resolve_{type}_{field}_field` | `Wedrix\Watchtower\ResolverPlugin` | Resolve fields using custom logic or services |
+| **Search Resolver** | `search_resolvers/` | `resolve_{pluralType}_search.php` | `resolve_{pluralType}_search` | `Wedrix\Watchtower\SearchResolverPlugin` | Resolve collection searches by result type |
 | **Filter** | `filters/` | `apply_{type}_{filter}_filter.php` | `apply_{pluralType}_{filter}_filter` | `Wedrix\Watchtower\FilterPlugin` | Filter collections based on parameters |
 | **Constraint** | `filters/` | `apply_{type}_constraint.php` | `apply_{type}_constraint` | `Wedrix\Watchtower\ConstraintPlugin` | Always-applied filters |
 | **Root Constraint** | `filters/` | `apply_constraint.php` | `apply_constraint` | `Wedrix\Watchtower\ConstraintPlugin` | Global constraints for all queries |
@@ -742,7 +747,7 @@ function apply_listings_ids_filter(
 }
 ```
 
-The Console component offers the following convenience methods for generating plugin files: `addFilterPlugin()`, `addOrderingPlugin()`, `addSelectorPlugin()`, `addResolverPlugin()`, `addAuthorizorPlugin()`, `addMutationPlugin()`, and `addSubscriptionPlugin()`.
+The Console component offers the following convenience methods for generating plugin files: `addFilterPlugin()`, `addOrderingPlugin()`, `addSelectorPlugin()`, `addResolverPlugin()`, `addSearchResolverPlugin()`, `addAuthorizorPlugin()`, `addMutationPlugin()`, and `addSubscriptionPlugin()`.
 
 # Computed Fields
 
@@ -857,6 +862,66 @@ function function_name(
 
 Kindly note that values returned from a resolver function must be resolvable by the library. This library is able to auto-resolve the following primitive php types: `null`, `int`, `bool`, `float`, `string`, and `array`. Any other return type must have an associated scalar type definition to be resolvable by this library. Values representing user-defined object types must be returned as associative arrays. For collections, return a 0-indexed list.
 
+## Search Resolver Plugins
+
+Search resolver plugins allow you to replace the default Doctrine query for a collection when the field is called with `queryParams.search`. Unlike ordinary Resolver plugins, search resolvers are keyed by the result node type rather than by the parent type and field name. For example, `books(queryParams: { search: "graphql" })` uses the `Book` search resolver, regardless of the parent field that exposes the collection.
+
+Search resolver plugins are useful when search is backed by a dedicated search engine, full-text index, or another service that should return the matching collection results directly.
+
+```php
+# resources/graphql/plugins/search_resolvers/resolve_books_search.php
+
+<?php
+
+declare(strict_types=1);
+
+namespace Wedrix\Watchtower\SearchResolverPlugin;
+
+use Wedrix\Watchtower\Resolver\Node;
+
+function resolve_books_search(
+    Node $node
+): mixed
+{
+    $search = (string) ($node->args()['queryParams']['search'] ?? '');
+
+    return [
+        [
+            'id' => 1,
+            'title' => "Search result for $search",
+        ],
+    ];
+}
+```
+
+### Rules
+
+The rules for Search Resolver plugins are as follows:
+
+ 1. The plugin's script file must be contained in the directory specified for the `pluginsDirectory` parameter of both the Executor and Console components, under the `search_resolvers` sub-folder.
+ 2. The script file's name must follow the following naming format:
+  resolve_{***pluralized node type name in snake_case***}_search.php
+ 3. Within the script file, the plugin function's name must follow the following naming format:
+  resolve_{***pluralized node type name in snake_case***}_search
+ 4. The plugin function must have the following signature:
+
+```php
+function function_name(
+    \Wedrix\Watchtower\Resolver\Node $node
+): mixed;
+```
+
+5. The plugin function must be namespaced under `Wedrix\Watchtower\SearchResolverPlugin`.
+6. The collection field's `queryParams` input type must define a `search` field. The generated schema does not add this field automatically.
+
+Use the Console helper to generate a search resolver plugin for a node type:
+
+```php
+$console->addSearchResolverPlugin('Book');
+```
+
+Search resolver results should follow the same return-value rules as Resolver plugins. For object results, return associative arrays. Include entity identifier fields when child fields or nested relations may be resolved from the returned records.
+
 ## Resolving Abstract Types
 
 Use the utility functions `$node->unwrappedType()`, `$node->isAbstract()`, `$node->concreteFieldsSelection()`, and `$node->abstractFieldsSelection()` to determine what type you are resolving: whether it's an abstract type, and the concrete and abstract fields selected, respectively.
@@ -970,6 +1035,22 @@ query {
     }
 }
 ```
+
+In most cases, write filter plugins as if they are applying to a single collection query. Watchtower applies the same filter to the batched query it builds for all matching nodes.
+
+If a filter depends on a specific parent row rather than only the field arguments, it must be batching-aware. For example, a nested query like this may resolve several `products` nodes in one batched query:
+
+```graphql
+query {
+    shops {
+        products(queryParams:{filters:{availableForCurrentShop:true}}) {
+            name
+        }
+    }
+}
+```
+
+For that kind of filter, avoid baking a single `$node->parentId()` value into the query unless the query is constructed for all buffered parent nodes. Use `NodeBuffer()` when the filter needs to account for every parent represented by the batch. See [Batching](#batching) for more details on how matching nodes are grouped.
 
 Kindly refer to the **Helpful Utilities** section under **Selector Plugins** for helpful methods using the builder.
 
@@ -1196,6 +1277,27 @@ query {
 Kindly take note of the `rank` parameter that is required for all orderings. It's used to determine the order in which to apply multiple orderings. The highest ranking ordering is applied first, followed by the next in that order.
 
 You can also pass params to the ordering using the `params` parameter.
+
+In most cases, write ordering plugins as if they are applying to a single collection query. Watchtower applies the ordering to the batched query it builds for all matching nodes.
+
+When ordering nested paginated collections with custom expressions, select the expression with an alias and order by that alias. Use the query builder's alias helpers to avoid collisions:
+
+```php
+function apply_products_title_length_ordering(
+    QueryBuilder $queryBuilder,
+    Node $node
+): void
+{
+    $entityAlias = $queryBuilder->rootEntityAlias();
+    $orderAlias = $queryBuilder->reconciledAlias('titleLengthOrder');
+
+    $queryBuilder
+        ->addSelect("LENGTH($entityAlias.title) AS HIDDEN $orderAlias")
+        ->addOrderBy($orderAlias, 'DESC');
+}
+```
+
+As with filters, orderings that depend on a specific parent row need batching-aware query construction. Use `NodeBuffer()` when the ordering needs to account for every parent represented by the batch. See [Batching](#batching) for more details on how matching nodes are grouped.
 
 Kindly refer to the **Helpful Utilities** section under **Selector Plugins** for helpful methods using the builder.
 
@@ -1438,6 +1540,8 @@ When a batch result is resolved and stored in the `ResultBuffer`, any other node
 ### Query Batching (Auto-Applied)
 
 Queries are automatically batched by the library. When multiple nodes with the same parent type and field name are resolved, they are combined into a single database query.
+
+The batch is shared by all matching nodes, so plugins that only depend on field arguments can be written like ordinary single-query filters and orderings. Plugins that depend on a specific parent row must construct the query for the whole batch rather than for one node. This commonly applies to filters or orderings that use `$node->parentId()`.
 
 ### Mutation Batching
 

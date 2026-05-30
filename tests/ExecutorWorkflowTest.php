@@ -20,6 +20,7 @@ use function Wedrix\Watchtower\MutationPlugin;
 use function Wedrix\Watchtower\OrderingPlugin;
 use function Wedrix\Watchtower\ResolverPlugin;
 use function Wedrix\Watchtower\RootAuthorizorPlugin;
+use function Wedrix\Watchtower\SearchResolverPlugin;
 use function Wedrix\Watchtower\SelectorPlugin;
 
 /**
@@ -186,6 +187,61 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
+    public function test_search_resolver_workflow_returns_matching_books_with_nested_relations(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(queryParams: { search: "graphql" }) {
+                title
+                price
+                author {
+                  name
+                }
+                tags {
+                  name
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame(
+            [
+                [
+                    'title' => 'GraphQL Basics',
+                    'price' => 12.5,
+                    'author' => [
+                        'name' => 'Ada Lovelace',
+                    ],
+                    'tags' => [
+                        [
+                            'name' => 'graphql',
+                        ],
+                        [
+                            'name' => 'php',
+                        ],
+                    ],
+                ],
+                [
+                    'title' => 'GraphQL in Action',
+                    'price' => 15.75,
+                    'author' => [
+                        'name' => 'Alan Turing',
+                    ],
+                    'tags' => [
+                        [
+                            'name' => 'graphql',
+                        ],
+                    ],
+                ],
+            ],
+            $result['data']['books'] ?? []
+        );
+    }
+
     public function test_one_to_many_relation_resolution_from_authors_to_books(): void
     {
         $result = $this->executeQuery(
@@ -232,6 +288,89 @@ final class ExecutorWorkflowTest extends TestCase
             [
                 'Ada Lovelace' => ['GraphQL Basics', 'PHP Patterns'],
                 'Alan Turing' => ['GraphQL in Action', 'Zed Algorithms'],
+            ],
+            $booksByAuthor
+        );
+    }
+
+    public function test_nested_collection_pagination_is_applied_per_parent(): void
+    {
+        $firstPageResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              authors {
+                name
+                books(
+                  queryParams: {
+                    ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                    limit: 1
+                    page: 1
+                  }
+                ) {
+                  title
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($firstPageResult);
+
+        $booksByAuthor = [];
+
+        foreach (($firstPageResult['data']['authors'] ?? []) as $author) {
+            $booksByAuthor[(string) $author['name']] = \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $author['books'] ?? []
+            );
+        }
+
+        \ksort($booksByAuthor);
+
+        self::assertSame(
+            [
+                'Ada Lovelace' => ['GraphQL Basics'],
+                'Alan Turing' => ['GraphQL in Action'],
+            ],
+            $booksByAuthor
+        );
+
+        $secondPageResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              authors {
+                name
+                books(
+                  queryParams: {
+                    ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                    limit: 1
+                    page: 2
+                  }
+                ) {
+                  title
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($secondPageResult);
+
+        $booksByAuthor = [];
+
+        foreach (($secondPageResult['data']['authors'] ?? []) as $author) {
+            $booksByAuthor[(string) $author['name']] = \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $author['books'] ?? []
+            );
+        }
+
+        \ksort($booksByAuthor);
+
+        self::assertSame(
+            [
+                'Ada Lovelace' => ['PHP Patterns'],
+                'Alan Turing' => ['Zed Algorithms'],
             ],
             $booksByAuthor
         );
@@ -861,6 +1000,53 @@ final class ExecutorWorkflowTest extends TestCase
             PHP
         );
 
+        $console->addSearchResolverPlugin('Book');
+        $searchResolverPlugin = SearchResolverPlugin('Book');
+        $this->writePluginFile(
+            $plugins->filePath($searchResolverPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\SearchResolverPlugin;
+
+            use Doctrine\\ORM\\EntityManagerInterface;
+            use Watchtower\\Tests\\Support\\Fixtures\\Entity\\Book;
+            use Wedrix\\Watchtower\\Resolver\\Node;
+
+            function {$searchResolverPlugin->name()}(
+                Node \$node
+            ): mixed
+            {
+                \$search = (string) (\$node->args()['queryParams']['search'] ?? '');
+                \$entityManager = \$node->context()['entityManager'] ?? null;
+
+                if (!\$entityManager instanceof EntityManagerInterface) {
+                    throw new \\RuntimeException('Expected entity manager in context.');
+                }
+
+                \$books = \$entityManager->createQueryBuilder()
+                    ->select('book')
+                    ->from(Book::class, 'book')
+                    ->where('LOWER(book.title) LIKE :search')
+                    ->setParameter('search', '%' . \\strtolower(\$search) . '%')
+                    ->orderBy('book.title', 'ASC')
+                    ->getQuery()
+                    ->getResult();
+
+                return \\array_map(
+                    static fn (Book \$book): array => [
+                        'id' => \$book->getId(),
+                        'title' => \$book->getTitle(),
+                        'price' => \$book->getPrice(),
+                    ],
+                    \$books
+                );
+            }
+            PHP
+        );
+
         $console->addMutationPlugin('renameBook');
         $mutationPlugin = MutationPlugin('renameBook');
         $this->writePluginFile(
@@ -1150,6 +1336,7 @@ final class ExecutorWorkflowTest extends TestCase
         input BooksQueryParams {
           filters: BooksQueryFilters
           ordering: BooksQueryOrdering
+          search: String
           limit: Limit
           page: Page
           distinct: Boolean

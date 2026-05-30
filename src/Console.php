@@ -49,6 +49,10 @@ interface Console
         string $fieldName
     ): void;
 
+    public function addSearchResolverPlugin(
+        string $nodeType
+    ): void;
+
     public function addAuthorizorPlugin(
         string $nodeType,
         bool $isForCollections
@@ -253,6 +257,17 @@ function Console(
                     plugin: ResolverPlugin(
                         nodeType: $nodeType,
                         fieldName: $fieldName
+                    )
+                );
+        }
+
+        public function addSearchResolverPlugin(
+            string $nodeType
+        ): void {
+            $this->plugins
+                ->add(
+                    plugin: SearchResolverPlugin(
+                        nodeType: $nodeType
                     )
                 );
         }

@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
+use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\Query as DoctrineQuery;
 use GraphQL\Deferred;
 use Wedrix\Watchtower\Plugins;
 
 use function Wedrix\Watchtower\ResolverPlugin;
+use function Wedrix\Watchtower\SearchResolverPlugin;
 
 trait QueryResult
 {
@@ -17,6 +19,7 @@ trait QueryResult
 
     private mixed $value;
 
+    /** @phpstan-impure */
     public function __construct(
         private Query $query,
         private Node $node,
@@ -29,6 +32,15 @@ trait QueryResult
                     nodeType: $this->node->unwrappedParentType(),
                     fieldName: $this->node->name()
                 )
+            )
+            && ! (
+                isset($this->node->args()['queryParams']['search'])
+                && $this->plugins
+                    ->contains(
+                        SearchResolverPlugin(
+                            nodeType: $this->node->unwrappedType()
+                        )
+                    )
             )
             && $this->query->isWorkable();
 
@@ -51,6 +63,61 @@ trait QueryResult
                 } else {
                     $doctrineQuery = $this->query->builder()->getQuery();
 
+                    // Nested collection pagination must happen per parent row,
+                    // so we need to partition the batched result by the selected parent id aliases
+                    $queryParams = $this->node->args()['queryParams'] ?? [];
+                    $limit = $queryParams['limit'] ?? null;
+
+                    if (! $this->node->isTopLevel() && $this->node->isACollection() && $limit !== null) {
+                        $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
+
+                        if (
+                            \count($rootEntity->idFieldNames()) !== 1
+                            || \in_array($rootEntity->idFieldNames()[0], $rootEntity->associationFieldNames())
+                        ) {
+                            throw new \RuntimeException('Per-parent pagination currently requires a single-column scalar child identifier.');
+                        }
+
+                        $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
+                        $parentEntityAlias = $this->query->builder()->parentEntityAlias();
+
+                        $parentIdResultAliases = [];
+
+                        foreach ($parentEntity->idFieldNames() as $idFieldName) {
+                            if (\in_array($idFieldName, $parentEntity->associationFieldNames())) {
+                                $targetEntity = $this->entityManager->findEntity(
+                                    name: $parentEntity->associationTargetEntity(
+                                        associationName: $idFieldName
+                                    )
+                                );
+
+                                foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
+                                    $parentIdResultAliases[] = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
+                                }
+
+                                continue;
+                            }
+
+                            $parentIdResultAliases[] = "{$parentEntityAlias}_$idFieldName";
+                        }
+
+                        $page = (int) ($queryParams['page'] ?? 1);
+                        $limit = (int) $limit;
+                        $firstResult = ($page - 1) * $limit;
+
+                        $doctrineQuery->setHint(DoctrineQuery::HINT_CUSTOM_OUTPUT_WALKER, PerParentPaginationOutputWalker::class);
+                        $doctrineQuery->setHint(
+                            PerParentPaginationOutputWalker::HINT_PARTITION_RESULT_ALIASES,
+                            $parentIdResultAliases
+                        );
+                        $doctrineQuery->setHint(
+                            PerParentPaginationOutputWalker::HINT_TIE_BREAKER_RESULT_ALIAS,
+                            $rootEntity->idFieldNames()[0]
+                        );
+                        $doctrineQuery->setHint(PerParentPaginationOutputWalker::HINT_FIRST_RESULT, $firstResult);
+                        $doctrineQuery->setHint(PerParentPaginationOutputWalker::HINT_MAX_RESULTS, $limit);
+                    }
+
                     $batchResult = $doctrineQuery->getResult();
 
                     ResultBuffer()->add(
@@ -66,40 +133,11 @@ trait QueryResult
 
                         $parentEntityAlias = $this->query->builder()->parentEntityAlias();
 
-                        $identifierAlias = $this->query->builder()->identifierAlias();
-
                         // Extract this node's parent ID
-                        $parentIds = \array_reduce(
-                            $parentEntity->idFieldNames(),
-                            function (array $parentIdValue, string $parentIdFieldName) use ($parentEntity, $identifierAlias): array {
-                                if (\in_array($parentIdFieldName, $parentEntity->associationFieldNames())) {
-                                    $targetEntity = $this->entityManager->findEntity(
-                                        name: $parentEntity->associationTargetEntity(
-                                            associationName: $parentIdFieldName
-                                        )
-                                    );
-
-                                    $parentIdValue[$parentIdFieldName] = \array_reduce(
-                                        $targetEntity->idFieldNames(),
-                                        function (array $associatedIdValue, string $targetIdFieldName) use ($parentIdFieldName, $identifierAlias): array {
-                                            $rootKey = "{$identifierAlias}_{$parentIdFieldName}_{$targetIdFieldName}";
-                                            $associatedIdValue[$targetIdFieldName] = $this->node->root()[$rootKey];
-
-                                            return $associatedIdValue;
-                                        },
-                                        []
-                                    );
-                                } else {
-                                    $parentIdValue[$parentIdFieldName] = $this->node->root()[$parentIdFieldName];
-                                }
-
-                                return $parentIdValue;
-                            },
-                            []
-                        );
+                        $parentId = $this->node->parentId();
 
                         // Filter batch to get only results for this node's parent
-                        $batchResult = \array_filter($batchResult, function ($resultRecord) use ($parentEntity, $parentEntityAlias, $parentIds): bool {
+                        $batchResult = \array_filter($batchResult, function ($resultRecord) use ($parentEntity, $parentEntityAlias, $parentId): bool {
                             // Check parent ID fields that were added to the query
                             foreach ($parentEntity->idFieldNames() as $idFieldName) {
                                 if (\in_array($idFieldName, $parentEntity->associationFieldNames())) {
@@ -115,7 +153,7 @@ trait QueryResult
                                             ! isset($resultRecord[$parentIdKey])
                                             || ! $this->entityManager->identifiersMatch(
                                                 $resultRecord[$parentIdKey],
-                                                $parentIds[$idFieldName][$targetIdFieldName]
+                                                $parentId[$idFieldName][$targetIdFieldName]
                                             )
                                         ) {
                                             return false;
@@ -127,7 +165,7 @@ trait QueryResult
                                         ! isset($resultRecord[$parentIdKey])
                                         || ! $this->entityManager->identifiersMatch(
                                             $resultRecord[$parentIdKey],
-                                            $parentIds[$idFieldName]
+                                            $parentId[$idFieldName]
                                         )
                                     ) {
                                         return false;

@@ -17,6 +17,7 @@ trait SubscriptionResult
 
     private mixed $value;
 
+    /** @phpstan-impure */
     public function __construct(
         private Node $node,
         private Plugins $plugins

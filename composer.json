@@ -30,6 +30,7 @@
             "src/RootAuthorizorPlugin.php",
             "src/RootConstraintPlugin.php",
             "src/ScalarTypeDefinitions.php",
+            "src/SearchResolverPlugin.php",
             "src/SelectorPlugin.php",
             "src/SubscriptionPlugin.php",
             "src/Resolver/EntityManager.php",
@@ -56,7 +57,7 @@
     "minimum-stability": "stable",
     "require": {
         "php": "^8.0",
-        "doctrine/orm": "^2.8 || ^3.0",
+        "doctrine/orm": "^2.20 || ^3.3",
         "webonyx/graphql-php": "^15.30.2"
     },
     "require-dev": {
@@ -77,19 +78,19 @@
         "rector": "vendor/bin/rector process",
         "rector:check": "vendor/bin/rector process --dry-run",
         "test:doctrine2:lowest": [
-            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^2.8 --prefer-lowest --prefer-stable",
+            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^2.20 --prefer-lowest --prefer-stable",
             "@test"
         ],
         "test:doctrine2:latest": [
-            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^2.8",
+            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^2.20",
             "@test"
         ],
         "test:doctrine3:lowest": [
-            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^3.0 --prefer-lowest --prefer-stable",
+            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^3.3 --prefer-lowest --prefer-stable",
             "@test"
         ],
         "test:doctrine3:latest": [
-            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^3.0",
+            "composer update --no-interaction --prefer-dist --with-all-dependencies --with doctrine/orm:^3.3",
             "@test"
         ],
         "test:matrix": [

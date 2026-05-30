@@ -146,6 +146,11 @@ interface Node
     public function abstractFieldsSelection(): array;
 
     public function info(): ResolveInfo;
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function parentId(): array;
 }
 
 /**
@@ -157,9 +162,10 @@ function Node(
     array $root,
     array $args,
     array $context,
-    ResolveInfo $info
+    ResolveInfo $info,
+    EntityManager $entityManager
 ): Node {
-    return new class(root: $root, args: $args, context: $context, info: $info) implements Node
+    return new class(root: $root, args: $args, context: $context, info: $info, entityManager: $entityManager) implements Node
     {
         private string $name;
 
@@ -185,20 +191,26 @@ function Node(
         private array $concreteFieldsSelection;
 
         /**
-         * @var array<string,mixed>
+         * @var array<string, mixed>
          */
         private array $abstractFieldsSelection;
 
         /**
-         * @param  array<string,mixed>  $root
-         * @param  array<string,mixed>  $args
-         * @param  array<string,mixed>  $context
+         * @var array<string, mixed>
+         */
+        private array $parentId;
+
+        /**
+         * @param  array<string, mixed>  $root
+         * @param  array<string, mixed>  $args
+         * @param  array<string, mixed>  $context
          */
         public function __construct(
             private array $root,
             private array $args,
             private array $context,
-            private ResolveInfo $info
+            private ResolveInfo $info,
+            private EntityManager $entityManager
         ) {
             $this->name = $this->info->fieldName;
 
@@ -228,6 +240,44 @@ function Node(
             $this->concreteFieldsSelection = $queryPlan['fields'] ?? $queryPlan;
 
             $this->abstractFieldsSelection = $queryPlan['implementors'] ?? [];
+
+            $this->parentId = (function (): array {
+                if (! $this->entityManager->hasEntity(name: $this->unwrappedParentType)) {
+                    return [];
+                }
+
+                $parentEntity = $this->entityManager->findEntity(name: $this->unwrappedParentType);
+
+                return \array_reduce(
+                    $parentEntity->idFieldNames(),
+                    function (array $parentId, string $idFieldName) use ($parentEntity): array {
+                        if (\in_array($idFieldName, $parentEntity->associationFieldNames())) {
+                            $targetEntity = $this->entityManager->findEntity(
+                                name: $parentEntity->associationTargetEntity(
+                                    associationName: $idFieldName
+                                )
+                            );
+
+                            $parentId[$idFieldName] = \array_reduce(
+                                $targetEntity->idFieldNames(),
+                                function (array $associatedId, string $targetIdFieldName) use ($idFieldName): array {
+                                    $identifierAlias = $this->entityManager->createQueryBuilder()->identifierAlias();
+                                    $rootKey = "{$identifierAlias}_{$idFieldName}_{$targetIdFieldName}";
+                                    $associatedId[$targetIdFieldName] = $this->root[$rootKey];
+
+                                    return $associatedId;
+                                },
+                                []
+                            );
+                        } else {
+                            $parentId[$idFieldName] = $this->root[$idFieldName];
+                        }
+
+                        return $parentId;
+                    },
+                    []
+                );
+            })();
         }
 
         public function root(): array
@@ -303,6 +353,14 @@ function Node(
         public function info(): ResolveInfo
         {
             return $this->info;
+        }
+
+        /**
+         * @return array<string, mixed>
+         */
+        public function parentId(): array
+        {
+            return $this->parentId;
         }
     };
 }

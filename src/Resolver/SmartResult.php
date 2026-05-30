@@ -8,12 +8,13 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartResult
 {
-    use MutationResult, QueryResult, ResolverResult, ScalarResult, SubscriptionResult {
+    use ScalarResult, QueryResult, ResolverResult, SearchResolverResult, MutationResult, SubscriptionResult {
         ScalarResult::__construct as private _constructScalarResult;
         QueryResult::__construct as private _constructQueryResult;
+        ResolverResult::__construct as private _constructResolverResult;
+        SearchResolverResult::__construct as private _constructSearchResolverResult;
         MutationResult::__construct as private _constructMutationResult;
         SubscriptionResult::__construct as private _constructSubscriptionResult;
-        ResolverResult::__construct as private _constructResolverResult;
     }
 
     private bool $isWorkable;
@@ -50,6 +51,26 @@ trait SmartResult
             return;
         }
 
+        $this->_constructResolverResult(
+            node: $this->node,
+            plugins: $this->plugins
+        );
+
+        // @phpstan-ignore if.alwaysFalse
+        if ($this->isWorkable) {
+            return;
+        }
+
+        $this->_constructSearchResolverResult(
+            node: $this->node,
+            plugins: $this->plugins
+        );
+
+        // @phpstan-ignore if.alwaysFalse
+        if ($this->isWorkable) {
+            return;
+        }
+
         $this->_constructMutationResult(
             node: $this->node,
             plugins: $this->plugins
@@ -61,16 +82,6 @@ trait SmartResult
         }
 
         $this->_constructSubscriptionResult(
-            node: $this->node,
-            plugins: $this->plugins
-        );
-
-        // @phpstan-ignore if.alwaysFalse
-        if ($this->isWorkable) {
-            return;
-        }
-
-        $this->_constructResolverResult(
             node: $this->node,
             plugins: $this->plugins
         );

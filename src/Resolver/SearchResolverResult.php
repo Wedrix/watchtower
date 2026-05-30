@@ -8,9 +8,9 @@ use GraphQL\Deferred;
 use Wedrix\Watchtower\Plugin;
 use Wedrix\Watchtower\Plugins;
 
-use function Wedrix\Watchtower\MutationPlugin;
+use function Wedrix\Watchtower\SearchResolverPlugin;
 
-trait MutationResult
+trait SearchResolverResult
 {
     private Plugin $plugin;
 
@@ -23,12 +23,11 @@ trait MutationResult
         private Node $node,
         private Plugins $plugins
     ) {
-        $this->plugin = MutationPlugin(
-            fieldName: $this->node->name()
+        $this->plugin = SearchResolverPlugin(
+            nodeType: $this->node->unwrappedType()
         );
 
-        $this->isWorkable = $this->node->operation() === 'mutation'
-            && $this->node->isTopLevel()
+        $this->isWorkable = isset($this->node->args()['queryParams']['search'])
             && $this->plugins->contains($this->plugin);
 
         $this->value = (function (): mixed {

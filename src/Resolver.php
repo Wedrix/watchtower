@@ -72,7 +72,8 @@ function Resolver(
                     root: $root,
                     args: $args,
                     context: $context,
-                    info: $info
+                    info: $info,
+                    entityManager: $this->entityManager
                 ),
                 entityManager: $this->entityManager,
                 plugins: $this->plugins,

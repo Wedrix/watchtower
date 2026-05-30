@@ -22,6 +22,10 @@ trait MaybePaginatedQuery
                     throw new \Exception('Invalid query. The limit parameter is required to paginate a query.');
                 }
 
+                if (! $this->node->isTopLevel() && $this->node->isACollection()) {
+                    return;
+                }
+
                 if (! \is_null($limit)) {
                     $this->queryBuilder->setMaxResults($limit);
 
