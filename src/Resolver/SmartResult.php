@@ -8,7 +8,7 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartResult
 {
-    use ScalarResult, QueryResult, ResolverResult, SearchResolverResult, MutationResult, SubscriptionResult {
+    use MutationResult, QueryResult, ResolverResult, ScalarResult, SearchResolverResult, SubscriptionResult {
         ScalarResult::__construct as private _constructScalarResult;
         QueryResult::__construct as private _constructQueryResult;
         ResolverResult::__construct as private _constructResolverResult;

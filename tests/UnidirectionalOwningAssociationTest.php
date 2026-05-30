@@ -9,6 +9,7 @@ use GraphQL\Error\DebugFlag;
 use PHPUnit\Framework\TestCase;
 use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
 use Watchtower\Tests\Support\FixtureWorkspace;
+use Wedrix\Watchtower\Executor;
 
 use function Wedrix\Watchtower\Executor;
 
@@ -187,7 +188,7 @@ final class UnidirectionalOwningAssociationTest extends TestCase
         );
     }
 
-    private function createExecutor(): \Wedrix\Watchtower\Executor
+    private function createExecutor(): Executor
     {
         return Executor(
             entityManager: $this->entityManager,

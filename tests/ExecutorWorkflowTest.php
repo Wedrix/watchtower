@@ -11,6 +11,8 @@ use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
 use Watchtower\Tests\Support\Fixtures\Entity\Author;
 use Watchtower\Tests\Support\Fixtures\Entity\Book;
 use Watchtower\Tests\Support\FixtureWorkspace;
+use Wedrix\Watchtower\Console;
+use Wedrix\Watchtower\Executor;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
@@ -1177,7 +1179,7 @@ final class ExecutorWorkflowTest extends TestCase
         ];
     }
 
-    private function createConsole(): \Wedrix\Watchtower\Console
+    private function createConsole(): Console
     {
         return Console(
             entityManager: $this->entityManager,
@@ -1191,7 +1193,7 @@ final class ExecutorWorkflowTest extends TestCase
 
     private function createExecutor(
         bool $optimize
-    ): \Wedrix\Watchtower\Executor {
+    ): Executor {
         return Executor(
             entityManager: $this->entityManager,
             schemaFile: $this->workspace->schemaFile(),

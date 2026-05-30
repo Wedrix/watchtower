@@ -8,6 +8,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use PHPUnit\Framework\TestCase;
 use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
 use Watchtower\Tests\Support\FixtureWorkspace;
+use Wedrix\Watchtower\Console;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
@@ -128,7 +129,7 @@ final class ConsoleWorkflowTest extends TestCase
         self::assertFileDoesNotExist($schemaCacheFile);
     }
 
-    private function createConsole(): \Wedrix\Watchtower\Console
+    private function createConsole(): Console
     {
         return Console(
             entityManager: $this->entityManager,

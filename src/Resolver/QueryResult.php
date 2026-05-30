@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
-use Doctrine\ORM\NoResultException;
 use Doctrine\ORM\NonUniqueResultException;
+use Doctrine\ORM\NoResultException;
 use Doctrine\ORM\Query as DoctrineQuery;
 use GraphQL\Deferred;
 use Wedrix\Watchtower\Plugins;

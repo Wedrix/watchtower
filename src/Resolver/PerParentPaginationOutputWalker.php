@@ -83,7 +83,6 @@ final class PerParentPaginationOutputWalker extends SqlOutputWalker
     }
 
     /**
-     * @param  mixed  $resultAliases
      * @return array<int, string>
      */
     private function sqlColumnAliasesForResultAliases(mixed $resultAliases): array
