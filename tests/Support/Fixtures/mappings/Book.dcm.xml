@@ -30,5 +30,9 @@
                 </inverse-join-columns>
             </join-table>
         </many-to-many>
+
+        <one-to-many field="bookRecommendations"
+                     target-entity="Watchtower\Tests\Support\Fixtures\Entity\BookRecommendation"
+                     mapped-by="book"/>
     </entity>
 </doctrine-mapping>

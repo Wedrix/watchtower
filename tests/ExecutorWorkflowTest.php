@@ -189,6 +189,143 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
+    public function test_schema_declared_recommendation_fields_resolve_across_authors_and_books(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              authors {
+                name
+                recommendedBooks(
+                  queryParams: {
+                    ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  }
+                ) {
+                  title
+                  recommendingAuthors {
+                    name
+                  }
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        $recommendedBooksByAuthor = [];
+        $recommendingAuthorsByBookByAuthor = [];
+
+        foreach (($result['data']['authors'] ?? []) as $author) {
+            $authorName = (string) ($author['name'] ?? '');
+            $recommendedBooksByAuthor[$authorName] = [];
+            $recommendingAuthorsByBookByAuthor[$authorName] = [];
+
+            foreach (($author['recommendedBooks'] ?? []) as $recommendedBook) {
+                $bookTitle = (string) ($recommendedBook['title'] ?? '');
+                $recommendedBooksByAuthor[$authorName][] = $bookTitle;
+
+                $recommendingAuthors = \array_map(
+                    static fn (array $recommendingAuthor): string => (string) ($recommendingAuthor['name'] ?? ''),
+                    $recommendedBook['recommendingAuthors'] ?? []
+                );
+                \sort($recommendingAuthors);
+
+                $recommendingAuthorsByBookByAuthor[$authorName][$bookTitle] = $recommendingAuthors;
+            }
+        }
+
+        \ksort($recommendedBooksByAuthor);
+        \ksort($recommendingAuthorsByBookByAuthor);
+
+        self::assertSame(
+            [
+                'Ada Lovelace' => ['GraphQL Basics', 'PHP Patterns'],
+                'Alan Turing' => ['GraphQL Basics', 'Zed Algorithms'],
+            ],
+            $recommendedBooksByAuthor
+        );
+        self::assertSame(['Ada Lovelace', 'Alan Turing'], $recommendingAuthorsByBookByAuthor['Ada Lovelace']['GraphQL Basics']);
+        self::assertSame(['Ada Lovelace'], $recommendingAuthorsByBookByAuthor['Ada Lovelace']['PHP Patterns']);
+        self::assertSame(['Alan Turing'], $recommendingAuthorsByBookByAuthor['Alan Turing']['Zed Algorithms']);
+    }
+
+    public function test_schema_declared_recommendation_fields_support_nested_collection_query_params(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              authors {
+                name
+                recommendedBooks(
+                  queryParams: {
+                    ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                    limit: 1
+                    page: 1
+                  }
+                ) {
+                  title
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        $recommendedBooksByAuthor = [];
+
+        foreach (($result['data']['authors'] ?? []) as $author) {
+            $recommendedBooksByAuthor[(string) $author['name']] = \array_map(
+                static fn (array $recommendedBook): string => (string) $recommendedBook['title'],
+                $author['recommendedBooks'] ?? []
+            );
+        }
+
+        \ksort($recommendedBooksByAuthor);
+
+        self::assertSame(
+            [
+                'Ada Lovelace' => ['GraphQL Basics'],
+                'Alan Turing' => ['GraphQL Basics'],
+            ],
+            $recommendedBooksByAuthor
+        );
+    }
+
+    public function test_misconfigured_schema_declared_recommendation_fields_return_meaningful_errors(): void
+    {
+        $ambiguousResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books {
+                title
+                ambiguousRecommendingAuthors {
+                  name
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertErrorContains($ambiguousResult, "must define exactly one association to parent entity 'Book'");
+
+        $missingAssociationResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books {
+                title
+                missingRecommendingAuthors {
+                  name
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertErrorContains($missingAssociationResult, "does not define an association named 'missingAssociation'");
+    }
+
     public function test_search_resolver_workflow_returns_matching_books_with_nested_relations(): void
     {
         $result = $this->executeQuery(
@@ -1257,6 +1394,8 @@ final class ExecutorWorkflowTest extends TestCase
         scalar Limit
         scalar Page
 
+        directive @watchtowerAssociation(through: String!) on FIELD_DEFINITION
+
         enum ContentKind {
           BOOK
           AUTHOR
@@ -1304,6 +1443,8 @@ final class ExecutorWorkflowTest extends TestCase
           name: String!
           profile: AuthorProfile
           books(queryParams: BooksQueryParams): [Book!]!
+          recommendedBooks(queryParams: BooksQueryParams): [Book!]!
+            @watchtowerAssociation(through: "bookRecommendations")
         }
 
         type AuthorProfile {
@@ -1319,6 +1460,12 @@ final class ExecutorWorkflowTest extends TestCase
           publishedAt: DateTime!
           author: Author!
           tags(queryParams: TagsQueryParams): [Tag!]!
+          recommendingAuthors(queryParams: AuthorsQueryParams): [Author!]!
+            @watchtowerAssociation(through: "bookRecommendations")
+          ambiguousRecommendingAuthors(queryParams: AuthorsQueryParams): [Author!]!
+            @watchtowerAssociation(through: "ambiguousBookRecommendations")
+          missingRecommendingAuthors(queryParams: AuthorsQueryParams): [Author!]!
+            @watchtowerAssociation(through: "missingAssociation")
           titleLength: Int!
           externalScore: Int!
         }

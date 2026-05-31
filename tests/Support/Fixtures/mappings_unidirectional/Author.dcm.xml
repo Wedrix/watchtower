@@ -9,5 +9,13 @@
         </id>
 
         <field name="name" type="string" length="255"/>
+
+        <one-to-many field="bookRecommendations"
+                     target-entity="Watchtower\Tests\Support\Fixtures\Entity\BookRecommendation"
+                     mapped-by="author"/>
+
+        <one-to-many field="ambiguousBookRecommendations"
+                     target-entity="Watchtower\Tests\Support\Fixtures\Entity\AmbiguousBookRecommendation"
+                     mapped-by="author"/>
     </entity>
 </doctrine-mapping>

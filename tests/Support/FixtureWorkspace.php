@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace Watchtower\Tests\Support;
 
 use Doctrine\ORM\EntityManagerInterface;
+use Watchtower\Tests\Support\Fixtures\Entity\AmbiguousBookRecommendation;
 use Watchtower\Tests\Support\Fixtures\Entity\Author;
 use Watchtower\Tests\Support\Fixtures\Entity\AuthorProfile;
 use Watchtower\Tests\Support\Fixtures\Entity\Book;
+use Watchtower\Tests\Support\Fixtures\Entity\BookRecommendation;
 use Watchtower\Tests\Support\Fixtures\Entity\Tag;
 
 use function Wedrix\Watchtower\DateTimeScalarTypeDefinition;
@@ -116,7 +118,7 @@ final class FixtureWorkspace
     }
 
     /**
-     * @return array{authors:array<int,Author>,profiles:array<int,AuthorProfile>,books:array<int,Book>,tags:array<int,Tag>}
+     * @return array{authors:array<int,Author>,profiles:array<int,AuthorProfile>,books:array<int,Book>,tags:array<int,Tag>,bookRecommendations:array<int,BookRecommendation>,ambiguousBookRecommendations:array<int,AmbiguousBookRecommendation>}
      */
     public function seedLibraryData(
         EntityManagerInterface $entityManager
@@ -164,6 +166,16 @@ final class FixtureWorkspace
         $bookThree->addTag($tagGraphql);
         $bookFour->addTag($tagAlgorithms);
 
+        $adaGraphqlRecommendation = new BookRecommendation($authorOne, $bookOne, 1);
+        $adaPhpRecommendation = new BookRecommendation($authorOne, $bookTwo, 2);
+        $alanGraphqlRecommendation = new BookRecommendation($authorTwo, $bookOne, 1);
+        $alanAlgorithmsRecommendation = new BookRecommendation($authorTwo, $bookFour, 2);
+        $ambiguousBookRecommendation = new AmbiguousBookRecommendation(
+            $authorOne,
+            $bookOne,
+            $bookTwo
+        );
+
         foreach ([
             $authorOne,
             $authorTwo,
@@ -176,6 +188,11 @@ final class FixtureWorkspace
             $tagGraphql,
             $tagPhp,
             $tagAlgorithms,
+            $adaGraphqlRecommendation,
+            $adaPhpRecommendation,
+            $alanGraphqlRecommendation,
+            $alanAlgorithmsRecommendation,
+            $ambiguousBookRecommendation,
         ] as $entity) {
             $entityManager->persist($entity);
         }
@@ -187,6 +204,13 @@ final class FixtureWorkspace
             'profiles' => [$profileOne, $profileTwo],
             'books' => [$bookOne, $bookTwo, $bookThree, $bookFour],
             'tags' => [$tagGraphql, $tagPhp, $tagAlgorithms],
+            'bookRecommendations' => [
+                $adaGraphqlRecommendation,
+                $adaPhpRecommendation,
+                $alanGraphqlRecommendation,
+                $alanAlgorithmsRecommendation,
+            ],
+            'ambiguousBookRecommendations' => [$ambiguousBookRecommendation],
         ];
     }
 

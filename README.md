@@ -545,6 +545,30 @@ query {
 
 resolves the product with id **1**, its best seller, and all the corresponding listings as described by the `bestSeller` and `listings` associations of the Product entity. For more details on Doctrine relations check out [the documentation](https://www.doctrine-project.org/projects/doctrine-orm/en/2.13/reference/association-mapping.html).
 
+### Through Associations
+
+Direct Doctrine associations do not need extra schema metadata. When a GraphQL field represents a logical relation that is implemented through an explicit association entity, declare the path with `@watchtowerAssociation`:
+
+```graphql
+directive @watchtowerAssociation(through: String!) on FIELD_DEFINITION
+
+type Author {
+    id: ID!
+    recommendedBooks(queryParams: BooksQueryParams): [Book!]!
+        @watchtowerAssociation(through: "bookRecommendations")
+}
+
+type Book {
+    id: ID!
+    recommendingAuthors(queryParams: AuthorsQueryParams): [Author!]!
+        @watchtowerAssociation(through: "bookRecommendations")
+}
+```
+
+The `through` value is the association field on the returned type. In the `Author.recommendedBooks` example above, Watchtower starts from the returned `Book` entity, follows `Book.bookRecommendations` to the association entity, then finds the association entity's single association back to the parent `Author` entity.
+
+The association entity must have exactly one association targeting the GraphQL parent type. If no matching association exists, or if more than one matching association exists, Watchtower throws a configuration error so the mapping can be made explicit in application code. The normal nested collection behavior still applies to these fields, including batching, query parameters on the returned collection, result grouping by parent, and per-parent pagination.
+
 ## Pagination
 
 ### Collection Pagination
@@ -1038,7 +1062,7 @@ query {
 
 In most cases, write filter plugins as if they are applying to a single collection query. Watchtower applies the same filter to the batched query it builds for all matching nodes.
 
-If a filter depends on a specific parent row rather than only the field arguments, it must be batching-aware. For example, a nested query like this may resolve several `products` nodes in one batched query:
+Avoid filters that need to bake a specific parent row value, such as `$node->parentId()`, into the query. A nested query like this may resolve several `products` nodes in one batched query:
 
 ```graphql
 query {
@@ -1050,7 +1074,7 @@ query {
 }
 ```
 
-For that kind of filter, avoid baking a single `$node->parentId()` value into the query unless the query is constructed for all buffered parent nodes. Use `NodeBuffer()` when the filter needs to account for every parent represented by the batch. See [Batching](#batching) for more details on how matching nodes are grouped.
+That kind of parent-specific filter is only safe when it can be expressed as a generic SQL predicate using the query aliases, without capturing one concrete parent id.
 
 Kindly refer to the **Helpful Utilities** section under **Selector Plugins** for helpful methods using the builder.
 
@@ -1297,7 +1321,7 @@ function apply_products_title_length_ordering(
 }
 ```
 
-As with filters, orderings that depend on a specific parent row need batching-aware query construction. Use `NodeBuffer()` when the ordering needs to account for every parent represented by the batch. See [Batching](#batching) for more details on how matching nodes are grouped.
+As with filters, avoid orderings that need to bake a specific parent row value, such as `$node->parentId()`, into the query. Parent-specific orderings are only safe when they can be expressed as a generic SQL predicate using the query aliases, without capturing one concrete parent id.
 
 Kindly refer to the **Helpful Utilities** section under **Selector Plugins** for helpful methods using the builder.
 
@@ -1541,7 +1565,7 @@ When a batch result is resolved and stored in the `ResultBuffer`, any other node
 
 Queries are automatically batched by the library. When multiple nodes with the same parent type and field name are resolved, they are combined into a single database query.
 
-The batch is shared by all matching nodes, so plugins that only depend on field arguments can be written like ordinary single-query filters and orderings. Plugins that depend on a specific parent row must construct the query for the whole batch rather than for one node. This commonly applies to filters or orderings that use `$node->parentId()`.
+The batch is shared by all matching nodes, so plugins that only depend on field arguments can be written like ordinary single-query filters and orderings. Filters and orderings should not capture one concrete `$node->parentId()` value, because that value can be baked into a query reused by other matching parent nodes.
 
 ### Mutation Batching
 

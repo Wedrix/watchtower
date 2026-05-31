@@ -22,6 +22,9 @@ class Book
     /** @var Collection<int,Tag> */
     private Collection $tags;
 
+    /** @var Collection<int,BookRecommendation> */
+    private Collection $bookRecommendations;
+
     public function __construct(
         Author $author,
         string $title,
@@ -33,6 +36,7 @@ class Book
         $this->price = $price;
         $this->publishedAt = $publishedAt;
         $this->tags = new ArrayCollection;
+        $this->bookRecommendations = new ArrayCollection;
 
         $this->author->addBook($this);
     }
@@ -85,5 +89,21 @@ class Book
     public function getTags(): Collection
     {
         return $this->tags;
+    }
+
+    public function addBookRecommendation(
+        BookRecommendation $bookRecommendation
+    ): void {
+        if (! $this->bookRecommendations->contains($bookRecommendation)) {
+            $this->bookRecommendations->add($bookRecommendation);
+        }
+    }
+
+    /**
+     * @return Collection<int,BookRecommendation>
+     */
+    public function getBookRecommendations(): Collection
+    {
+        return $this->bookRecommendations;
     }
 }

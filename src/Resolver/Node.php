@@ -6,6 +6,7 @@ namespace Wedrix\Watchtower\Resolver;
 
 use GraphQL\Type\Definition\ResolveInfo;
 use GraphQL\Type\Definition\Type;
+use GraphQL\Utils\AST;
 
 interface Node
 {
@@ -150,6 +151,11 @@ interface Node
     /**
      * @return array<string, mixed>
      */
+    public function associationDirective(): array;
+
+    /**
+     * @return array<string, mixed>
+     */
     public function parentId(): array;
 }
 
@@ -201,6 +207,11 @@ function Node(
         private array $parentId;
 
         /**
+         * @var array<string, mixed>
+         */
+        private array $associationDirective;
+
+        /**
          * @param  array<string, mixed>  $root
          * @param  array<string, mixed>  $args
          * @param  array<string, mixed>  $context
@@ -240,6 +251,30 @@ function Node(
             $this->concreteFieldsSelection = $queryPlan['fields'] ?? $queryPlan;
 
             $this->abstractFieldsSelection = $queryPlan['implementors'] ?? [];
+
+            $this->associationDirective = (function (): array {
+                $fieldDefinitionNode = $this->info->fieldDefinition->astNode;
+
+                if ($fieldDefinitionNode === null) {
+                    return [];
+                }
+
+                foreach ($fieldDefinitionNode->directives as $directive) {
+                    if ($directive->name->value !== 'watchtowerAssociation') {
+                        continue;
+                    }
+
+                    $directiveValues = [];
+
+                    foreach ($directive->arguments as $argument) {
+                        $directiveValues[$argument->name->value] = AST::valueFromASTUntyped($argument->value);
+                    }
+
+                    return $directiveValues;
+                }
+
+                return [];
+            })();
 
             $this->parentId = (function (): array {
                 if (! $this->entityManager->hasEntity(name: $this->unwrappedParentType)) {
@@ -353,6 +388,11 @@ function Node(
         public function info(): ResolveInfo
         {
             return $this->info;
+        }
+
+        public function associationDirective(): array
+        {
+            return $this->associationDirective;
         }
 
         /**
