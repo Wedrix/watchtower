@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use Doctrine\DBAL\ArrayParameterType;
+use Doctrine\DBAL\ParameterType;
+use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\QueryBuilder as DoctrineQueryBuilder;
 
 /**
@@ -11,6 +14,20 @@ use Doctrine\ORM\QueryBuilder as DoctrineQueryBuilder;
  */
 interface QueryBuilder
 {
+    public function registerCursorOrdering(
+        string $key,
+        string $expression,
+        string $direction,
+        ParameterType|ArrayParameterType|string|int|null $parameterType = null
+    ): void;
+
+    /**
+     * @return array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null}>
+     */
+    public function cursorOrderings(): array;
+
+    public function reverseOrderings(): void;
+
     public function identifierAlias(): string;
 
     public function parentEntityAlias(): string;
@@ -53,6 +70,11 @@ function QueryBuilder(
          */
         private array $aliases = [];
 
+        /**
+         * @var array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null}>
+         */
+        private array $cursorOrderings = [];
+
         private string $identifierAlias = '__primary';
 
         private string $parentEntityAlias = '__parent';
@@ -62,6 +84,90 @@ function QueryBuilder(
         public function __construct(
             private DoctrineQueryBuilder $doctrineQueryBuilder
         ) {}
+
+        public function registerCursorOrdering(
+            string $key,
+            string $expression,
+            string $direction,
+            ParameterType|ArrayParameterType|string|int|null $parameterType = null
+        ): void {
+            $direction = \strtoupper($direction);
+
+            if (! \in_array($direction, ['ASC', 'DESC'], true)) {
+                throw new InvalidCursorOrderingDirectionQueryBuilderException("Invalid cursor ordering direction '{$direction}'.");
+            }
+
+            if ($key === '') {
+                throw new EmptyCursorOrderingKeyQueryBuilderException('Cursor ordering key cannot be empty.');
+            }
+
+            if ($expression === '') {
+                throw new EmptyCursorOrderingExpressionQueryBuilderException('Cursor ordering expression cannot be empty.');
+            }
+
+            $this->cursorOrderings[] = [
+                'key' => $key,
+                'expression' => $expression,
+                'direction' => $direction,
+                'parameterType' => $parameterType,
+            ];
+        }
+
+        public function cursorOrderings(): array
+        {
+            return $this->cursorOrderings;
+        }
+
+        public function reverseOrderings(): void
+        {
+            $orderByParts = $this->doctrineQueryBuilder->getDQLPart('orderBy');
+
+            if (! \is_array($orderByParts) || empty($orderByParts)) {
+                return;
+            }
+
+            $reversedOrderings = [];
+
+            foreach ($orderByParts as $orderByPart) {
+                if (! $orderByPart instanceof OrderBy) {
+                    continue;
+                }
+
+                foreach ($orderByPart->getParts() as $orderByItem) {
+                    $reversedOrderings[] = $this->reverseOrdering($orderByItem);
+                }
+            }
+
+            if (empty($reversedOrderings)) {
+                return;
+            }
+
+            $this->doctrineQueryBuilder->resetDQLPart('orderBy');
+
+            foreach ($reversedOrderings as [$expression, $direction]) {
+                $this->doctrineQueryBuilder->addOrderBy($expression, $direction);
+            }
+        }
+
+        /**
+         * @return array{0:string,1:'ASC'|'DESC'}
+         */
+        private function reverseOrdering(string $ordering): array
+        {
+            $ordering = \trim($ordering);
+
+            if (\preg_match('/\s+(ASC|DESC)$/i', $ordering, $matches) === 1) {
+                $direction = \strtoupper($matches[1]);
+                $expression = \trim(\substr($ordering, 0, -\strlen($matches[0])));
+
+                return [
+                    $expression,
+                    $direction === 'ASC' ? 'DESC' : 'ASC',
+                ];
+            }
+
+            return [$ordering, 'DESC'];
+        }
 
         public function identifierAlias(): string
         {
@@ -84,7 +190,7 @@ function QueryBuilder(
             // Remove reserved prefixes from the alias
             foreach (self::RESERVED_PREFIXES as $prefix) {
                 if (\str_starts_with($alias, $prefix)) {
-                    throw new \InvalidArgumentException("Alias '{$alias}' uses reserved prefix '{$prefix}'");
+                    throw new ReservedAliasQueryBuilderException("Alias '{$alias}' uses reserved prefix '{$prefix}'");
                 }
             }
 
@@ -105,12 +211,12 @@ function QueryBuilder(
          * @param  array<int,mixed>  $arguments  The arguments passed to the method.
          * @return mixed The result of the proxied method call.
          *
-         * @throws \BadMethodCallException If the method does not exist on the Doctrine QueryBuilder instance.
+         * @throws UnknownMethodQueryBuilderException If the method does not exist on the Doctrine QueryBuilder instance.
          */
         public function __call(string $name, array $arguments): mixed
         {
             if (! \method_exists($this->doctrineQueryBuilder, $name)) {
-                throw new \BadMethodCallException("Method {$name} does not exist on ".self::class);
+                throw new UnknownMethodQueryBuilderException("Method {$name} does not exist on ".self::class);
             }
 
             return $this->doctrineQueryBuilder->$name(...$arguments);

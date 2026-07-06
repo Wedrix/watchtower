@@ -117,12 +117,12 @@ function Entity(
             $this->class = (function (): string {
                 $matchingRegisteredClasses = \array_filter(
                     $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames()
-                        ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
+                        ?? throw new InvalidEntityManagerException('Invalid EntityManager. The metadata driver implementation is not set.'),
                     fn (string $className) => \str_ends_with($className, "\\{$this->name}")
                 );
 
                 return \array_shift($matchingRegisteredClasses)
-                    ?? throw new \Exception("No entity with the name '{$this->name}' exists for the given entity manager instance.");
+                    ?? throw new MissingEntityEntityException("No entity with the name '{$this->name}' exists for the given entity manager instance.");
             })();
 
             $this->metadata = $this->entityManager->getClassMetadata($this->class);

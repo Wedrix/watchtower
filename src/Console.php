@@ -72,8 +72,6 @@ interface Console
 }
 
 /**
- * @api
- *
  * @param  EntityManagerInterface  $entityManager  The Doctrine entityManager instance.
  * @param  string  $schemaFileDirectory  The directory of the schema file.
  * @param  string  $schemaFileName  The name of the schema file.
@@ -142,7 +140,7 @@ function Console(
         public function generateSchema(): void
         {
             if (\is_file($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
-                throw new \Exception("The schema '$schemaFile' already exists. Kindly either update it using the console command or delete the file to proceed regenerating it.");
+                throw new ExistingSchemaConsoleException("The schema '$schemaFile' already exists. Kindly either update it using the console command or delete the file to proceed regenerating it.");
             }
 
             file_force_put_contents(
@@ -162,6 +160,7 @@ function Console(
                     DateTimeScalarTypeDefinition(),
                     LimitScalarTypeDefinition(),
                     PageScalarTypeDefinition(),
+                    CursorScalarTypeDefinition(),
                 ] as $scalarTypeDefinition
             ) {
                 if (! $this->scalarTypeDefinitions->contains($scalarTypeDefinition)) {
@@ -332,13 +331,13 @@ function Console(
 
             // Generate Schema cache
             if (! \is_file($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
-                throw new \Exception('No schema file! Kindly generate it first to proceed.');
+                throw new MissingSchemaConsoleException('No schema file! Kindly generate it first to proceed.');
             }
 
             $document = Parser::parse(
                 source: \is_string($schemaFileContents = \file_get_contents($schemaFile))
                             ? $schemaFileContents
-                            : throw new \Exception("Unable to read the schema file '$schemaFile'.")
+                            : throw new UnreadableSchemaFileConsoleException("Unable to read the schema file '$schemaFile'.")
             );
 
             file_force_put_contents($schemaCacheFile, "<?php\nreturn ".\var_export(AST::toArray($document), true).";\n");

@@ -9,6 +9,7 @@ use PHPUnit\Framework\TestCase;
 use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
 use Watchtower\Tests\Support\FixtureWorkspace;
 use Wedrix\Watchtower\Console;
+use Wedrix\Watchtower\ExistingSchemaConsoleException;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
@@ -62,6 +63,7 @@ final class ConsoleWorkflowTest extends TestCase
         self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/date_time_type_definition.php');
         self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/limit_type_definition.php');
         self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/page_type_definition.php');
+        self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/cursor_type_definition.php');
     }
 
     public function test_generate_schema_throws_when_schema_already_exists(): void
@@ -69,7 +71,7 @@ final class ConsoleWorkflowTest extends TestCase
         $console = $this->createConsole();
         $console->generateSchema();
 
-        $this->expectException(\Exception::class);
+        $this->expectException(ExistingSchemaConsoleException::class);
         $this->expectExceptionMessage('already exists');
 
         $console->generateSchema();

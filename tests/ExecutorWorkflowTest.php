@@ -13,6 +13,7 @@ use Watchtower\Tests\Support\Fixtures\Entity\Book;
 use Watchtower\Tests\Support\FixtureWorkspace;
 use Wedrix\Watchtower\Console;
 use Wedrix\Watchtower\Executor;
+use Wedrix\Watchtower\MissingSchemaCacheSchemaException;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
@@ -515,6 +516,346 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
+    public function test_cursor_pagination_applies_seek_predicate_to_top_level_collections(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              books(
+                queryParams: {
+                  ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  after: $cursor
+                  limit: 2
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $this->cursor([
+                    'title' => 'graphql basics',
+                    'id' => $this->firstBookId,
+                ]),
+            ]
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame(
+            ['GraphQL in Action', 'PHP Patterns'],
+            \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $result['data']['books'] ?? []
+            )
+        );
+    }
+
+    public function test_before_cursor_with_limit_returns_items_nearest_the_cursor(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              books(
+                queryParams: {
+                  ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  before: $cursor
+                  limit: 1
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $this->cursor([
+                    'title' => 'php patterns',
+                    'id' => $this->bookIdByTitle('PHP Patterns'),
+                ]),
+            ]
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame(
+            ['GraphQL in Action'],
+            \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $result['data']['books'] ?? []
+            )
+        );
+    }
+
+    public function test_nested_collection_cursor_pagination_reuses_per_parent_limit_walker(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              authors {
+                name
+                books(
+                  queryParams: {
+                    ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                    after: $cursor
+                    limit: 1
+                  }
+                ) {
+                  title
+                }
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $this->cursor([
+                    'title' => 'graphql basics',
+                    'id' => $this->firstBookId,
+                ]),
+            ]
+        );
+
+        $this->assertNoErrors($result);
+
+        $booksByAuthor = [];
+
+        foreach (($result['data']['authors'] ?? []) as $author) {
+            $booksByAuthor[(string) $author['name']] = \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $author['books'] ?? []
+            );
+        }
+
+        \ksort($booksByAuthor);
+
+        self::assertSame(
+            [
+                'Ada Lovelace' => ['PHP Patterns'],
+                'Alan Turing' => ['GraphQL in Action'],
+            ],
+            $booksByAuthor
+        );
+    }
+
+    public function test_nested_collection_before_cursor_with_limit_returns_items_nearest_the_cursor_per_parent(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              authors {
+                name
+                books(
+                  queryParams: {
+                    ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                    before: $cursor
+                    limit: 1
+                  }
+                ) {
+                  title
+                }
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $this->cursor([
+                    'title' => 'zed algorithms',
+                    'id' => $this->bookIdByTitle('Zed Algorithms'),
+                ]),
+            ]
+        );
+
+        $this->assertNoErrors($result);
+
+        $booksByAuthor = [];
+
+        foreach (($result['data']['authors'] ?? []) as $author) {
+            $booksByAuthor[(string) $author['name']] = \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $author['books'] ?? []
+            );
+        }
+
+        \ksort($booksByAuthor);
+
+        self::assertSame(
+            [
+                'Ada Lovelace' => ['PHP Patterns'],
+                'Alan Turing' => ['GraphQL in Action'],
+            ],
+            $booksByAuthor
+        );
+    }
+
+    public function test_cursor_pagination_rejects_page_parameter(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              books(
+                queryParams: {
+                  ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  after: $cursor
+                  limit: 2
+                  page: 1
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $this->cursor([
+                    'title' => 'graphql basics',
+                    'id' => $this->firstBookId,
+                ]),
+            ]
+        );
+
+        $this->assertErrorContains($result, 'page parameter cannot be combined with cursor pagination');
+    }
+
+    public function test_cursor_pagination_requires_cursor_ordering_metadata(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              books(
+                queryParams: {
+                  ordering: { legacyTitleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  after: $cursor
+                  limit: 2
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $this->cursor([
+                    'title' => 'graphql basics',
+                    'id' => $this->firstBookId,
+                ]),
+            ]
+        );
+
+        $this->assertErrorContains($result, 'requires cursor-capable ordering metadata');
+    }
+
+    public function test_cursor_pagination_accepts_custom_cursor_scalar_types_that_parse_to_arrays(): void
+    {
+        $workspace = new FixtureWorkspace(prefix: 'watchtower_custom_cursor_');
+
+        try {
+            $schema = \str_replace(
+                'scalar Cursor',
+                'scalar Cursor
+        scalar BookCursor',
+                self::schemaSource()
+            );
+
+            $schema = \preg_replace(
+                '/(input BooksQueryParams \{[^}]*\bafter: )Cursor(\b[^}]*\bbefore: )Cursor(\b[^}]*\})/s',
+                '$1BookCursor$2BookCursor$3',
+                $schema
+            );
+
+            self::assertIsString($schema);
+
+            $workspace->writeSchema($schema);
+
+            \file_put_contents(
+                $this->workspace->scalarTypeDefinitionsDirectory().'/book_cursor_type_definition.php',
+                <<<'PHP'
+                <?php
+
+                declare(strict_types=1);
+
+                namespace Wedrix\Watchtower\BookCursorTypeDefinition;
+
+                use GraphQL\Language\AST\StringValueNode;
+
+                function serialize(array|string $value): string
+                {
+                    return \is_string($value)
+                        ? $value
+                        : \base64_encode(\json_encode($value, \JSON_THROW_ON_ERROR));
+                }
+
+                function parseValue(string $value): array
+                {
+                    $json = \base64_decode($value, true);
+
+                    if ($json === false) {
+                        throw new \Wedrix\Watchtower\InvalidValueCursorScalarTypeDefinitionException('Invalid BookCursor value!');
+                    }
+
+                    $decoded = \json_decode($json, true);
+
+                    if (! \is_array($decoded)) {
+                        throw new \Wedrix\Watchtower\InvalidValueCursorScalarTypeDefinitionException('Invalid BookCursor value!');
+                    }
+
+                    return $decoded;
+                }
+
+                function parseLiteral(StringValueNode $value, ?array $variables = null): array
+                {
+                    return parseValue($value->value);
+                }
+                PHP
+            );
+
+            $result = Executor(
+                entityManager: $this->entityManager,
+                schemaFile: $workspace->schemaFile(),
+                pluginsDirectory: $this->workspace->pluginsDirectory(),
+                scalarTypeDefinitionsDirectory: $this->workspace->scalarTypeDefinitionsDirectory(),
+                cacheDirectory: $workspace->cacheDirectory(),
+                optimize: false
+            )->executeQuery(
+                source: <<<'GRAPHQL'
+                query($cursor: BookCursor!) {
+                  books(
+                    queryParams: {
+                      ordering: { titleAsc: { rank: 1 } }
+                      after: $cursor
+                      limit: 2
+                    }
+                  ) {
+                    title
+                  }
+                }
+                GRAPHQL,
+                rootValue: [],
+                contextValue: $this->defaultContext(),
+                variableValues: [
+                    'cursor' => $this->cursor([
+                        'title' => 'graphql basics',
+                        'id' => $this->firstBookId,
+                    ]),
+                ],
+                operationName: null,
+                validationRules: null
+            )->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE);
+
+            $this->assertNoErrors($result);
+
+            self::assertSame(
+                ['GraphQL in Action', 'PHP Patterns'],
+                \array_map(
+                    static fn (array $book): string => (string) $book['title'],
+                    $result['data']['books'] ?? []
+                )
+            );
+        } finally {
+            $workspace->cleanup();
+        }
+    }
+
     public function test_one_to_one_relation_resolution_on_owning_and_inverse_sides(): void
     {
         $result = $this->executeQuery(
@@ -853,7 +1194,7 @@ final class ExecutorWorkflowTest extends TestCase
 
     public function test_optimize_mode_fails_when_cache_was_not_generated(): void
     {
-        $this->expectException(\Exception::class);
+        $this->expectException(MissingSchemaCacheSchemaException::class);
         $this->expectExceptionMessage('cache');
 
         $this->createExecutor(true);
@@ -1109,6 +1450,7 @@ final class ExecutorWorkflowTest extends TestCase
 
         $console->addOrderingPlugin('Book', 'titleAsc');
         $orderingPlugin = OrderingPlugin('Book', 'titleAsc');
+
         $this->writePluginFile(
             $plugins->filePath($orderingPlugin),
             <<<PHP
@@ -1118,6 +1460,7 @@ final class ExecutorWorkflowTest extends TestCase
 
             namespace Wedrix\\Watchtower\\OrderingPlugin;
 
+            use Doctrine\\DBAL\\ParameterType;
             use Wedrix\\Watchtower\\Resolver\\Node;
             use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
 
@@ -1131,6 +1474,44 @@ final class ExecutorWorkflowTest extends TestCase
 
                 \$entityAlias = \$queryBuilder->rootEntityAlias();
                 \$orderAlias = \$queryBuilder->reconciledAlias('titleOrder');
+                \$idOrderAlias = \$queryBuilder->reconciledAlias('idOrder');
+
+                \$queryBuilder
+                    ->addSelect("LOWER(\$entityAlias.title) AS HIDDEN \$orderAlias")
+                    ->addSelect("\$entityAlias.id AS HIDDEN \$idOrderAlias")
+                    ->addOrderBy(\$orderAlias, \$direction)
+                    ->addOrderBy(\$idOrderAlias, 'ASC');
+
+                \$queryBuilder->registerCursorOrdering('title', "LOWER(\$entityAlias.title)", \$direction, ParameterType::STRING);
+                \$queryBuilder->registerCursorOrdering('id', "\$entityAlias.id", 'ASC', ParameterType::INTEGER);
+            }
+            PHP
+        );
+
+        $console->addOrderingPlugin('Book', 'legacyTitleAsc');
+        $legacyOrderingPlugin = OrderingPlugin('Book', 'legacyTitleAsc');
+        $this->writePluginFile(
+            $plugins->filePath($legacyOrderingPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\OrderingPlugin;
+
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+
+            function {$legacyOrderingPlugin->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                \$direction = \\strtoupper((string) (\$node->args()['queryParams']['ordering']['legacyTitleAsc']['params']['direction'] ?? 'ASC'));
+                \$direction = \\in_array(\$direction, ['ASC', 'DESC'], true) ? \$direction : 'ASC';
+
+                \$entityAlias = \$queryBuilder->rootEntityAlias();
+                \$orderAlias = \$queryBuilder->reconciledAlias('legacyTitleOrder');
 
                 \$queryBuilder
                     ->addSelect("LOWER(\$entityAlias.title) AS HIDDEN \$orderAlias")
@@ -1350,6 +1731,28 @@ final class ExecutorWorkflowTest extends TestCase
         }
     }
 
+    /**
+     * @param  array<string,mixed>  $values
+     */
+    private function cursor(
+        array $values
+    ): string {
+        return \base64_encode(\json_encode($values, \JSON_THROW_ON_ERROR));
+    }
+
+    private function bookIdByTitle(
+        string $title
+    ): int {
+        return (int) $this->entityManager
+            ->createQueryBuilder()
+            ->select('book.id')
+            ->from(Book::class, 'book')
+            ->where('book.title = :title')
+            ->setParameter('title', $title)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     private function assertNoErrors(
         array $result
     ): void {
@@ -1393,6 +1796,7 @@ final class ExecutorWorkflowTest extends TestCase
         scalar DateTime
         scalar Limit
         scalar Page
+        scalar Cursor
 
         directive @watchtowerAssociation(through: String!) on FIELD_DEFINITION
 
@@ -1479,6 +1883,8 @@ final class ExecutorWorkflowTest extends TestCase
         input AuthorsQueryParams {
           limit: Limit
           page: Page
+          after: Cursor
+          before: Cursor
           distinct: Boolean
         }
 
@@ -1488,18 +1894,24 @@ final class ExecutorWorkflowTest extends TestCase
           search: String
           limit: Limit
           page: Page
+          after: Cursor
+          before: Cursor
           distinct: Boolean
         }
 
         input AuthorProfilesQueryParams {
           limit: Limit
           page: Page
+          after: Cursor
+          before: Cursor
           distinct: Boolean
         }
 
         input TagsQueryParams {
           limit: Limit
           page: Page
+          after: Cursor
+          before: Cursor
           distinct: Boolean
         }
 
@@ -1510,6 +1922,7 @@ final class ExecutorWorkflowTest extends TestCase
 
         input BooksQueryOrdering {
           titleAsc: BooksOrderingRule
+          legacyTitleAsc: BooksOrderingRule
           unimplemented: BooksOrderingRule
         }
 

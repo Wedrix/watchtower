@@ -88,7 +88,7 @@ final class PerParentPaginationOutputWalker extends SqlOutputWalker
     private function sqlColumnAliasesForResultAliases(mixed $resultAliases): array
     {
         if (! \is_array($resultAliases)) {
-            throw new \RuntimeException('Invalid per-parent pagination partition aliases.');
+            throw new InvalidPerParentPaginationPartitionAliasesException('Invalid per-parent pagination partition aliases.');
         }
 
         return \array_map(
@@ -102,7 +102,7 @@ final class PerParentPaginationOutputWalker extends SqlOutputWalker
         $sqlAlias = \array_search($resultAlias, $this->resultSetMapping->scalarMappings, true);
 
         if (! \is_string($sqlAlias)) {
-            throw new \RuntimeException("Unable to locate SQL alias for result alias '$resultAlias'.");
+            throw new MissingResultAliasSqlAliasException("Unable to locate SQL alias for result alias '$resultAlias'.");
         }
 
         return $sqlAlias;
@@ -173,7 +173,7 @@ final class PerParentPaginationOutputWalker extends SqlOutputWalker
 
         foreach ($orderByItems as $orderByItem) {
             if (! \preg_match('/^([A-Za-z_][A-Za-z0-9_]*)(\s+(?:ASC|DESC))?$/i', $orderByItem, $matches)) {
-                throw new \RuntimeException(
+                throw new InvalidPerParentPaginationOrderingException(
                     'Per-parent pagination requires orderings to use selected aliases. Add a HIDDEN select alias for custom ordering expressions.'
                 );
             }

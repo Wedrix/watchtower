@@ -43,7 +43,7 @@ trait LimitScalarTypeDefinition
         ): int
         {
             if ((\$value < 1) || (\$value > 100)) {
-                throw new \Exception('Invalid Limit value!');
+                throw new \Wedrix\Watchtower\InvalidValueLimitScalarTypeDefinitionException('Invalid Limit value!');
             }
         
             return \$value;

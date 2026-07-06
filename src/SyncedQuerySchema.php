@@ -38,6 +38,9 @@ final class SyncedQuerySchema extends GraphQLSchema
                 'Page' => new CustomScalarType([
                     'name' => 'Page',
                 ]),
+                'Cursor' => new CustomScalarType([
+                    'name' => 'Cursor',
+                ]),
             ];
 
             /**
@@ -166,7 +169,7 @@ final class SyncedQuerySchema extends GraphQLSchema
                                 $associatedType = $types[$associatedEntityName];
 
                                 if (! $associatedType instanceof ObjectType) {
-                                    throw new \LogicException("Invalid associated entity type '{$associatedEntityName}'.");
+                                    throw new InvalidAssociatedEntityTypeSyncedQuerySchemaException("Invalid associated entity type '{$associatedEntityName}'.");
                                 }
 
                                 return $associatedType;
@@ -200,7 +203,7 @@ final class SyncedQuerySchema extends GraphQLSchema
             };
 
             $entityClassNames = $this->entityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames()
-                    ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.');
+                    ?? throw new InvalidEntityManagerException('Invalid EntityManager. The metadata driver implementation is not set.');
 
             foreach ($entityClassNames as $entityClassName) {
                 $addEntityType(
@@ -243,6 +246,8 @@ final class SyncedQuerySchema extends GraphQLSchema
                     'fields' => [
                         'limit' => $scalars['Limit'],
                         'page' => $scalars['Page'],
+                        'after' => $scalars['Cursor'],
+                        'before' => $scalars['Cursor'],
                         'distinct' => Type::boolean(),
                     ],
                 ]);

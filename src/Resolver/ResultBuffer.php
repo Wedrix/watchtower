@@ -55,7 +55,7 @@ function ResultBuffer(): ResultBuffer
             BatchKey $batchKey,
         ): mixed {
             if (! $this->has($batchKey)) {
-                throw new \RuntimeException(
+                throw new MissingResultBufferBatchKeyException(
                     message: 'ResultBuffer does not contain batchKey: '.$batchKey->value()
                 );
             }

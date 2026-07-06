@@ -29,7 +29,7 @@ trait MaybeFilteredQuery
                     );
 
                     if (! $this->plugins->contains($filterPlugin)) {
-                        throw new \Exception("Invalid query. No filter plugin exists for '$filterName'.");
+                        throw new MissingFilterPluginQueryException("Invalid query. No filter plugin exists for '$filterName'.");
                     }
 
                     require_once $this->plugins->filePath($filterPlugin);

@@ -91,7 +91,7 @@ trait SmartResult
             return;
         }
 
-        throw new \Exception('Unable to resolve the node. None of the result strategies were workable.');
+        throw new UnresolvableNodeSmartResultException('Unable to resolve the node. None of the result strategies were workable.');
     }
 
     public function value(): mixed

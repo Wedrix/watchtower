@@ -43,7 +43,7 @@ trait PageScalarTypeDefinition
         ): int
         {
             if ((\$value < 1)) {
-                throw new \Exception('Invalid Page value!');
+                throw new \Wedrix\Watchtower\InvalidValuePageScalarTypeDefinitionException('Invalid Page value!');
             }
         
             return \$value;

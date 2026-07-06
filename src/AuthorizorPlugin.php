@@ -65,7 +65,7 @@ trait AuthorizorPlugin
     {
         return \is_callable($this->callback)
             ? $this->callback
-            : throw new \Exception("Invalid callable string '{$this->callback}'.");
+            : throw new InvalidCallablePluginException("Invalid callable string '{$this->callback}'.");
     }
 
     public function template(): string

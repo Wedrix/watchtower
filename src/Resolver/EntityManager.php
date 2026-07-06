@@ -91,7 +91,7 @@ function EntityManager(
                     || ! empty(
                         \array_filter(
                             $this->doctrineEntityManager->getConfiguration()->getMetadataDriverImpl()?->getAllClassNames()
-                                ?? throw new \Exception('Invalid EntityManager. The metadata driver implementation is not set.'),
+                                ?? throw new InvalidEntityManagerException('Invalid EntityManager. The metadata driver implementation is not set.'),
                             static fn (string $className) => \str_ends_with($className, "\\$name")
                         )
                     );

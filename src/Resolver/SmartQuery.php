@@ -8,9 +8,10 @@ use Wedrix\Watchtower\Plugins;
 
 trait SmartQuery
 {
-    use BaseQuery, ConstrainedQuery, FindQuery, MaybeDistinctQuery, MaybeFilteredQuery, MaybeOrderedQuery, MaybePaginatedQuery, ParentAssociatedQuery {
+    use BaseQuery, ConstrainedQuery, FindQuery, MaybeCursorPaginatedQuery, MaybeDistinctQuery, MaybeFilteredQuery, MaybeOrderedQuery, MaybePaginatedQuery, ParentAssociatedQuery {
         BaseQuery::__construct as private _constructBaseQuery;
         ConstrainedQuery::__construct as private _constructConstrainedQuery;
+        MaybeCursorPaginatedQuery::__construct as private _constructMaybeCursorPaginatedQuery;
         MaybePaginatedQuery::__construct as private _constructMaybePaginatedQuery;
         MaybeOrderedQuery::__construct as private _constructMaybeOrderedQuery;
         MaybeFilteredQuery::__construct as private _constructMaybeFilteredQuery;
@@ -59,6 +60,12 @@ trait SmartQuery
             $this->_constructMaybeOrderedQuery(
                 node: $this->node,
                 plugins: $this->plugins,
+                queryBuilder: $this->queryBuilder,
+                isWorkable: $this->isWorkable
+            );
+
+            $this->_constructMaybeCursorPaginatedQuery(
+                node: $this->node,
                 queryBuilder: $this->queryBuilder,
                 isWorkable: $this->isWorkable
             );

@@ -42,8 +42,8 @@ trait DateTimeScalarTypeDefinition
             string \$value
         ): \DateTimeImmutable
         {
-            return \date_create_immutable(\$value) 
-                ?: throw new \Exception('Invalid DateTime value!');
+            return \date_create_immutable(\$value)
+                ?: throw new \Wedrix\Watchtower\InvalidValueDateTimeScalarTypeDefinitionException('Invalid DateTime value!');
         }
         
         /**

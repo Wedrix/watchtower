@@ -119,11 +119,11 @@ trait ParentAssociatedQuery
                 $fieldName = $this->node->unwrappedParentType().'.'.$this->node->name();
 
                 if (! \is_string($throughAssociation) || $throughAssociation === '') {
-                    throw new \RuntimeException("Invalid @watchtowerAssociation configuration for '{$fieldName}'. The 'through' argument must be a non-empty string.");
+                    throw new InvalidAssociationConfigurationParentAssociatedQueryException("Invalid @watchtowerAssociation configuration for '{$fieldName}'. The 'through' argument must be a non-empty string.");
                 }
 
                 if (! \in_array($throughAssociation, $rootEntity->associationFieldNames(), true)) {
-                    throw new \RuntimeException("Invalid @watchtowerAssociation configuration for '{$fieldName}'. The returned entity '{$rootEntity->name()}' does not define an association named '{$throughAssociation}'.");
+                    throw new InvalidAssociationConfigurationParentAssociatedQueryException("Invalid @watchtowerAssociation configuration for '{$fieldName}'. The returned entity '{$rootEntity->name()}' does not define an association named '{$throughAssociation}'.");
                 }
 
                 $throughEntity = $this->entityManager->findEntity(
@@ -142,7 +142,7 @@ trait ParentAssociatedQuery
                         ? 'none'
                         : \implode(', ', $parentAssociationNames);
 
-                    throw new \RuntimeException("Invalid @watchtowerAssociation configuration for '{$fieldName}'. The through entity '{$throughEntity->name()}' must define exactly one association to parent entity '{$parentEntity->name()}'; found {$matches}.");
+                    throw new InvalidAssociationConfigurationParentAssociatedQueryException("Invalid @watchtowerAssociation configuration for '{$fieldName}'. The through entity '{$throughEntity->name()}' must define exactly one association to parent entity '{$parentEntity->name()}'; found {$matches}.");
                 }
 
                 $throughEntityAlias = $this->queryBuilder->reconciledAlias('watchtowerThrough');

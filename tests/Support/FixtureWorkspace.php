@@ -12,6 +12,7 @@ use Watchtower\Tests\Support\Fixtures\Entity\Book;
 use Watchtower\Tests\Support\Fixtures\Entity\BookRecommendation;
 use Watchtower\Tests\Support\Fixtures\Entity\Tag;
 
+use function Wedrix\Watchtower\CursorScalarTypeDefinition;
 use function Wedrix\Watchtower\DateTimeScalarTypeDefinition;
 use function Wedrix\Watchtower\LimitScalarTypeDefinition;
 use function Wedrix\Watchtower\PageScalarTypeDefinition;
@@ -114,6 +115,10 @@ final class FixtureWorkspace
         \file_put_contents(
             $this->scalarTypeDefinitionsDirectory.'/page_type_definition.php',
             PageScalarTypeDefinition()->template()
+        );
+        \file_put_contents(
+            $this->scalarTypeDefinitionsDirectory.'/cursor_type_definition.php',
+            CursorScalarTypeDefinition()->template()
         );
     }
 

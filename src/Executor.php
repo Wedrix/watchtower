@@ -37,8 +37,6 @@ interface Executor
 }
 
 /**
- * @api
- *
  * @param  EntityManagerInterface  $entityManager  The Doctrine entityManager instance.
  * @param  string  $schemaFile  The schema file.
  * @param  string  $pluginsDirectory  The plugin functions' directory.
@@ -83,7 +81,7 @@ function Executor(
             private bool $optimize
         ) {
             if (! \is_file($this->schemaFile)) {
-                throw new \Exception("The schema '{$this->schemaFile}' does not exist. Kindly generate it first to proceed.");
+                throw new MissingSchemaExecutorException("The schema '{$this->schemaFile}' does not exist. Kindly generate it first to proceed.");
             }
 
             $this->schema = new Schema(

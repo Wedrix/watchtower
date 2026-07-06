@@ -8,12 +8,14 @@
             "Wedrix\\Watchtower\\": "src/"
         },
         "files": [
+            "src/exceptions.php",
             "src/string_extensions.php",
             "src/array_extensions.php",
             "src/file_extensions.php",
             "src/AuthorizorPlugin.php",
             "src/Console.php",
             "src/ConstraintPlugin.php",
+            "src/CursorScalarTypeDefinition.php",
             "src/DateTimeScalarTypeDefinition.php",
             "src/Entity.php",
             "src/Executor.php",

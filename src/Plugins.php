@@ -66,7 +66,7 @@ function Plugins(
             Plugin $plugin
         ): void {
             if ($this->contains($plugin)) {
-                throw new \Exception("The plugin '{$plugin->name()}' already exists.");
+                throw new AlreadyExistingPluginPluginsException("The plugin '{$plugin->name()}' already exists.");
             }
 
             file_force_put_contents(

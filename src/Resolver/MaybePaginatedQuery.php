@@ -19,7 +19,7 @@ trait MaybePaginatedQuery
                 $page = $queryParams['page'] ?? null;
 
                 if (! \is_null($page) && \is_null($limit)) {
-                    throw new \Exception('Invalid query. The limit parameter is required to paginate a query.');
+                    throw new MissingLimitMaybePaginatedQueryException('Invalid query. The limit parameter is required to paginate a query.');
                 }
 
                 if (! $this->node->isTopLevel() && $this->node->isACollection()) {

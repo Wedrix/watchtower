@@ -56,6 +56,10 @@ trait QueryResult
             return new Deferred(function (): mixed {
                 $batchResult = [];
 
+                $queryParams = $this->node->args()['queryParams'] ?? [];
+                $limit = $queryParams['limit'] ?? null;
+                $before = $queryParams['before'] ?? null;
+
                 $batchKey = BatchKey(node: $this->node);
 
                 if (ResultBuffer()->has($batchKey)) {
@@ -65,9 +69,6 @@ trait QueryResult
 
                     // Nested collection pagination must happen per parent row,
                     // so we need to partition the batched result by the selected parent id aliases
-                    $queryParams = $this->node->args()['queryParams'] ?? [];
-                    $limit = $queryParams['limit'] ?? null;
-
                     if (! $this->node->isTopLevel() && $this->node->isACollection() && $limit !== null) {
                         $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
@@ -75,7 +76,7 @@ trait QueryResult
                             \count($rootEntity->idFieldNames()) !== 1
                             || \in_array($rootEntity->idFieldNames()[0], $rootEntity->associationFieldNames())
                         ) {
-                            throw new \RuntimeException('Per-parent pagination currently requires a single-column scalar child identifier.');
+                            throw new UnsupportedPerParentPaginationIdentifierQueryResultException('Per-parent pagination currently requires a single-column scalar child identifier.');
                         }
 
                         $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
@@ -102,8 +103,8 @@ trait QueryResult
                         }
 
                         $page = (int) ($queryParams['page'] ?? 1);
-                        $limit = (int) $limit;
-                        $firstResult = ($page - 1) * $limit;
+                        $perParentLimit = (int) $limit;
+                        $firstResult = ($page - 1) * $perParentLimit;
 
                         $doctrineQuery->setHint(DoctrineQuery::HINT_CUSTOM_OUTPUT_WALKER, PerParentPaginationOutputWalker::class);
                         $doctrineQuery->setHint(
@@ -115,7 +116,7 @@ trait QueryResult
                             $rootEntity->idFieldNames()[0]
                         );
                         $doctrineQuery->setHint(PerParentPaginationOutputWalker::HINT_FIRST_RESULT, $firstResult);
-                        $doctrineQuery->setHint(PerParentPaginationOutputWalker::HINT_MAX_RESULTS, $limit);
+                        $doctrineQuery->setHint(PerParentPaginationOutputWalker::HINT_MAX_RESULTS, $perParentLimit);
                     }
 
                     $batchResult = $doctrineQuery->getResult();
@@ -183,6 +184,10 @@ trait QueryResult
                 })();
 
                 $value = $filteredBatch;
+
+                if ($before !== null) {
+                    $value = \array_reverse($value);
+                }
 
                 if (! $this->node->isACollection()) {
                     if (count($filteredBatch) > 1) {

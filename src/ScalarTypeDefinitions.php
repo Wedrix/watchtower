@@ -66,7 +66,7 @@ function ScalarTypeDefinitions(
             ScalarTypeDefinition $scalarTypeDefinition
         ): void {
             if ($this->contains($scalarTypeDefinition)) {
-                throw new \Exception("The type definition for '{$scalarTypeDefinition->typeName()}' already exists.");
+                throw new AlreadyExistingScalarTypeDefinitionScalarTypeDefinitionsException("The type definition for '{$scalarTypeDefinition->typeName()}' already exists.");
             }
 
             file_force_put_contents(

@@ -38,7 +38,7 @@ trait MaybeOrderedQuery
                     );
 
                     if (! $this->plugins->contains($orderingPlugin)) {
-                        throw new \Exception("Invalid query. No ordering plugin exists for '$orderingName'.");
+                        throw new MissingOrderingPluginQueryException("Invalid query. No ordering plugin exists for '$orderingName'.");
                     }
 
                     require_once $this->plugins->filePath($orderingPlugin);

@@ -42,14 +42,14 @@ final class Schema extends GraphQLSchema
         static $cacheFile = null;
 
         if (! \is_file($sourceFile)) {
-            throw new \Exception("The schema '{$sourceFile}' does not exist. Kindly generate it first to proceed.");
+            throw new MissingSchemaSchemaException("The schema '{$sourceFile}' does not exist. Kindly generate it first to proceed.");
         }
 
         $cacheFile ??= $cacheDirectory.'/'.\pathinfo($sourceFile, \PATHINFO_BASENAME);
 
         if ($optimize) {
             if (! \is_file($cacheFile)) {
-                throw new \Exception("The cache '{$cacheFile}' does not exist. Kindly generate it first to proceed.");
+                throw new MissingSchemaCacheSchemaException("The cache '{$cacheFile}' does not exist. Kindly generate it first to proceed.");
             }
         }
 
@@ -67,7 +67,7 @@ final class Schema extends GraphQLSchema
                     );
 
                     if (! $scalarTypeDefinitions->contains($scalarTypeDefinition)) {
-                        throw new \LogicException("The type definition for '$typeName' does not exist.
+                        throw new MissingScalarTypeDefinitionSchemaException("The type definition for '$typeName' does not exist.
                             Kindly create it in '{$scalarTypeDefinitions->filePath($scalarTypeDefinition)}'.");
                     }
 
@@ -84,10 +84,10 @@ final class Schema extends GraphQLSchema
                     $typeConfig = \array_merge($typeConfig, [
                         'resolveType' => static function (array $value, array $context, ResolveInfo $resolveInfo): string {
                             $typeName = $value['__typename']
-                                ?? throw new \Exception('Invalid abstract type. Kindly specify \'__typename\' in the resolved result.');
+                                ?? throw new InvalidAbstractTypeSchemaException('Invalid abstract type. Kindly specify \'__typename\' in the resolved result.');
 
                             if (! \is_string($typeName)) {
-                                throw new \Exception('Inalid typename type. \'__typename\' must be a string.');
+                                throw new InvalidTypenameTypeSchemaException('Inalid typename type. \'__typename\' must be a string.');
                             }
 
                             return $typeName;
@@ -103,7 +103,7 @@ final class Schema extends GraphQLSchema
                     $document = AST::fromArray(require $cacheFile);
 
                     if (! $document instanceof DocumentNode) {
-                        throw new \Exception('Invalid schema. Could not be parsed as a document node.');
+                        throw new InvalidSchemaSchemaException('Invalid schema. Could not be parsed as a document node.');
                     }
 
                     return $document;
@@ -112,7 +112,7 @@ final class Schema extends GraphQLSchema
                 return Parser::parse(
                     source: \is_string($schemaFileContents = \file_get_contents($sourceFile))
                                 ? $schemaFileContents
-                                : throw new \Exception("Unable to read the schema file '{$sourceFile}'.")
+                                : throw new UnreadableSchemaFileSchemaException("Unable to read the schema file '{$sourceFile}'.")
                 );
             })();
 

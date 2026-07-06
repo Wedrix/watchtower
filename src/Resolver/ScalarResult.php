@@ -59,7 +59,7 @@ trait ScalarResult
                     return empty(\array_filter(\array_values($embeddedField))) ? null : $embeddedField;
                 }
 
-                throw new \Exception("Invalid root value. The field '$fieldName' is unset in the resolved root.");
+                throw new InvalidRootValueScalarResultException("Invalid root value. The field '$fieldName' is unset in the resolved root.");
             }
 
             return null;
