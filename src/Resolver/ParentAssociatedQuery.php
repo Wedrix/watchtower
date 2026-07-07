@@ -152,12 +152,12 @@ trait ParentAssociatedQuery
                 );
                 $parentAssociation = $parentAssociationNames[0];
 
-                $this->queryBuilder->join(
+                $this->queryBuilder->joinOnce(
                     $throughJoin,
                     $throughEntityAlias
                 );
 
-                $this->queryBuilder->join(
+                $this->queryBuilder->joinOnce(
                     "$throughEntityAlias.$parentAssociation",
                     $parentAlias
                 );
@@ -199,7 +199,7 @@ trait ParentAssociatedQuery
                         $this->queryBuilder->addSelect("IDENTITY($rootAlias.$mappedByAssociation, '$idFieldName') AS $parentIdResultAlias");
                     }
                 } else {
-                    $this->queryBuilder->join(
+                    $this->queryBuilder->joinOnce(
                         "$rootAlias.$mappedByAssociation",
                         $parentAlias
                     );
@@ -210,7 +210,7 @@ trait ParentAssociatedQuery
                 $inversedByAssociation = $parentEntity->associationInversedByTargetField($association);
 
                 if ($inversedByAssociation !== null) {
-                    $this->queryBuilder->join(
+                    $this->queryBuilder->joinOnce(
                         "$rootAlias.$inversedByAssociation",
                         $parentAlias
                     );

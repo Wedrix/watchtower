@@ -542,6 +542,163 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertSame(['Alan Turing'], $recommendingAuthorsByBookByAuthor['Alan Turing']['Zed Algorithms']);
     }
 
+    public function test_schema_declared_through_association_reuses_existing_join_alias(): void
+    {
+        $console = $this->createConsole();
+        $plugins = $console->plugins();
+
+        $console->addFilterPlugin('Book', 'throughRankAtLeast');
+        $filterPlugin = FilterPlugin('Book', 'throughRankAtLeast');
+        $this->writePluginFile(
+            $plugins->filePath($filterPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\FilterPlugin;
+
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+
+            function {$filterPlugin->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                \$rank = \$node->args()['queryParams']['filters']['throughRankAtLeast'] ?? null;
+
+                if (!\\is_int(\$rank)) {
+                    return;
+                }
+
+                \$throughJoin = \$queryBuilder->rootAlias() . '.bookRecommendations';
+                \$throughAlias = \$queryBuilder->joinAlias(
+                    \$throughJoin,
+                    'positionBookRecommendation'
+                );
+                \$queryBuilder->joinOnce(\$throughJoin, \$throughAlias);
+
+                \$rankParameter = \$queryBuilder->parameterName('recommendationRank');
+
+                \$queryBuilder
+                    ->andWhere("\$throughAlias.rank >= :\$rankParameter")
+                    ->setParameter(\$rankParameter, \$rank);
+            }
+            PHP
+        );
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              authors {
+                name
+                recommendedBooks(
+                  queryParams: {
+                    filters: { throughRankAtLeast: 1 }
+                  }
+                ) {
+                  title
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        $recommendedBooksByAuthor = [];
+
+        foreach (($result['data']['authors'] ?? []) as $author) {
+            $recommendedBooksByAuthor[(string) $author['name']] = \array_map(
+                static fn (array $recommendedBook): string => (string) $recommendedBook['title'],
+                $author['recommendedBooks'] ?? []
+            );
+
+            \sort($recommendedBooksByAuthor[(string) $author['name']]);
+        }
+
+        \ksort($recommendedBooksByAuthor);
+
+        self::assertSame(
+            [
+                'Ada Lovelace' => ['GraphQL Basics', 'PHP Patterns'],
+                'Alan Turing' => ['GraphQL Basics', 'Zed Algorithms'],
+            ],
+            $recommendedBooksByAuthor
+        );
+    }
+
+    public function test_parent_association_reuses_existing_framework_parent_join_alias(): void
+    {
+        $console = $this->createConsole();
+        $plugins = $console->plugins();
+
+        $console->addConstraintPlugin('Author');
+        $constraintPlugin = ConstraintPlugin('Author');
+        $this->writePluginFile(
+            $plugins->filePath($constraintPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\ConstraintPlugin;
+
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+
+            function {$constraintPlugin->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                if (\$node->isTopLevel()) {
+                    return;
+                }
+
+                \$queryBuilder->joinOnce(
+                    \$queryBuilder->rootAlias() . '.books',
+                    \$queryBuilder->parentAlias()
+                );
+            }
+            PHP
+        );
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books {
+                title
+                author {
+                  name
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        $authorsByBook = [];
+
+        foreach (($result['data']['books'] ?? []) as $book) {
+            $authorsByBook[(string) $book['title']] = (string) ($book['author']['name'] ?? '');
+        }
+
+        \ksort($authorsByBook);
+
+        self::assertSame(
+            [
+                'GraphQL Basics' => 'Ada Lovelace',
+                'GraphQL in Action' => 'Alan Turing',
+                'PHP Patterns' => 'Ada Lovelace',
+                'Zed Algorithms' => 'Alan Turing',
+            ],
+            $authorsByBook
+        );
+    }
+
     public function test_schema_declared_recommendation_fields_support_nested_collection_query_params(): void
     {
         $result = $this->executeQuery(
@@ -2658,6 +2815,7 @@ final class ExecutorWorkflowTest extends TestCase
         input BooksQueryFilters {
           titleContains: String
           authorNameContains: String
+          throughRankAtLeast: Int
           unimplemented: String
         }
 
