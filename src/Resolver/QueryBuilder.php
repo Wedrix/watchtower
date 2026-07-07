@@ -212,7 +212,7 @@ function QueryBuilder(
                 indexBy: $indexBy
             );
 
-            return $result;
+            return $this;
         }
 
         public function innerJoin(
@@ -241,7 +241,7 @@ function QueryBuilder(
                 indexBy: $indexBy
             );
 
-            return $result;
+            return $this;
         }
 
         public function leftJoin(
@@ -270,7 +270,7 @@ function QueryBuilder(
                 indexBy: $indexBy
             );
 
-            return $result;
+            return $this;
         }
 
         public function joinOnce(
@@ -575,7 +575,7 @@ function QueryBuilder(
                 }
 
                 if (isset($this->joinedSpecs[$specKey])) {
-                    return $this->doctrineQueryBuilder;
+                    return $this;
                 }
             }
 
@@ -753,7 +753,13 @@ function QueryBuilder(
                 throw new UnknownMethodQueryBuilderException("Method {$name} does not exist on ".self::class);
             }
 
-            return $this->doctrineQueryBuilder->$name(...$arguments);
+            $result = $this->doctrineQueryBuilder->$name(...$arguments);
+
+            if ($result === $this->doctrineQueryBuilder) {
+                return $this;
+            }
+
+            return $result;
         }
     };
 }
