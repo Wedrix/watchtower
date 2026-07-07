@@ -60,6 +60,10 @@ final class ConsoleWorkflowTest extends TestCase
             'type Query',
             (string) \file_get_contents($this->workspace->schemaFile())
         );
+        self::assertStringContainsString(
+            '_cursor: Cursor',
+            (string) \file_get_contents($this->workspace->schemaFile())
+        );
         self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/date_time_type_definition.php');
         self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/limit_type_definition.php');
         self::assertFileExists($this->workspace->scalarTypeDefinitionsDirectory().'/page_type_definition.php');

@@ -65,7 +65,8 @@ trait QueryResult
                 if (ResultBuffer()->has($batchKey)) {
                     $batchResult = ResultBuffer()->get($batchKey);
                 } else {
-                    $doctrineQuery = $this->query->builder()->getQuery();
+                    $queryBuilder = $this->query->builder();
+                    $doctrineQuery = $queryBuilder->getQuery();
 
                     // Nested collection pagination must happen per parent row,
                     // so we need to partition the batched result by the selected parent id aliases
@@ -80,7 +81,7 @@ trait QueryResult
                         }
 
                         $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
-                        $parentEntityAlias = $this->query->builder()->parentEntityAlias();
+                        $parentEntityAlias = $queryBuilder->parentEntityAlias();
 
                         $parentIdResultAliases = [];
 
@@ -120,6 +121,51 @@ trait QueryResult
                     }
 
                     $batchResult = $doctrineQuery->getResult();
+
+                    if ($queryBuilder->cursorProjectionEnabled()) {
+                        $cursorOrderings = $queryBuilder->cursorOrderings();
+
+                        // Build _cursor before buffering so nested batched relations reuse the same row data.
+                        $batchResult = \array_map(
+                            static function (mixed $resultRecord) use ($cursorOrderings): mixed {
+                                if (! \is_array($resultRecord)) {
+                                    return $resultRecord;
+                                }
+
+                                if (empty($cursorOrderings)) {
+                                    $resultRecord['_cursor'] = null;
+
+                                    return $resultRecord;
+                                }
+
+                                $cursor = [];
+
+                                foreach ($cursorOrderings as $cursorOrdering) {
+                                    $resultAlias = $cursorOrdering['resultAlias'];
+
+                                    if ($resultAlias === null || ! \array_key_exists($resultAlias, $resultRecord)) {
+                                        $resultRecord['_cursor'] = null;
+
+                                        return $resultRecord;
+                                    }
+
+                                    $cursorValue = $resultRecord[$resultAlias];
+
+                                    if ($cursorValue instanceof \DateTimeInterface) {
+                                        $cursorValue = $cursorValue->format(\DateTimeInterface::ATOM);
+                                    }
+
+                                    $cursor[$cursorOrdering['key']] = $cursorValue;
+                                    unset($resultRecord[$resultAlias]);
+                                }
+
+                                $resultRecord['_cursor'] = $cursor;
+
+                                return $resultRecord;
+                            },
+                            $batchResult
+                        );
+                    }
 
                     ResultBuffer()->add(
                         batchKey: $batchKey,

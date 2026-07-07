@@ -21,8 +21,12 @@ interface QueryBuilder
         ParameterType|ArrayParameterType|string|int|null $parameterType = null
     ): void;
 
+    public function enableCursorProjection(): void;
+
+    public function cursorProjectionEnabled(): bool;
+
     /**
-     * @return array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null}>
+     * @return array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null,resultAlias:string|null}>
      */
     public function cursorOrderings(): array;
 
@@ -61,6 +65,7 @@ function QueryBuilder(
             '__root',
             '__parent',
             '__primary',
+            '__cursor',
         ];
 
         /**
@@ -71,9 +76,11 @@ function QueryBuilder(
         private array $aliases = [];
 
         /**
-         * @var array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null}>
+         * @var array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null,resultAlias:string|null}>
          */
         private array $cursorOrderings = [];
+
+        private bool $cursorProjectionEnabled = false;
 
         private string $identifierAlias = '__primary';
 
@@ -110,7 +117,43 @@ function QueryBuilder(
                 'expression' => $expression,
                 'direction' => $direction,
                 'parameterType' => $parameterType,
+                'resultAlias' => null,
             ];
+
+            if ($this->cursorProjectionEnabled) {
+                $this->enableCursorProjection();
+            }
+        }
+
+        public function enableCursorProjection(): void
+        {
+            $this->cursorProjectionEnabled = true;
+
+            foreach ($this->cursorOrderings as $index => $cursorOrdering) {
+                if ($cursorOrdering['resultAlias'] !== null) {
+                    continue;
+                }
+
+                // Select cursor parts into row-only aliases so QueryResult can assemble _cursor.
+                $safeKey = \preg_replace('/[^A-Za-z0-9_]/', '_', $cursorOrdering['key']) ?? 'value';
+
+                if ($safeKey === '' || \ctype_digit($safeKey[0])) {
+                    $safeKey = 'value_'.$safeKey;
+                }
+
+                $resultAlias = "__cursor_{$index}_{$safeKey}";
+
+                $this->doctrineQueryBuilder->addSelect(
+                    "{$cursorOrdering['expression']} AS $resultAlias"
+                );
+
+                $this->cursorOrderings[$index]['resultAlias'] = $resultAlias;
+            }
+        }
+
+        public function cursorProjectionEnabled(): bool
+        {
+            return $this->cursorProjectionEnabled;
         }
 
         public function cursorOrderings(): array
@@ -134,7 +177,21 @@ function QueryBuilder(
                 }
 
                 foreach ($orderByPart->getParts() as $orderByItem) {
-                    $reversedOrderings[] = $this->reverseOrdering($orderByItem);
+                    $orderByItem = \trim($orderByItem);
+
+                    if (\preg_match('/\s+(ASC|DESC)$/i', $orderByItem, $matches) === 1) {
+                        $direction = \strtoupper($matches[1]);
+                        $expression = \trim(\substr($orderByItem, 0, -\strlen($matches[0])));
+                        $reversedOrderings[] = [
+                            $expression,
+                            $direction === 'ASC' ? 'DESC' : 'ASC',
+                        ];
+
+                        continue;
+                    }
+
+                    // Doctrine defaults directionless ORDER BY items to ASC, so reverse them to DESC.
+                    $reversedOrderings[] = [$orderByItem, 'DESC'];
                 }
             }
 
@@ -147,26 +204,6 @@ function QueryBuilder(
             foreach ($reversedOrderings as [$expression, $direction]) {
                 $this->doctrineQueryBuilder->addOrderBy($expression, $direction);
             }
-        }
-
-        /**
-         * @return array{0:string,1:'ASC'|'DESC'}
-         */
-        private function reverseOrdering(string $ordering): array
-        {
-            $ordering = \trim($ordering);
-
-            if (\preg_match('/\s+(ASC|DESC)$/i', $ordering, $matches) === 1) {
-                $direction = \strtoupper($matches[1]);
-                $expression = \trim(\substr($ordering, 0, -\strlen($matches[0])));
-
-                return [
-                    $expression,
-                    $direction === 'ASC' ? 'DESC' : 'ASC',
-                ];
-            }
-
-            return [$ordering, 'DESC'];
         }
 
         public function identifierAlias(): string

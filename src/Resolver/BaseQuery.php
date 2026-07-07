@@ -34,6 +34,10 @@ trait BaseQuery
 
                 $selectedNodeFields = \array_keys($nodeFieldsSelection);
 
+                if (\in_array('_cursor', $selectedNodeFields, true)) {
+                    $queryBuilder->enableCursorProjection();
+                }
+
                 $queryBuilder->from(
                     from: $rootEntity->class(),
                     alias: $rootEntityAlias
@@ -44,30 +48,33 @@ trait BaseQuery
                  */
                 $selectedScalarEntityFields = \array_filter(
                     $rootEntity->scalarFieldNames(),
-                    static fn (string $selectedScalarEntityField) => \in_array($selectedScalarEntityField, $rootEntity->idFieldNames())
-                        || \in_array($selectedScalarEntityField, $selectedNodeFields)
-                        || \array_reduce(
-                            $selectedNodeFields,
-                            static function (bool $isSelectedEmbeddedField, string $selectedNodeField) use ($selectedScalarEntityField, $nodeFieldsSelection) {
-                                /**
-                                 * @var array<string,mixed>
-                                 */
-                                $subFieldsSelection = $nodeFieldsSelection[$selectedNodeField]['fields'] ?? [];
+                    static fn (string $selectedScalarEntityField) => $selectedScalarEntityField !== '_cursor'
+                        && (
+                            \in_array($selectedScalarEntityField, $rootEntity->idFieldNames())
+                            || \in_array($selectedScalarEntityField, $selectedNodeFields)
+                            || \array_reduce(
+                                $selectedNodeFields,
+                                static function (bool $isSelectedEmbeddedField, string $selectedNodeField) use ($selectedScalarEntityField, $nodeFieldsSelection) {
+                                    /**
+                                     * @var array<string,mixed>
+                                     */
+                                    $subFieldsSelection = $nodeFieldsSelection[$selectedNodeField]['fields'] ?? [];
 
-                                if (! empty($subFieldsSelection)) {
-                                    $requestedSubFields = \array_keys($subFieldsSelection);
+                                    if (! empty($subFieldsSelection)) {
+                                        $requestedSubFields = \array_keys($subFieldsSelection);
 
-                                    $selectedEmbeddedFields = \array_map(
-                                        static fn (string $requestedSubField) => "$selectedNodeField.$requestedSubField",
-                                        $requestedSubFields
-                                    );
+                                        $selectedEmbeddedFields = \array_map(
+                                            static fn (string $requestedSubField) => "$selectedNodeField.$requestedSubField",
+                                            $requestedSubFields
+                                        );
 
-                                    return $isSelectedEmbeddedField || \in_array($selectedScalarEntityField, $selectedEmbeddedFields);
-                                }
+                                        return $isSelectedEmbeddedField || \in_array($selectedScalarEntityField, $selectedEmbeddedFields);
+                                    }
 
-                                return $isSelectedEmbeddedField;
-                            },
-                            false
+                                    return $isSelectedEmbeddedField;
+                                },
+                                false
+                            )
                         )
                 );
 

@@ -153,6 +153,8 @@ final class SyncedQuerySchema extends GraphQLSchema
                             }
                         }
 
+                        $fields['_cursor'] = $scalars['Cursor'];
+
                         foreach ($entity->associationFieldNames() as $associationName) {
                             $associatedEntityName = $entity->associationTargetEntity($associationName);
 

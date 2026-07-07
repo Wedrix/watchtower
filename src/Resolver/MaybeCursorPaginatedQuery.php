@@ -36,13 +36,31 @@ trait MaybeCursorPaginatedQuery
             throw new CursorWithPageQueryException('Invalid query. The page parameter cannot be combined with cursor pagination.');
         }
 
-        $cursor = $this->cursorValues($after ?? $before);
+        $cursor = $after ?? $before;
+
+        if (! \is_array($cursor)) {
+            throw new InvalidCursorValueQueryException('Invalid Cursor value. The Cursor scalar must parse to an array.');
+        }
+
         $isBeforeCursor = $before !== null;
 
         $cursorOrderings = $this->queryBuilder->cursorOrderings();
 
         if (empty($cursorOrderings)) {
             throw new MissingCursorOrderingMetadataQueryException('Invalid query. Cursor pagination requires cursor-capable ordering metadata from an active ordering plugin.');
+        }
+
+        $cursorParameterNames = [];
+
+        foreach ($cursorOrderings as $index => $cursorOrdering) {
+            // Cursor keys can be arbitrary API names; Doctrine parameter names need safe identifiers.
+            $safeKey = \preg_replace('/[^A-Za-z0-9_]/', '_', $cursorOrdering['key']) ?? 'value';
+
+            if ($safeKey === '' || \ctype_digit($safeKey[0])) {
+                $safeKey = 'value_'.$safeKey;
+            }
+
+            $cursorParameterNames[$index] = "cursor_{$index}_{$safeKey}";
         }
 
         $orConditions = $this->queryBuilder->expr()->orX();
@@ -52,7 +70,7 @@ trait MaybeCursorPaginatedQuery
 
             for ($previousIndex = 0; $previousIndex < $index; $previousIndex++) {
                 $previousCursorOrdering = $cursorOrderings[$previousIndex];
-                $previousParamName = $this->cursorParameterName($previousCursorOrdering['key'], $previousIndex);
+                $previousParamName = $cursorParameterNames[$previousIndex];
 
                 $andConditions->add(
                     $this->queryBuilder->expr()
@@ -60,8 +78,14 @@ trait MaybeCursorPaginatedQuery
                 );
             }
 
-            $paramName = $this->cursorParameterName($cursorOrdering['key'], $index);
-            $comparator = $this->cursorComparator($cursorOrdering['direction'], $isBeforeCursor);
+            $paramName = $cursorParameterNames[$index];
+            $comparator = $cursorOrdering['direction'] === 'ASC' ? '>' : '<';
+
+            // A before cursor walks the same ordering from the other side.
+            if ($isBeforeCursor) {
+                $comparator = $comparator === '>' ? '<' : '>';
+            }
+
             $expression = $cursorOrdering['expression'];
 
             $andConditions->add(
@@ -86,7 +110,7 @@ trait MaybeCursorPaginatedQuery
                 throw new InvalidCursorKeyValueQueryException("Invalid Cursor value. Cursor key '$key' must contain a scalar value.");
             }
 
-            $paramName = $this->cursorParameterName($key, $index);
+            $paramName = $cursorParameterNames[$index];
             $parameterType = $cursorOrdering['parameterType'];
 
             if ($parameterType === null) {
@@ -103,44 +127,6 @@ trait MaybeCursorPaginatedQuery
         }
 
         $this->queryBuilder->andWhere($orConditions);
-    }
-
-    /**
-     * @return array<string,mixed>
-     */
-    private function cursorValues(mixed $cursor): array
-    {
-        if (\is_array($cursor)) {
-            return $cursor;
-        }
-
-        throw new InvalidCursorValueQueryException('Invalid Cursor value. The Cursor scalar must parse to an array.');
-    }
-
-    private function cursorComparator(
-        string $direction,
-        bool $isBeforeCursor
-    ): string {
-        $comparator = $direction === 'ASC' ? '>' : '<';
-
-        if (! $isBeforeCursor) {
-            return $comparator;
-        }
-
-        return $comparator === '>' ? '<' : '>';
-    }
-
-    private function cursorParameterName(
-        string $key,
-        int $index
-    ): string {
-        $safeKey = \preg_replace('/[^A-Za-z0-9_]/', '_', $key) ?? 'value';
-
-        if ($safeKey === '' || \ctype_digit($safeKey[0])) {
-            $safeKey = 'value_'.$safeKey;
-        }
-
-        return "cursor_{$index}_{$safeKey}";
     }
 
     public function builder(): QueryBuilder

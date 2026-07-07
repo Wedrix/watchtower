@@ -45,8 +45,11 @@ function BatchKey(
                 };
 
                 $sortedArgs = $sortArgs($args);
+                $cursorSelection = \array_key_exists('_cursor', $this->node->concreteFieldsSelection())
+                    ? 'cursor'
+                    : 'no-cursor';
 
-                return $this->node->unwrappedParentType().'|'.$this->node->name().'|'.\json_encode($sortedArgs);
+                return $this->node->unwrappedParentType().'|'.$this->node->name().'|'.$cursorSelection.'|'.\json_encode($sortedArgs);
             })();
         }
 

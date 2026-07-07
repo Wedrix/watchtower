@@ -282,21 +282,31 @@ query {
 Use cursor pagination with `after` or `before`, usually with `limit` and a deterministic ordering:
 
 ```graphql
-query($cursor: Cursor!) {
+query {
   books(
     queryParams: {
       ordering: { titleAsc: { rank: 1 } }
-      after: $cursor
       limit: 20
     }
   ) {
+    _cursor
     id
     title
   }
 }
 ```
 
-The built-in `Cursor` scalar expects a base64-encoded JSON object. Cursor pagination requires at least one selected ordering plugin that calls `$queryBuilder->registerCursorOrdering()`. When a cursor query includes multiple orderings, Watchtower runs their plugins in `rank` order and combines the cursor metadata they register. The cursor payload must contain values for every registered cursor key; the order of keys in the JSON object does not matter.
+Use the last returned row's `_cursor` as `after` for the next page, or the first returned row's `_cursor` as `before` for the previous page. `_cursor` is a nullable virtual field reserved by Watchtower for cursor metadata, so it must be declared on manually maintained entity types:
+
+```graphql
+type Book {
+  _cursor: Cursor
+  id: ID!
+  title: String!
+}
+```
+
+The built-in `Cursor` scalar expects a base64-encoded JSON object. Cursor pagination and `_cursor` values require at least one selected ordering plugin that calls `$queryBuilder->registerCursorOrdering()`. When a cursor query includes multiple orderings, Watchtower runs their plugins in `rank` order and combines the cursor metadata they register. The cursor payload must contain values for every registered cursor key; the order of keys in the JSON object does not matter.
 
 ```php
 $cursor = base64_encode(json_encode([

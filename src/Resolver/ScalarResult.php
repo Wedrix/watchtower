@@ -15,7 +15,7 @@ trait ScalarResult
         private Node $node,
         private EntityManager $entityManager
     ) {
-        $this->isWorkable = (
+        $this->isWorkable = $this->node->name() === '_cursor' || (
             (\in_array($this->node->name(), \array_keys($this->node->root())))
             || (
                 ! $this->node->isTopLevel()
@@ -57,6 +57,10 @@ trait ScalarResult
                     }
 
                     return empty(\array_filter(\array_values($embeddedField))) ? null : $embeddedField;
+                }
+
+                if ($fieldName === '_cursor') {
+                    return null;
                 }
 
                 throw new InvalidRootValueScalarResultException("Invalid root value. The field '$fieldName' is unset in the resolved root.");

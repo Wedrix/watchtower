@@ -588,6 +588,207 @@ final class ExecutorWorkflowTest extends TestCase
         );
     }
 
+    public function test_virtual_cursor_field_returns_cursor_values_for_ordered_collections(): void
+    {
+        $firstPageResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(
+                queryParams: {
+                  ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  limit: 2
+                }
+              ) {
+                _cursor
+                title
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($firstPageResult);
+
+        $books = $firstPageResult['data']['books'] ?? [];
+
+        self::assertCount(2, $books);
+        self::assertSame('GraphQL Basics', $books[0]['title']);
+        self::assertSame('GraphQL in Action', $books[1]['title']);
+
+        // Decode the scalar output to assert the generated cursor payload directly.
+        $decodedCursor = \json_decode((string) \base64_decode((string) $books[0]['_cursor'], true), true, flags: \JSON_THROW_ON_ERROR);
+
+        if (! \is_array($decodedCursor)) {
+            throw new \RuntimeException('Expected decoded cursor to be an array.');
+        }
+
+        self::assertSame(
+            [
+                'title' => 'graphql basics',
+                'id' => $this->firstBookId,
+            ],
+            $decodedCursor
+        );
+
+        $secondPageResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              books(
+                queryParams: {
+                  ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  after: $cursor
+                  limit: 2
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $books[1]['_cursor'],
+            ]
+        );
+
+        $this->assertNoErrors($secondPageResult);
+
+        self::assertSame(
+            ['PHP Patterns', 'Zed Algorithms'],
+            \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $secondPageResult['data']['books'] ?? []
+            )
+        );
+    }
+
+    public function test_virtual_cursor_field_does_not_reuse_non_cursor_batch_results(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              withoutCursor: books(
+                queryParams: {
+                  ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  limit: 1
+                }
+              ) {
+                title
+              }
+              withCursor: books(
+                queryParams: {
+                  ordering: { titleAsc: { rank: 1, params: { direction: "ASC" } } }
+                  limit: 1
+                }
+              ) {
+                _cursor
+                title
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame('GraphQL Basics', $result['data']['withoutCursor'][0]['title'] ?? null);
+        self::assertSame('GraphQL Basics', $result['data']['withCursor'][0]['title'] ?? null);
+
+        $decodedCursor = \json_decode(
+            (string) \base64_decode((string) ($result['data']['withCursor'][0]['_cursor'] ?? ''), true),
+            true,
+            flags: \JSON_THROW_ON_ERROR
+        );
+
+        if (! \is_array($decodedCursor)) {
+            throw new \RuntimeException('Expected decoded cursor to be an array.');
+        }
+
+        self::assertSame(
+            [
+                'title' => 'graphql basics',
+                'id' => $this->firstBookId,
+            ],
+            $decodedCursor
+        );
+    }
+
+    public function test_virtual_cursor_field_normalizes_datetime_values_for_reuse(): void
+    {
+        $firstPageResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(
+                queryParams: {
+                  ordering: { publishedAtAsc: { rank: 1 } }
+                  limit: 1
+                }
+              ) {
+                _cursor
+                title
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($firstPageResult);
+
+        $cursor = (string) ($firstPageResult['data']['books'][0]['_cursor'] ?? '');
+        $decodedCursor = \json_decode((string) \base64_decode($cursor, true), true, flags: \JSON_THROW_ON_ERROR);
+
+        if (! \is_array($decodedCursor)) {
+            throw new \RuntimeException('Expected decoded cursor to be an array.');
+        }
+
+        self::assertSame(
+            [
+                'publishedAt' => '2024-01-01T00:00:00+00:00',
+                'id' => $this->firstBookId,
+            ],
+            $decodedCursor
+        );
+
+        $secondPageResult = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($cursor: Cursor!) {
+              books(
+                queryParams: {
+                  ordering: { publishedAtAsc: { rank: 1 } }
+                  after: $cursor
+                  limit: 1
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [],
+            [
+                'cursor' => $cursor,
+            ]
+        );
+
+        $this->assertNoErrors($secondPageResult);
+
+        self::assertSame('PHP Patterns', $secondPageResult['data']['books'][0]['title'] ?? null);
+    }
+
+    public function test_virtual_cursor_field_is_null_without_cursor_ordering_metadata(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(queryParams: { limit: 1 }) {
+                _cursor
+                title
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertArrayHasKey('_cursor', $result['data']['books'][0] ?? []);
+        self::assertNull($result['data']['books'][0]['_cursor']);
+    }
+
     public function test_nested_collection_cursor_pagination_reuses_per_parent_limit_walker(): void
     {
         $result = $this->executeQuery(
@@ -1488,6 +1689,43 @@ final class ExecutorWorkflowTest extends TestCase
             PHP
         );
 
+        $console->addOrderingPlugin('Book', 'publishedAtAsc');
+        $publishedAtOrderingPlugin = OrderingPlugin('Book', 'publishedAtAsc');
+
+        $this->writePluginFile(
+            $plugins->filePath($publishedAtOrderingPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\OrderingPlugin;
+
+            use Doctrine\\DBAL\\ParameterType;
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+
+            function {$publishedAtOrderingPlugin->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                \$entityAlias = \$queryBuilder->rootEntityAlias();
+                \$publishedAtOrderAlias = \$queryBuilder->reconciledAlias('publishedAtOrder');
+                \$idOrderAlias = \$queryBuilder->reconciledAlias('publishedAtIdOrder');
+
+                \$queryBuilder
+                    ->addSelect("\$entityAlias.publishedAt AS HIDDEN \$publishedAtOrderAlias")
+                    ->addSelect("\$entityAlias.id AS HIDDEN \$idOrderAlias")
+                    ->addOrderBy(\$publishedAtOrderAlias, 'ASC')
+                    ->addOrderBy(\$idOrderAlias, 'ASC');
+
+                \$queryBuilder->registerCursorOrdering('publishedAt', "\$entityAlias.publishedAt", 'ASC', ParameterType::STRING);
+                \$queryBuilder->registerCursorOrdering('id', "\$entityAlias.id", 'ASC', ParameterType::INTEGER);
+            }
+            PHP
+        );
+
         $console->addOrderingPlugin('Book', 'legacyTitleAsc');
         $legacyOrderingPlugin = OrderingPlugin('Book', 'legacyTitleAsc');
         $this->writePluginFile(
@@ -1843,6 +2081,7 @@ final class ExecutorWorkflowTest extends TestCase
         }
 
         type Author {
+          _cursor: Cursor
           id: ID!
           name: String!
           profile: AuthorProfile
@@ -1852,12 +2091,14 @@ final class ExecutorWorkflowTest extends TestCase
         }
 
         type AuthorProfile {
+          _cursor: Cursor
           id: ID!
           bio: String!
           author: Author!
         }
 
         type Book {
+          _cursor: Cursor
           id: ID!
           title: String!
           price: Float!
@@ -1875,6 +2116,7 @@ final class ExecutorWorkflowTest extends TestCase
         }
 
         type Tag {
+          _cursor: Cursor
           id: ID!
           name: String!
           books(queryParams: BooksQueryParams): [Book!]!
@@ -1922,6 +2164,7 @@ final class ExecutorWorkflowTest extends TestCase
 
         input BooksQueryOrdering {
           titleAsc: BooksOrderingRule
+          publishedAtAsc: BooksOrderingRule
           legacyTitleAsc: BooksOrderingRule
           unimplemented: BooksOrderingRule
         }
