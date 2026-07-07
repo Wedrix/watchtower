@@ -12,11 +12,11 @@ interface ResultBuffer
     ): void;
 
     public function has(
-        BatchKey $batchKey,
+        BatchKey $batchKey
     ): bool;
 
     public function get(
-        BatchKey $batchKey,
+        BatchKey $batchKey
     ): mixed;
 
     public function clear(): void;
@@ -46,13 +46,13 @@ function ResultBuffer(): ResultBuffer
         }
 
         public function has(
-            BatchKey $batchKey,
+            BatchKey $batchKey
         ): bool {
             return isset($this->keys[$batchKey->value()]);
         }
 
         public function get(
-            BatchKey $batchKey,
+            BatchKey $batchKey
         ): mixed {
             if (! $this->has($batchKey)) {
                 throw new MissingResultBufferBatchKeyException(

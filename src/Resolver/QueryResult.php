@@ -10,6 +10,7 @@ use Doctrine\ORM\Query as DoctrineQuery;
 use GraphQL\Deferred;
 use Wedrix\Watchtower\Plugins;
 
+use function Wedrix\Watchtower\reservedFieldResultKey;
 use function Wedrix\Watchtower\ResolverPlugin;
 use function Wedrix\Watchtower\SearchResolverPlugin;
 
@@ -60,19 +61,30 @@ trait QueryResult
                 $limit = $queryParams['limit'] ?? null;
                 $before = $queryParams['before'] ?? null;
 
+                $queryBuilder = $this->query->builder();
+                $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
+                $cursorFieldNames = \array_keys(
+                    \array_filter(
+                        $rootEntity->reservedFields(),
+                        static fn (string $reservedFieldType): bool => $reservedFieldType === 'Cursor'
+                    )
+                );
+
+                if ($queryBuilder->cursorOrderings() !== []) {
+                    $queryBuilder->enableCursorProjection();
+                }
+
+                $cursorOrderings = $queryBuilder->cursorOrderings();
                 $batchKey = BatchKey(node: $this->node);
 
                 if (ResultBuffer()->has($batchKey)) {
                     $batchResult = ResultBuffer()->get($batchKey);
                 } else {
-                    $queryBuilder = $this->query->builder();
                     $doctrineQuery = $queryBuilder->getQuery();
 
                     // Nested collection pagination must happen per parent row,
                     // so we need to partition the batched result by the selected parent id aliases
                     if (! $this->node->isTopLevel() && $this->node->isACollection() && $limit !== null) {
-                        $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
-
                         if (
                             \count($rootEntity->idFieldNames()) !== 1
                             || \in_array($rootEntity->idFieldNames()[0], $rootEntity->associationFieldNames())
@@ -81,7 +93,7 @@ trait QueryResult
                         }
 
                         $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
-                        $parentEntityAlias = $queryBuilder->parentEntityAlias();
+                        $parentAlias = $queryBuilder->parentAlias();
 
                         $parentIdResultAliases = [];
 
@@ -94,13 +106,13 @@ trait QueryResult
                                 );
 
                                 foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
-                                    $parentIdResultAliases[] = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
+                                    $parentIdResultAliases[] = "{$parentAlias}_{$idFieldName}_{$targetIdFieldName}";
                                 }
 
                                 continue;
                             }
 
-                            $parentIdResultAliases[] = "{$parentEntityAlias}_$idFieldName";
+                            $parentIdResultAliases[] = "{$parentAlias}_$idFieldName";
                         }
 
                         $page = (int) ($queryParams['page'] ?? 1);
@@ -122,50 +134,47 @@ trait QueryResult
 
                     $batchResult = $doctrineQuery->getResult();
 
-                    if ($queryBuilder->cursorProjectionEnabled()) {
-                        $cursorOrderings = $queryBuilder->cursorOrderings();
+                    // Build reserved virtual fields before buffering so all aliases of the same
+                    // collection reuse one row shape.
+                    foreach ($batchResult as &$resultRecord) {
+                        if (! \is_array($resultRecord)) {
+                            continue;
+                        }
 
-                        // Build _cursor before buffering so nested batched relations reuse the same row data.
-                        $batchResult = \array_map(
-                            static function (mixed $resultRecord) use ($cursorOrderings): mixed {
-                                if (! \is_array($resultRecord)) {
-                                    return $resultRecord;
-                                }
+                        $cursor = $cursorOrderings === [] ? null : [];
 
-                                if (empty($cursorOrderings)) {
-                                    $resultRecord['_cursor'] = null;
+                        foreach ($cursorOrderings as $cursorOrdering) {
+                            $resultAlias = $cursorOrdering['resultAlias'];
 
-                                    return $resultRecord;
-                                }
+                            if ($resultAlias === null || ! \array_key_exists($resultAlias, $resultRecord)) {
+                                $cursor = null;
 
-                                $cursor = [];
+                                break;
+                            }
 
-                                foreach ($cursorOrderings as $cursorOrdering) {
-                                    $resultAlias = $cursorOrdering['resultAlias'];
+                            $cursorValue = $resultRecord[$resultAlias];
 
-                                    if ($resultAlias === null || ! \array_key_exists($resultAlias, $resultRecord)) {
-                                        $resultRecord['_cursor'] = null;
+                            if ($cursorValue instanceof \DateTimeInterface) {
+                                $cursorValue = $cursorValue->format(\DateTimeInterface::ATOM);
+                            }
 
-                                        return $resultRecord;
-                                    }
+                            $cursor[$cursorOrdering['key']] = $cursorValue;
+                        }
 
-                                    $cursorValue = $resultRecord[$resultAlias];
+                        foreach ($cursorOrderings as $cursorOrdering) {
+                            $resultAlias = $cursorOrdering['resultAlias'];
 
-                                    if ($cursorValue instanceof \DateTimeInterface) {
-                                        $cursorValue = $cursorValue->format(\DateTimeInterface::ATOM);
-                                    }
+                            if ($cursorOrdering['resultAliasIsInternal'] && $resultAlias !== null) {
+                                unset($resultRecord[$resultAlias]);
+                            }
+                        }
 
-                                    $cursor[$cursorOrdering['key']] = $cursorValue;
-                                    unset($resultRecord[$resultAlias]);
-                                }
-
-                                $resultRecord['_cursor'] = $cursor;
-
-                                return $resultRecord;
-                            },
-                            $batchResult
-                        );
+                        foreach ($cursorFieldNames as $cursorFieldName) {
+                            $resultRecord[reservedFieldResultKey($cursorFieldName)] = $cursor;
+                        }
                     }
+
+                    unset($resultRecord);
 
                     ResultBuffer()->add(
                         batchKey: $batchKey,
@@ -178,13 +187,13 @@ trait QueryResult
                     if (! $this->node->isTopLevel()) {
                         $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
 
-                        $parentEntityAlias = $this->query->builder()->parentEntityAlias();
+                        $parentAlias = $this->query->builder()->parentAlias();
 
                         // Extract this node's parent ID
                         $parentId = $this->node->parentId();
 
                         // Filter batch to get only results for this node's parent
-                        $batchResult = \array_filter($batchResult, function ($resultRecord) use ($parentEntity, $parentEntityAlias, $parentId): bool {
+                        $batchResult = \array_filter($batchResult, function ($resultRecord) use ($parentEntity, $parentAlias, $parentId): bool {
                             // Check parent ID fields that were added to the query
                             foreach ($parentEntity->idFieldNames() as $idFieldName) {
                                 if (\in_array($idFieldName, $parentEntity->associationFieldNames())) {
@@ -195,7 +204,7 @@ trait QueryResult
                                     );
 
                                     foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
-                                        $parentIdKey = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
+                                        $parentIdKey = "{$parentAlias}_{$idFieldName}_{$targetIdFieldName}";
                                         if (
                                             ! isset($resultRecord[$parentIdKey])
                                             || ! $this->entityManager->identifiersMatch(
@@ -207,7 +216,7 @@ trait QueryResult
                                         }
                                     }
                                 } else {
-                                    $parentIdKey = "{$parentEntityAlias}_$idFieldName";
+                                    $parentIdKey = "{$parentAlias}_$idFieldName";
                                     if (
                                         ! isset($resultRecord[$parentIdKey])
                                         || ! $this->entityManager->identifiersMatch(

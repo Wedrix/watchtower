@@ -63,11 +63,11 @@ trait ParentAssociatedQuery
 
             $association = $this->node->name();
 
-            $rootEntityAlias = $this->queryBuilder->rootEntityAlias();
+            $rootAlias = $this->queryBuilder->rootAlias();
 
-            $parentEntityAlias = $this->queryBuilder->parentEntityAlias();
+            $parentAlias = $this->queryBuilder->parentAlias();
 
-            $constrainByParentEntityAlias = function () use ($parentEntity, $parentEntityAlias, $parentIds): void {
+            $constrainByParentAlias = function () use ($parentEntity, $parentAlias, $parentIds): void {
                 $idFieldNames = $parentEntity->idFieldNames();
 
                 // Build OR conditions for composite key matching
@@ -77,12 +77,12 @@ trait ParentAssociatedQuery
                     $andConditions = $this->queryBuilder->expr()->andX();
 
                     foreach ($idFieldNames as $idFieldName) {
-                        $paramName = "{$parentEntityAlias}_{$idFieldName}_{$index}";
+                        $parentIdParameter = "{$parentAlias}_{$idFieldName}_{$index}";
                         $andConditions->add(
                             $this->queryBuilder->expr()
-                                ->eq("$parentEntityAlias.$idFieldName", ":$paramName")
+                                ->eq("$parentAlias.$idFieldName", ":$parentIdParameter")
                         );
-                        $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
+                        $this->queryBuilder->setParameter($parentIdParameter, $parentId[$idFieldName]);
                     }
 
                     $orConditions->add($andConditions);
@@ -99,15 +99,15 @@ trait ParentAssociatedQuery
                         );
 
                         foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
-                            $idNameAlias = "{$parentEntityAlias}_{$idFieldName}_{$targetIdFieldName}";
-                            $this->queryBuilder->addSelect("IDENTITY($parentEntityAlias.$idFieldName, '$targetIdFieldName') AS $idNameAlias");
+                            $parentIdResultAlias = "{$parentAlias}_{$idFieldName}_{$targetIdFieldName}";
+                            $this->queryBuilder->addSelect("IDENTITY($parentAlias.$idFieldName, '$targetIdFieldName') AS $parentIdResultAlias");
                         }
 
                         continue;
                     }
 
-                    $idNameAlias = "{$parentEntityAlias}_$idFieldName";
-                    $this->queryBuilder->addSelect("$parentEntityAlias.$idFieldName AS $idNameAlias");
+                    $parentIdResultAlias = "{$parentAlias}_$idFieldName";
+                    $this->queryBuilder->addSelect("$parentAlias.$idFieldName AS $parentIdResultAlias");
                 }
             };
 
@@ -145,20 +145,24 @@ trait ParentAssociatedQuery
                     throw new InvalidAssociationConfigurationParentAssociatedQueryException("Invalid @watchtowerAssociation configuration for '{$fieldName}'. The through entity '{$throughEntity->name()}' must define exactly one association to parent entity '{$parentEntity->name()}'; found {$matches}.");
                 }
 
-                $throughEntityAlias = $this->queryBuilder->reconciledAlias('watchtowerThrough');
+                $throughJoin = "$rootAlias.$throughAssociation";
+                $throughEntityAlias = $this->queryBuilder->joinAlias(
+                    $throughJoin,
+                    'watchtowerThrough'
+                );
                 $parentAssociation = $parentAssociationNames[0];
 
                 $this->queryBuilder->join(
-                    "$rootEntityAlias.$throughAssociation",
+                    $throughJoin,
                     $throughEntityAlias
                 );
 
                 $this->queryBuilder->join(
                     "$throughEntityAlias.$parentAssociation",
-                    $parentEntityAlias
+                    $parentAlias
                 );
 
-                $constrainByParentEntityAlias();
+                $constrainByParentAlias();
 
                 return $this->queryBuilder;
             }
@@ -177,12 +181,12 @@ trait ParentAssociatedQuery
                         $andConditions = $this->queryBuilder->expr()->andX();
 
                         foreach ($idFieldNames as $idFieldName) {
-                            $paramName = "{$parentEntityAlias}_{$idFieldName}_{$index}";
+                            $parentIdParameter = "{$parentAlias}_{$idFieldName}_{$index}";
                             $andConditions->add(
                                 $this->queryBuilder->expr()
-                                    ->eq("IDENTITY($rootEntityAlias.$mappedByAssociation, '$idFieldName')", ":$paramName")
+                                    ->eq("IDENTITY($rootAlias.$mappedByAssociation, '$idFieldName')", ":$parentIdParameter")
                             );
-                            $this->queryBuilder->setParameter($paramName, $parentId[$idFieldName]);
+                            $this->queryBuilder->setParameter($parentIdParameter, $parentId[$idFieldName]);
                         }
 
                         $orConditions->add($andConditions);
@@ -191,45 +195,45 @@ trait ParentAssociatedQuery
                     $this->queryBuilder->andWhere($orConditions);
 
                     foreach ($idFieldNames as $idFieldName) {
-                        $idNameAlias = "{$parentEntityAlias}_$idFieldName";
-                        $this->queryBuilder->addSelect("IDENTITY($rootEntityAlias.$mappedByAssociation, '$idFieldName') AS $idNameAlias");
+                        $parentIdResultAlias = "{$parentAlias}_$idFieldName";
+                        $this->queryBuilder->addSelect("IDENTITY($rootAlias.$mappedByAssociation, '$idFieldName') AS $parentIdResultAlias");
                     }
                 } else {
                     $this->queryBuilder->join(
-                        "$rootEntityAlias.$mappedByAssociation",
-                        $parentEntityAlias
+                        "$rootAlias.$mappedByAssociation",
+                        $parentAlias
                     );
 
-                    $constrainByParentEntityAlias();
+                    $constrainByParentAlias();
                 }
             } else {
                 $inversedByAssociation = $parentEntity->associationInversedByTargetField($association);
 
                 if ($inversedByAssociation !== null) {
                     $this->queryBuilder->join(
-                        "$rootEntityAlias.$inversedByAssociation",
-                        $parentEntityAlias
+                        "$rootAlias.$inversedByAssociation",
+                        $parentAlias
                     );
                 } else {
                     $this->queryBuilder->from(
                         $parentEntity->class(),
-                        $parentEntityAlias
+                        $parentAlias
                     );
 
                     if ($parentEntity->associationIsSingleValued($association)) {
                         $this->queryBuilder->andWhere(
                             $this->queryBuilder->expr()
-                                ->eq("$parentEntityAlias.$association", $rootEntityAlias)
+                                ->eq("$parentAlias.$association", $rootAlias)
                         );
                     } else {
                         $this->queryBuilder->andWhere(
                             $this->queryBuilder->expr()
-                                ->isMemberOf($rootEntityAlias, "$parentEntityAlias.$association")
+                                ->isMemberOf($rootAlias, "$parentAlias.$association")
                         );
                     }
                 }
 
-                $constrainByParentEntityAlias();
+                $constrainByParentAlias();
             }
         }
 

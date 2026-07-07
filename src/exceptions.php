@@ -80,6 +80,8 @@ namespace Wedrix\Watchtower {
     final class InvalidEntityManagerException extends BaseException {}
 
     final class MissingEntityEntityException extends BaseException {}
+
+    final class ReservedFieldNameEntityException extends BaseException {}
 }
 
 namespace Wedrix\Watchtower\Resolver {
@@ -94,6 +96,12 @@ namespace Wedrix\Watchtower\Resolver {
     final class EmptyCursorOrderingExpressionQueryBuilderException extends BaseException {}
 
     final class ReservedAliasQueryBuilderException extends BaseException {}
+
+    final class DuplicateJoinPathQueryBuilderException extends BaseException {}
+
+    final class ConflictingJoinAliasQueryBuilderException extends BaseException {}
+
+    final class InvalidJoinConditionTypeQueryBuilderException extends BaseException {}
 
     final class UnknownMethodQueryBuilderException extends BaseException {}
 

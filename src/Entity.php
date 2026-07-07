@@ -28,6 +28,13 @@ interface Entity
      */
     public function associationFieldNames(): array;
 
+    /**
+     * @return array<string,string>
+     *
+     * Map of GraphQL field name to GraphQL type name reserved by Watchtower.
+     */
+    public function reservedFields(): array;
+
     public function hasEmbeddedField(
         string $fieldName
     ): bool;
@@ -110,6 +117,11 @@ function Entity(
          */
         private array $associationFieldNames;
 
+        /**
+         * @var array<string,string>
+         */
+        private array $reservedFields;
+
         public function __construct(
             private string $name,
             private EntityManagerInterface $entityManager
@@ -132,6 +144,26 @@ function Entity(
             $this->idFieldNames = $this->metadata->getIdentifierFieldNames();
 
             $this->associationFieldNames = $this->metadata->getAssociationNames();
+
+            $this->reservedFields = [
+                '_cursor' => 'Cursor',
+            ];
+
+            $reservedFieldNames = \array_values(
+                \array_intersect(
+                    \array_keys($this->reservedFields),
+                    \array_merge(
+                        $this->scalarFieldNames,
+                        $this->associationFieldNames
+                    )
+                )
+            );
+
+            if ($reservedFieldNames !== []) {
+                throw new ReservedFieldNameEntityException(
+                    "Entity '{$this->name}' uses reserved field name(s): ".\implode(', ', $reservedFieldNames).'.'
+                );
+            }
         }
 
         public function name(): string
@@ -157,6 +189,11 @@ function Entity(
         public function associationFieldNames(): array
         {
             return $this->associationFieldNames;
+        }
+
+        public function reservedFields(): array
+        {
+            return $this->reservedFields;
         }
 
         public function hasEmbeddedField(

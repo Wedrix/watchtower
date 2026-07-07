@@ -14,9 +14,14 @@ use Watchtower\Tests\Support\FixtureWorkspace;
 use Wedrix\Watchtower\Console;
 use Wedrix\Watchtower\Executor;
 use Wedrix\Watchtower\MissingSchemaCacheSchemaException;
+use Wedrix\Watchtower\ReservedFieldNameEntityException;
+use Wedrix\Watchtower\Resolver\ConflictingJoinAliasQueryBuilderException;
+use Wedrix\Watchtower\Resolver\DuplicateJoinPathQueryBuilderException;
+use Wedrix\Watchtower\SyncedQuerySchema;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
+use function Wedrix\Watchtower\ConstraintPlugin;
 use function Wedrix\Watchtower\Executor;
 use function Wedrix\Watchtower\FilterPlugin;
 use function Wedrix\Watchtower\MutationPlugin;
@@ -65,6 +70,292 @@ final class ExecutorWorkflowTest extends TestCase
         $this->workspace->cleanup();
 
         parent::tearDown();
+    }
+
+    public function test_query_builder_reuses_join_aliases_for_matching_join_specs(): void
+    {
+        $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+        $queryBuilder
+            ->select('__root.title')
+            ->from(Book::class, '__root');
+
+        $authorAlias = $queryBuilder->joinAlias('__root.author', 'bookAuthor');
+        $queryBuilder->joinOnce('__root.author', $authorAlias);
+        $sameAuthorAlias = $queryBuilder->joinAlias('__root.author', 'ignoredAuthorAlias');
+        $queryBuilder->joinOnce('__root.author', $sameAuthorAlias);
+
+        $tagsAlias = $queryBuilder->leftJoinAlias('__root.tags', 'bookTags');
+        $queryBuilder->leftJoinOnce('__root.tags', $tagsAlias);
+        $sameTagsAlias = $queryBuilder->leftJoinAlias('__root.tags', 'ignoredTagsAlias');
+        $queryBuilder->leftJoinOnce('__root.tags', $sameTagsAlias);
+
+        self::assertSame('bookAuthor', $authorAlias);
+        self::assertSame($authorAlias, $sameAuthorAlias);
+        self::assertSame('bookTags', $tagsAlias);
+        self::assertSame($tagsAlias, $sameTagsAlias);
+        self::assertSame([], $queryBuilder->duplicateJoinPaths());
+
+        $dql = $queryBuilder->getDQL();
+
+        self::assertSame(1, \preg_match_all('/\bJOIN\s+__root\.author\s+bookAuthor\b/', $dql));
+        self::assertSame(1, \preg_match_all('/\bLEFT\s+JOIN\s+__root\.tags\s+bookTags\b/', $dql));
+    }
+
+    public function test_query_builder_names_alias_and_parameter_namespaces_explicitly(): void
+    {
+        $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+
+        self::assertSame('shared', $queryBuilder->joinAlias('__root.author', 'shared'));
+        self::assertSame('shared2', $queryBuilder->selectAlias('shared'));
+        self::assertSame('shared', $queryBuilder->parameterName('shared'));
+        self::assertSame('shared2', $queryBuilder->parameterName('shared'));
+    }
+
+    public function test_query_builder_join_once_rejects_existing_join_with_different_alias(): void
+    {
+        $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+        $queryBuilder
+            ->select('__root.title')
+            ->from(Book::class, '__root');
+
+        $queryBuilder->joinOnce('__root.author', 'bookAuthor');
+
+        $this->expectException(ConflictingJoinAliasQueryBuilderException::class);
+
+        $queryBuilder->joinOnce('__root.author', 'otherBookAuthor');
+    }
+
+    public function test_query_builder_reuses_pending_join_alias_before_join_is_added(): void
+    {
+        $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+        $queryBuilder
+            ->select('__root.title')
+            ->from(Book::class, '__root');
+
+        $authorAlias = $queryBuilder->joinAlias('__root.author', 'bookAuthor');
+        $sameAuthorAlias = $queryBuilder->joinAlias('__root.author', 'ignoredAuthorAlias');
+
+        self::assertSame($authorAlias, $sameAuthorAlias);
+
+        $queryBuilder->joinOnce('__root.author', $sameAuthorAlias);
+
+        self::assertSame(1, \preg_match_all('/\bJOIN\s+__root\.author\s+bookAuthor\b/', $queryBuilder->getDQL()));
+    }
+
+    public function test_query_builder_tracks_doctrine_inner_join_aliases(): void
+    {
+        $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+        $queryBuilder
+            ->select('__root.title')
+            ->from(Book::class, '__root');
+
+        $queryBuilder->innerJoin('__root.author', 'innerAuthor');
+
+        self::assertSame('innerAuthor', $queryBuilder->joinAlias('__root.author', 'ignoredAuthorAlias'));
+
+        $queryBuilder->join('__root.author', 'duplicateAuthor');
+
+        self::assertSame(
+            [
+                '__root.author' => ['innerAuthor', 'duplicateAuthor'],
+            ],
+            $queryBuilder->duplicateJoinPaths()
+        );
+    }
+
+    public function test_query_builder_reports_duplicate_join_paths_for_development_shape_checks(): void
+    {
+        $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+        $queryBuilder
+            ->select('__root.title')
+            ->from(Book::class, '__root');
+
+        $queryBuilder->join('__root.author', 'firstAuthor');
+        $queryBuilder->join('__root.author', 'secondAuthor');
+
+        self::assertSame(
+            [
+                '__root.author' => ['firstAuthor', 'secondAuthor'],
+            ],
+            $queryBuilder->duplicateJoinPaths()
+        );
+
+        $this->expectException(DuplicateJoinPathQueryBuilderException::class);
+
+        $queryBuilder->assertNoDuplicateJoins();
+    }
+
+    public function test_query_builder_allows_repeated_join_path_with_different_conditions(): void
+    {
+        $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+        $queryBuilder
+            ->select('__root.title')
+            ->from(Book::class, '__root');
+
+        $queryBuilder->join('__root.author', 'namedAuthor', 'WITH', "namedAuthor.name = 'Ada Lovelace'");
+        $queryBuilder->join('__root.author', 'knownAuthor', 'WITH', 'knownAuthor.id IS NOT NULL');
+
+        self::assertSame([], $queryBuilder->duplicateJoinPaths());
+
+        $queryBuilder->assertNoDuplicateJoins();
+    }
+
+    public function test_composed_plugins_reuse_join_once_alias_for_generated_query_shape(): void
+    {
+        $console = $this->createConsole();
+        $plugins = $console->plugins();
+
+        $console->addConstraintPlugin('Book');
+        $constraintPlugin = ConstraintPlugin('Book');
+        $this->writePluginFile(
+            $plugins->filePath($constraintPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\ConstraintPlugin;
+
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+
+            function {$constraintPlugin->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                \$queryBuilder->joinOnce(
+                    \$queryBuilder->rootAlias() . '.author',
+                    'bookAuthor'
+                );
+            }
+            PHP
+        );
+
+        $console->addFilterPlugin('Book', 'authorNameContains');
+        $filterPlugin = FilterPlugin('Book', 'authorNameContains');
+        $this->writePluginFile(
+            $plugins->filePath($filterPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\FilterPlugin;
+
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+
+            function {$filterPlugin->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                \$needle = \$node->args()['queryParams']['filters']['authorNameContains'] ?? null;
+
+                if (!\\is_string(\$needle) || \$needle === '') {
+                    return;
+                }
+
+                \$authorJoin = \$queryBuilder->rootAlias() . '.author';
+                \$authorAlias = \$queryBuilder->joinAlias(
+                    \$authorJoin,
+                    'filteredBookAuthor'
+                );
+                \$queryBuilder->joinOnce(\$authorJoin, \$authorAlias);
+                \$needleParameter = \$queryBuilder->parameterName('authorNameContains');
+
+                \$queryBuilder
+                    ->andWhere("LOWER(\$authorAlias.name) LIKE :\$needleParameter")
+                    ->setParameter(\$needleParameter, '%' . \\strtolower(\$needle) . '%');
+            }
+            PHP
+        );
+
+        $console->addOrderingPlugin('Book', 'authorNameAsc');
+        $orderingPlugin = OrderingPlugin('Book', 'authorNameAsc');
+        $this->writePluginFile(
+            $plugins->filePath($orderingPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\OrderingPlugin;
+
+            use Doctrine\\DBAL\\ParameterType;
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+
+            function {$orderingPlugin->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                \$rootAlias = \$queryBuilder->rootAlias();
+                \$authorJoin = \$rootAlias . '.author';
+                \$authorAlias = \$queryBuilder->joinAlias(
+                    \$authorJoin,
+                    'orderedBookAuthor'
+                );
+                \$queryBuilder->joinOnce(\$authorJoin, \$authorAlias);
+                \$authorNameAlias = \$queryBuilder->selectAlias('authorNameOrder');
+                \$idAlias = \$queryBuilder->selectAlias('authorNameIdOrder');
+
+                \$queryBuilder
+                    ->addSelect("LOWER(\$authorAlias.name) AS HIDDEN \$authorNameAlias")
+                    ->addSelect("\$rootAlias.id AS HIDDEN \$idAlias")
+                    ->addOrderBy(\$authorNameAlias, 'ASC')
+                    ->addOrderBy(\$idAlias, 'ASC');
+
+                \$queryBuilder->registerCursorOrdering('authorName', "LOWER(\$authorAlias.name)", 'ASC', ParameterType::STRING);
+                \$queryBuilder->registerCursorOrdering('id', "\$rootAlias.id", 'ASC', ParameterType::INTEGER);
+
+                \$recorder = \$node->context()['queryShapeRecorder'] ?? null;
+
+                if (\$recorder instanceof \\ArrayObject) {
+                    \$recorder['dql'] = \$queryBuilder->getDQL();
+                    \$recorder['duplicateJoinPaths'] = \$queryBuilder->duplicateJoinPaths();
+                }
+            }
+            PHP
+        );
+
+        $recorder = new \ArrayObject;
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(
+                queryParams: {
+                  filters: { authorNameContains: "ada" }
+                  ordering: { authorNameAsc: { rank: 1 } }
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [
+                'queryShapeRecorder' => $recorder,
+            ]
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame(
+            ['GraphQL Basics', 'PHP Patterns'],
+            \array_map(
+                static fn (array $book): string => (string) $book['title'],
+                $result['data']['books'] ?? []
+            )
+        );
+
+        $dql = (string) ($recorder['dql'] ?? '');
+
+        self::assertSame([], $recorder['duplicateJoinPaths'] ?? null);
+        self::assertSame(1, \preg_match_all('/\bJOIN\s+__root\.author\s+bookAuthor\b/', $dql));
+        self::assertStringNotContainsString('filteredBookAuthor', $dql);
+        self::assertStringNotContainsString('orderedBookAuthor', $dql);
     }
 
     public function test_query_workflow_covers_relations_filters_ordering_pagination_selector_and_resolver(): void
@@ -600,6 +891,7 @@ final class ExecutorWorkflowTest extends TestCase
                 }
               ) {
                 _cursor
+                id
                 title
               }
             }
@@ -611,6 +903,7 @@ final class ExecutorWorkflowTest extends TestCase
         $books = $firstPageResult['data']['books'] ?? [];
 
         self::assertCount(2, $books);
+        self::assertSame((string) $this->firstBookId, $books[0]['id']);
         self::assertSame('GraphQL Basics', $books[0]['title']);
         self::assertSame('GraphQL in Action', $books[1]['title']);
 
@@ -787,6 +1080,210 @@ final class ExecutorWorkflowTest extends TestCase
 
         self::assertArrayHasKey('_cursor', $result['data']['books'][0] ?? []);
         self::assertNull($result['data']['books'][0]['_cursor']);
+    }
+
+    public function test_reserved_entity_cursor_field_cannot_be_overridden_by_resolver_plugin(): void
+    {
+        $console = $this->createConsole();
+        $plugins = $console->plugins();
+
+        $console->addResolverPlugin('Book', '_cursor');
+        $resolverPlugin = ResolverPlugin('Book', '_cursor');
+        $this->writePluginFile(
+            $plugins->filePath($resolverPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\ResolverPlugin;
+
+            use Wedrix\\Watchtower\\Resolver\\Node;
+
+            function {$resolverPlugin->name()}(
+                Node \$node
+            ): mixed
+            {
+                return 'plugin-owned-cursor';
+            }
+            PHP
+        );
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(queryParams: { limit: 1 }) {
+                pluginAttempt: _cursor
+                title
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame('GraphQL Basics', $result['data']['books'][0]['title'] ?? null);
+        self::assertArrayHasKey('pluginAttempt', $result['data']['books'][0] ?? []);
+        self::assertNull($result['data']['books'][0]['pluginAttempt']);
+    }
+
+    public function test_reserved_entity_cursor_field_ignores_resolver_root_value(): void
+    {
+        $console = $this->createConsole();
+        $plugins = $console->plugins();
+
+        $console->addResolverPlugin('Query', 'book');
+        $resolverPlugin = ResolverPlugin('Query', 'book');
+        $this->writePluginFile(
+            $plugins->filePath($resolverPlugin),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\ResolverPlugin;
+
+            use Wedrix\\Watchtower\\Resolver\\Node;
+
+            function {$resolverPlugin->name()}(
+                Node \$node
+            ): mixed
+            {
+                return [
+                    'id' => (int) \$node->args()['id'],
+                    '_cursor' => 'resolver-owned-cursor',
+                    'title' => 'Resolver Book',
+                ];
+            }
+            PHP
+        );
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              book(id: "1") {
+                _cursor
+                title
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame('Resolver Book', $result['data']['book']['title'] ?? null);
+        self::assertArrayHasKey('_cursor', $result['data']['book'] ?? []);
+        self::assertNull($result['data']['book']['_cursor']);
+    }
+
+    public function test_reserved_entity_cursor_field_ignores_search_resolver_root_value(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(queryParams: { search: "graphql" }) {
+                _cursor
+                title
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+
+        self::assertSame('GraphQL Basics', $result['data']['books'][0]['title'] ?? null);
+        self::assertArrayHasKey('_cursor', $result['data']['books'][0] ?? []);
+        self::assertNull($result['data']['books'][0]['_cursor']);
+    }
+
+    public function test_top_level_reserved_name_can_still_be_resolver_backed_when_not_entity_field(): void
+    {
+        $workspace = new FixtureWorkspace(prefix: 'watchtower_top_level_cursor_');
+
+        try {
+            $workspace->writeSchema(
+                <<<'GRAPHQL'
+                type Query {
+                  _cursor: String!
+                }
+                GRAPHQL
+            );
+
+            $console = Console(
+                entityManager: $this->entityManager,
+                schemaFileDirectory: $workspace->schemaDirectory(),
+                schemaFileName: $workspace->schemaFileName(),
+                pluginsDirectory: $workspace->pluginsDirectory(),
+                scalarTypeDefinitionsDirectory: $workspace->scalarTypeDefinitionsDirectory(),
+                cacheDirectory: $workspace->cacheDirectory()
+            );
+            $plugins = $console->plugins();
+
+            $console->addResolverPlugin('Query', '_cursor');
+            $resolverPlugin = ResolverPlugin('Query', '_cursor');
+            $this->writePluginFile(
+                $plugins->filePath($resolverPlugin),
+                <<<PHP
+                <?php
+
+                declare(strict_types=1);
+
+                namespace Wedrix\\Watchtower\\ResolverPlugin;
+
+                use Wedrix\\Watchtower\\Resolver\\Node;
+
+                function {$resolverPlugin->name()}(
+                    Node \$node
+                ): mixed
+                {
+                    return 'top-level-cursor';
+                }
+                PHP
+            );
+
+            $result = Executor(
+                entityManager: $this->entityManager,
+                schemaFile: $workspace->schemaFile(),
+                pluginsDirectory: $workspace->pluginsDirectory(),
+                scalarTypeDefinitionsDirectory: $workspace->scalarTypeDefinitionsDirectory(),
+                cacheDirectory: $workspace->cacheDirectory(),
+                optimize: false
+            )->executeQuery(
+                source: <<<'GRAPHQL'
+                query {
+                  _cursor
+                }
+                GRAPHQL,
+                rootValue: [],
+                contextValue: $this->defaultContext(),
+                variableValues: null,
+                operationName: null,
+                validationRules: null
+            )->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE);
+
+            $this->assertNoErrors($result);
+
+            self::assertSame('top-level-cursor', $result['data']['_cursor'] ?? null);
+        } finally {
+            $workspace->cleanup();
+        }
+    }
+
+    public function test_synced_schema_rejects_entity_fields_using_reserved_names(): void
+    {
+        $entityManager = DoctrineEntityManagerFactory::create(
+            __DIR__.'/Support/Fixtures/mappings_reserved',
+            'Watchtower\\Tests\\Support\\Fixtures\\Reserved'
+        );
+
+        try {
+            $this->expectException(ReservedFieldNameEntityException::class);
+            $this->expectExceptionMessage('_cursor');
+
+            new SyncedQuerySchema($entityManager);
+        } finally {
+            $entityManager->close();
+        }
     }
 
     public function test_nested_collection_cursor_pagination_reuses_per_parent_limit_walker(): void
@@ -1486,9 +1983,9 @@ final class ExecutorWorkflowTest extends TestCase
                 Node \$node
             ): void
             {
-                \$entityAlias = \$queryBuilder->rootEntityAlias();
+                \$rootAlias = \$queryBuilder->rootAlias();
 
-                \$queryBuilder->addSelect("LENGTH(\$entityAlias.title) AS titleLength");
+                \$queryBuilder->addSelect("LENGTH(\$rootAlias.title) AS titleLength");
             }
             PHP
         );
@@ -1639,12 +2136,12 @@ final class ExecutorWorkflowTest extends TestCase
                     return;
                 }
 
-                \$entityAlias = \$queryBuilder->rootEntityAlias();
-                \$needleAlias = \$queryBuilder->reconciledAlias('titleContains');
+                \$rootAlias = \$queryBuilder->rootAlias();
+                \$needleParameter = \$queryBuilder->parameterName('titleContains');
 
                 \$queryBuilder
-                    ->andWhere("LOWER(\$entityAlias.title) LIKE :\$needleAlias")
-                    ->setParameter(\$needleAlias, '%' . \\strtolower(\$needle) . '%');
+                    ->andWhere("LOWER(\$rootAlias.title) LIKE :\$needleParameter")
+                    ->setParameter(\$needleParameter, '%' . \\strtolower(\$needle) . '%');
             }
             PHP
         );
@@ -1673,18 +2170,18 @@ final class ExecutorWorkflowTest extends TestCase
                 \$direction = \\strtoupper((string) (\$node->args()['queryParams']['ordering']['titleAsc']['params']['direction'] ?? 'ASC'));
                 \$direction = \\in_array(\$direction, ['ASC', 'DESC'], true) ? \$direction : 'ASC';
 
-                \$entityAlias = \$queryBuilder->rootEntityAlias();
-                \$orderAlias = \$queryBuilder->reconciledAlias('titleOrder');
-                \$idOrderAlias = \$queryBuilder->reconciledAlias('idOrder');
+                \$rootAlias = \$queryBuilder->rootAlias();
+                \$orderAlias = \$queryBuilder->selectAlias('titleOrder');
+                \$idOrderAlias = \$queryBuilder->selectAlias('idOrder');
 
                 \$queryBuilder
-                    ->addSelect("LOWER(\$entityAlias.title) AS HIDDEN \$orderAlias")
-                    ->addSelect("\$entityAlias.id AS HIDDEN \$idOrderAlias")
+                    ->addSelect("LOWER(\$rootAlias.title) AS HIDDEN \$orderAlias")
+                    ->addSelect("\$rootAlias.id AS HIDDEN \$idOrderAlias")
                     ->addOrderBy(\$orderAlias, \$direction)
                     ->addOrderBy(\$idOrderAlias, 'ASC');
 
-                \$queryBuilder->registerCursorOrdering('title', "LOWER(\$entityAlias.title)", \$direction, ParameterType::STRING);
-                \$queryBuilder->registerCursorOrdering('id', "\$entityAlias.id", 'ASC', ParameterType::INTEGER);
+                \$queryBuilder->registerCursorOrdering('title', "LOWER(\$rootAlias.title)", \$direction, ParameterType::STRING);
+                \$queryBuilder->registerCursorOrdering('id', "\$rootAlias.id", 'ASC', ParameterType::INTEGER);
             }
             PHP
         );
@@ -1710,18 +2207,18 @@ final class ExecutorWorkflowTest extends TestCase
                 Node \$node
             ): void
             {
-                \$entityAlias = \$queryBuilder->rootEntityAlias();
-                \$publishedAtOrderAlias = \$queryBuilder->reconciledAlias('publishedAtOrder');
-                \$idOrderAlias = \$queryBuilder->reconciledAlias('publishedAtIdOrder');
+                \$rootAlias = \$queryBuilder->rootAlias();
+                \$publishedAtOrderAlias = \$queryBuilder->selectAlias('publishedAtOrder');
+                \$idOrderAlias = \$queryBuilder->selectAlias('publishedAtIdOrder');
 
                 \$queryBuilder
-                    ->addSelect("\$entityAlias.publishedAt AS HIDDEN \$publishedAtOrderAlias")
-                    ->addSelect("\$entityAlias.id AS HIDDEN \$idOrderAlias")
+                    ->addSelect("\$rootAlias.publishedAt AS HIDDEN \$publishedAtOrderAlias")
+                    ->addSelect("\$rootAlias.id AS HIDDEN \$idOrderAlias")
                     ->addOrderBy(\$publishedAtOrderAlias, 'ASC')
                     ->addOrderBy(\$idOrderAlias, 'ASC');
 
-                \$queryBuilder->registerCursorOrdering('publishedAt', "\$entityAlias.publishedAt", 'ASC', ParameterType::STRING);
-                \$queryBuilder->registerCursorOrdering('id', "\$entityAlias.id", 'ASC', ParameterType::INTEGER);
+                \$queryBuilder->registerCursorOrdering('publishedAt', "\$rootAlias.publishedAt", 'ASC', ParameterType::STRING);
+                \$queryBuilder->registerCursorOrdering('id', "\$rootAlias.id", 'ASC', ParameterType::INTEGER);
             }
             PHP
         );
@@ -1748,11 +2245,11 @@ final class ExecutorWorkflowTest extends TestCase
                 \$direction = \\strtoupper((string) (\$node->args()['queryParams']['ordering']['legacyTitleAsc']['params']['direction'] ?? 'ASC'));
                 \$direction = \\in_array(\$direction, ['ASC', 'DESC'], true) ? \$direction : 'ASC';
 
-                \$entityAlias = \$queryBuilder->rootEntityAlias();
-                \$orderAlias = \$queryBuilder->reconciledAlias('legacyTitleOrder');
+                \$rootAlias = \$queryBuilder->rootAlias();
+                \$orderAlias = \$queryBuilder->selectAlias('legacyTitleOrder');
 
                 \$queryBuilder
-                    ->addSelect("LOWER(\$entityAlias.title) AS HIDDEN \$orderAlias")
+                    ->addSelect("LOWER(\$rootAlias.title) AS HIDDEN \$orderAlias")
                     ->addOrderBy(\$orderAlias, \$direction);
             }
             PHP
@@ -1796,6 +2293,7 @@ final class ExecutorWorkflowTest extends TestCase
                 return \\array_map(
                     static fn (Book \$book): array => [
                         'id' => \$book->getId(),
+                        '_cursor' => 'search-owned-cursor',
                         'title' => \$book->getTitle(),
                         'price' => \$book->getPrice(),
                     ],
@@ -2159,6 +2657,7 @@ final class ExecutorWorkflowTest extends TestCase
 
         input BooksQueryFilters {
           titleContains: String
+          authorNameContains: String
           unimplemented: String
         }
 
@@ -2166,6 +2665,7 @@ final class ExecutorWorkflowTest extends TestCase
           titleAsc: BooksOrderingRule
           publishedAtAsc: BooksOrderingRule
           legacyTitleAsc: BooksOrderingRule
+          authorNameAsc: BooksOrderingRule
           unimplemented: BooksOrderingRule
         }
 

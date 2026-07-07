@@ -28,19 +28,16 @@ trait BaseQuery
             if ($this->isWorkable) {
                 $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
 
-                $rootEntityAlias = $queryBuilder->rootEntityAlias();
+                $rootAlias = $queryBuilder->rootAlias();
 
                 $nodeFieldsSelection = $this->node->concreteFieldsSelection();
 
                 $selectedNodeFields = \array_keys($nodeFieldsSelection);
-
-                if (\in_array('_cursor', $selectedNodeFields, true)) {
-                    $queryBuilder->enableCursorProjection();
-                }
+                $reservedFieldNames = \array_keys($rootEntity->reservedFields());
 
                 $queryBuilder->from(
                     from: $rootEntity->class(),
-                    alias: $rootEntityAlias
+                    alias: $rootAlias
                 );
 
                 /**
@@ -48,7 +45,11 @@ trait BaseQuery
                  */
                 $selectedScalarEntityFields = \array_filter(
                     $rootEntity->scalarFieldNames(),
-                    static fn (string $selectedScalarEntityField) => $selectedScalarEntityField !== '_cursor'
+                    static fn (string $selectedScalarEntityField) => ! \in_array(
+                        $selectedScalarEntityField,
+                        $reservedFieldNames,
+                        true
+                    )
                         && (
                             \in_array($selectedScalarEntityField, $rootEntity->idFieldNames())
                             || \in_array($selectedScalarEntityField, $selectedNodeFields)
@@ -83,16 +84,21 @@ trait BaseQuery
                  */
                 $selectedSelectorFields = \array_filter(
                     $selectedNodeFields,
-                    fn (string $selectedNodeField) => $this->plugins->contains(
-                        SelectorPlugin(
-                            nodeType: $this->node->unwrappedType(),
-                            fieldName: $selectedNodeField
-                        )
+                    fn (string $selectedNodeField) => ! \in_array(
+                        $selectedNodeField,
+                        $reservedFieldNames,
+                        true
                     )
+                        && $this->plugins->contains(
+                            SelectorPlugin(
+                                nodeType: $this->node->unwrappedType(),
+                                fieldName: $selectedNodeField
+                            )
+                        )
                 );
 
                 foreach ($selectedScalarEntityFields as $fieldName) {
-                    $queryBuilder->addSelect("{$rootEntityAlias}.$fieldName");
+                    $queryBuilder->addSelect("{$rootAlias}.$fieldName");
                 }
 
                 foreach ($selectedSelectorFields as $fieldName) {
@@ -121,8 +127,8 @@ trait BaseQuery
                     );
 
                     foreach ($targetEntity->idFieldNames() as $targetIdFieldName) {
-                        $idNameAlias = "{$identifierAlias}_{$identifierAssociationField}_{$targetIdFieldName}";
-                        $queryBuilder->addSelect("IDENTITY({$rootEntityAlias}.$identifierAssociationField, '$targetIdFieldName') AS $idNameAlias");
+                        $identifierResultAlias = "{$identifierAlias}_{$identifierAssociationField}_{$targetIdFieldName}";
+                        $queryBuilder->addSelect("IDENTITY({$rootAlias}.$identifierAssociationField, '$targetIdFieldName') AS $identifierResultAlias");
                     }
                 }
             }

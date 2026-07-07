@@ -6,6 +6,7 @@ namespace Wedrix\Watchtower\Resolver;
 
 use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
+use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\Query\Expr\OrderBy;
 use Doctrine\ORM\QueryBuilder as DoctrineQueryBuilder;
 
@@ -14,6 +15,77 @@ use Doctrine\ORM\QueryBuilder as DoctrineQueryBuilder;
  */
 interface QueryBuilder
 {
+    public function join(
+        string $join,
+        string $alias,
+        ?string $conditionType = null,
+        mixed $condition = null,
+        ?string $indexBy = null
+    ): mixed;
+
+    public function innerJoin(
+        string $join,
+        string $alias,
+        ?string $conditionType = null,
+        mixed $condition = null,
+        ?string $indexBy = null
+    ): mixed;
+
+    public function leftJoin(
+        string $join,
+        string $alias,
+        ?string $conditionType = null,
+        mixed $condition = null,
+        ?string $indexBy = null
+    ): mixed;
+
+    public function joinOnce(
+        string $path,
+        string $alias,
+        ?string $conditionType = null,
+        mixed $condition = null,
+        ?string $indexBy = null
+    ): mixed;
+
+    public function leftJoinOnce(
+        string $path,
+        string $alias,
+        ?string $conditionType = null,
+        mixed $condition = null,
+        ?string $indexBy = null
+    ): mixed;
+
+    public function joinAlias(
+        string $path,
+        string $alias,
+        ?string $conditionType = null,
+        mixed $condition = null,
+        ?string $indexBy = null
+    ): string;
+
+    public function leftJoinAlias(
+        string $path,
+        string $alias,
+        ?string $conditionType = null,
+        mixed $condition = null,
+        ?string $indexBy = null
+    ): string;
+
+    public function selectAlias(
+        string $alias
+    ): string;
+
+    public function parameterName(
+        string $name
+    ): string;
+
+    /**
+     * @return array<string,array<int,string>>
+     */
+    public function duplicateJoinPaths(): array;
+
+    public function assertNoDuplicateJoins(): void;
+
     public function registerCursorOrdering(
         string $key,
         string $expression,
@@ -23,10 +95,8 @@ interface QueryBuilder
 
     public function enableCursorProjection(): void;
 
-    public function cursorProjectionEnabled(): bool;
-
     /**
-     * @return array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null,resultAlias:string|null}>
+     * @return array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null,resultAlias:string|null,resultAliasIsInternal:bool}>
      */
     public function cursorOrderings(): array;
 
@@ -34,13 +104,9 @@ interface QueryBuilder
 
     public function identifierAlias(): string;
 
-    public function parentEntityAlias(): string;
+    public function parentAlias(): string;
 
-    public function rootEntityAlias(): string;
-
-    public function reconciledAlias(
-        string $alias
-    ): string;
+    public function rootAlias(): string;
 }
 
 function QueryBuilder(
@@ -71,12 +137,40 @@ function QueryBuilder(
         /**
          * @var array<string,int>
          *
-         * The key is the alias and the value is the count
+         * The key is the DQL alias and the value is the count
          */
         private array $aliases = [];
 
         /**
-         * @var array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null,resultAlias:string|null}>
+         * @var array<string,int>
+         *
+         * The key is the parameter name and the value is the count
+         */
+        private array $parameterNames = [];
+
+        /**
+         * @var array<string,string>
+         *
+         * The key is a normalized join spec and the value is the canonical alias for it.
+         */
+        private array $joinAliasesBySpec = [];
+
+        /**
+         * @var array<string,true>
+         *
+         * The key is a normalized join spec that has already been added to the DQL.
+         */
+        private array $joinedSpecs = [];
+
+        /**
+         * @var array<string,array{path:string,aliases:array<string,true>}>
+         *
+         * The key is a normalized join spec. Aliases are only duplicated when the full join spec matches.
+         */
+        private array $joinedAliasesBySpec = [];
+
+        /**
+         * @var array<int,array{key:string,expression:string,direction:'ASC'|'DESC',parameterType:ParameterType|ArrayParameterType|string|int|null,resultAlias:string|null,resultAliasIsInternal:bool}>
          */
         private array $cursorOrderings = [];
 
@@ -84,13 +178,226 @@ function QueryBuilder(
 
         private string $identifierAlias = '__primary';
 
-        private string $parentEntityAlias = '__parent';
+        private string $parentAlias = '__parent';
 
-        private string $rootEntityAlias = '__root';
+        private string $rootAlias = '__root';
 
         public function __construct(
             private DoctrineQueryBuilder $doctrineQueryBuilder
         ) {}
+
+        public function join(
+            string $join,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): mixed {
+            $conditionType = self::normalizedJoinConditionType($conditionType);
+
+            $result = $this->doctrineQueryBuilder->join(
+                $join,
+                $alias,
+                $conditionType,
+                $condition,
+                $indexBy
+            );
+
+            $this->recordJoin(
+                joinType: 'inner',
+                path: $join,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+
+            return $result;
+        }
+
+        public function innerJoin(
+            string $join,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): mixed {
+            $conditionType = self::normalizedJoinConditionType($conditionType);
+
+            $result = $this->doctrineQueryBuilder->innerJoin(
+                $join,
+                $alias,
+                $conditionType,
+                $condition,
+                $indexBy
+            );
+
+            $this->recordJoin(
+                joinType: 'inner',
+                path: $join,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+
+            return $result;
+        }
+
+        public function leftJoin(
+            string $join,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): mixed {
+            $conditionType = self::normalizedJoinConditionType($conditionType);
+
+            $result = $this->doctrineQueryBuilder->leftJoin(
+                $join,
+                $alias,
+                $conditionType,
+                $condition,
+                $indexBy
+            );
+
+            $this->recordJoin(
+                joinType: 'left',
+                path: $join,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+
+            return $result;
+        }
+
+        public function joinOnce(
+            string $path,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): mixed {
+            return $this->joinOnceUsing(
+                joinType: 'inner',
+                path: $path,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+        }
+
+        public function leftJoinOnce(
+            string $path,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): mixed {
+            return $this->joinOnceUsing(
+                joinType: 'left',
+                path: $path,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+        }
+
+        public function joinAlias(
+            string $path,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): string {
+            return $this->joinAliasUsing(
+                joinType: 'inner',
+                path: $path,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+        }
+
+        public function leftJoinAlias(
+            string $path,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): string {
+            return $this->joinAliasUsing(
+                joinType: 'left',
+                path: $path,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+        }
+
+        public function selectAlias(
+            string $alias
+        ): string {
+            return $this->reconciledAlias($alias);
+        }
+
+        public function parameterName(
+            string $name
+        ): string {
+            if (! isset($this->parameterNames[$name])) {
+                $this->parameterNames[$name] = 1;
+
+                return $name;
+            }
+
+            return $name.++$this->parameterNames[$name];
+        }
+
+        public function duplicateJoinPaths(): array
+        {
+            $duplicates = [];
+
+            foreach ($this->joinedAliasesBySpec as $joinedAliases) {
+                $aliases = $joinedAliases['aliases'];
+
+                if (\count($aliases) <= 1) {
+                    continue;
+                }
+
+                $duplicates[$joinedAliases['path']] = \array_merge(
+                    $duplicates[$joinedAliases['path']] ?? [],
+                    \array_keys($aliases)
+                );
+            }
+
+            return $duplicates;
+        }
+
+        public function assertNoDuplicateJoins(): void
+        {
+            $duplicates = $this->duplicateJoinPaths();
+
+            if ($duplicates === []) {
+                return;
+            }
+
+            $summary = \implode(
+                '; ',
+                \array_map(
+                    static fn (string $path, array $aliases): string => "{$path} joined as ".\implode(', ', $aliases),
+                    \array_keys($duplicates),
+                    \array_values($duplicates)
+                )
+            );
+
+            throw new DuplicateJoinPathQueryBuilderException("Duplicate join paths detected: {$summary}.");
+        }
 
         public function registerCursorOrdering(
             string $key,
@@ -118,6 +425,7 @@ function QueryBuilder(
                 'direction' => $direction,
                 'parameterType' => $parameterType,
                 'resultAlias' => null,
+                'resultAliasIsInternal' => false,
             ];
 
             if ($this->cursorProjectionEnabled) {
@@ -148,12 +456,8 @@ function QueryBuilder(
                 );
 
                 $this->cursorOrderings[$index]['resultAlias'] = $resultAlias;
+                $this->cursorOrderings[$index]['resultAliasIsInternal'] = true;
             }
-        }
-
-        public function cursorProjectionEnabled(): bool
-        {
-            return $this->cursorProjectionEnabled;
         }
 
         public function cursorOrderings(): array
@@ -211,17 +515,17 @@ function QueryBuilder(
             return $this->identifierAlias;
         }
 
-        public function parentEntityAlias(): string
+        public function parentAlias(): string
         {
-            return $this->parentEntityAlias;
+            return $this->parentAlias;
         }
 
-        public function rootEntityAlias(): string
+        public function rootAlias(): string
         {
-            return $this->rootEntityAlias;
+            return $this->rootAlias;
         }
 
-        public function reconciledAlias(
+        private function reconciledAlias(
             string $alias
         ): string {
             // Remove reserved prefixes from the alias
@@ -238,6 +542,199 @@ function QueryBuilder(
             }
 
             return $alias.++$this->aliases[$alias];
+        }
+
+        private function joinOnceUsing(
+            string $joinType,
+            string $path,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): mixed {
+            $conditionType = self::normalizedJoinConditionType($conditionType);
+
+            $specKey = $this->joinSpecKey(
+                joinType: $joinType,
+                path: $path,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+
+            if (isset($this->joinAliasesBySpec[$specKey])) {
+                $existingAlias = $this->joinAliasesBySpec[$specKey];
+
+                if ($existingAlias !== $alias) {
+                    $aliasMethod = $joinType === 'left' ? 'leftJoinAlias()' : 'joinAlias()';
+                    $joinMethod = $joinType === 'left' ? 'leftJoinOnce()' : 'joinOnce()';
+
+                    throw new ConflictingJoinAliasQueryBuilderException(
+                        "Join '{$path}' is already joined as '{$existingAlias}', not '{$alias}'. Use {$aliasMethod} before {$joinMethod} when composing plugins."
+                    );
+                }
+
+                if (isset($this->joinedSpecs[$specKey])) {
+                    return $this->doctrineQueryBuilder;
+                }
+            }
+
+            if ($joinType === 'left') {
+                return $this->leftJoin(
+                    join: $path,
+                    alias: $alias,
+                    conditionType: $conditionType,
+                    condition: $condition,
+                    indexBy: $indexBy
+                );
+            }
+
+            return $this->join(
+                join: $path,
+                alias: $alias,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+        }
+
+        private function joinAliasUsing(
+            string $joinType,
+            string $path,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): string {
+            $conditionType = self::normalizedJoinConditionType($conditionType);
+
+            $specKey = $this->joinSpecKey(
+                joinType: $joinType,
+                path: $path,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+
+            if (isset($this->joinAliasesBySpec[$specKey])) {
+                return $this->joinAliasesBySpec[$specKey];
+            }
+
+            return $this->joinAliasesBySpec[$specKey] = $this->reconciledAlias($alias);
+        }
+
+        private function recordJoin(
+            string $joinType,
+            string $path,
+            string $alias,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): void {
+            $normalizedPath = self::normalizeJoinPath($path);
+            $specKey = $this->joinSpecKey(
+                joinType: $joinType,
+                path: $path,
+                conditionType: $conditionType,
+                condition: $condition,
+                indexBy: $indexBy
+            );
+
+            $this->reserveAlias($alias);
+
+            $this->joinAliasesBySpec[$specKey] ??= $alias;
+            $this->joinedSpecs[$specKey] = true;
+            $this->joinedAliasesBySpec[$specKey]['path'] = $normalizedPath;
+            $this->joinedAliasesBySpec[$specKey]['aliases'][$alias] = true;
+
+            if ($this->strictDuplicateJoinDetectionEnabled()) {
+                $this->assertNoDuplicateJoins();
+            }
+        }
+
+        private function reserveAlias(
+            string $alias
+        ): void {
+            $this->aliases[$alias] ??= 1;
+        }
+
+        private function joinSpecKey(
+            string $joinType,
+            string $path,
+            ?string $conditionType = null,
+            mixed $condition = null,
+            ?string $indexBy = null
+        ): string {
+            return \json_encode(
+                [
+                    'joinType' => $joinType,
+                    'path' => self::normalizeJoinPath($path),
+                    'conditionType' => $conditionType,
+                    'condition' => self::normalizeJoinValue($condition),
+                    'indexBy' => $indexBy,
+                ],
+                \JSON_THROW_ON_ERROR
+            );
+        }
+
+        private static function normalizeJoinPath(
+            string $path
+        ): string {
+            return \preg_replace('/\s+/', ' ', \trim($path)) ?? \trim($path);
+        }
+
+        private static function normalizeJoinValue(
+            mixed $value
+        ): string {
+            if ($value === null) {
+                return '';
+            }
+
+            if (\is_scalar($value)) {
+                return (string) $value;
+            }
+
+            if ($value instanceof \Stringable) {
+                return (string) $value;
+            }
+
+            try {
+                return \serialize($value);
+            } catch (\Throwable) {
+                return \is_object($value) ? $value::class : \gettype($value);
+            }
+        }
+
+        /**
+         * @return 'ON'|'WITH'|null
+         */
+        private static function normalizedJoinConditionType(
+            ?string $conditionType
+        ): ?string {
+            if ($conditionType === null) {
+                return null;
+            }
+
+            $conditionType = \strtoupper($conditionType);
+
+            if (! \in_array($conditionType, [Join::ON, Join::WITH], true)) {
+                throw new InvalidJoinConditionTypeQueryBuilderException("Invalid join condition type '{$conditionType}'.");
+            }
+
+            return $conditionType;
+        }
+
+        private function strictDuplicateJoinDetectionEnabled(): bool
+        {
+            $value = $_SERVER['WATCHTOWER_STRICT_QUERY_SHAPE']
+                ?? $_ENV['WATCHTOWER_STRICT_QUERY_SHAPE']
+                ?? \getenv('WATCHTOWER_STRICT_QUERY_SHAPE');
+
+            return \in_array(
+                \strtolower((string) $value),
+                ['1', 'true', 'yes', 'on'],
+                true
+            );
         }
 
         /**

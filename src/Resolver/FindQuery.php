@@ -16,16 +16,16 @@ trait FindQuery
             && $this->node->operation() === 'query';
 
         if ($this->isWorkable) {
-            $rootEntityAlias = $this->queryBuilder->rootEntityAlias();
+            $rootAlias = $this->queryBuilder->rootAlias();
 
             foreach ($this->node->args() as $idField => $idValue) {
-                $idValueAlias = $this->queryBuilder->reconciledAlias($idField);
+                $idValueParameter = $this->queryBuilder->parameterName($idField);
 
                 $this->queryBuilder->andWhere(
                     $this->queryBuilder->expr()
-                        ->eq("{$rootEntityAlias}.$idField", ":$idValueAlias")
+                        ->eq("{$rootAlias}.$idField", ":$idValueParameter")
                 )
-                    ->setParameter($idValueAlias, $idValue);
+                    ->setParameter($idValueParameter, $idValue);
             }
         }
     }

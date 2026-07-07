@@ -7,7 +7,7 @@ It is built on [graphql-php](https://github.com/webonyx/graphql-php) and works w
 ## What You Get
 
 - GraphQL queries backed by Doctrine entities and associations.
-- Schema generation from Doctrine metadata to get started quickly.
+- Schema generation from Doctrine mappings to get started quickly.
 - Offset and cursor pagination for collection fields.
 - Plugin hooks for filters, ordering, computed fields, search, mutations, subscriptions, constraints, and authorization.
 - Custom scalar support through small PHP definition files.
@@ -95,15 +95,15 @@ match ($argv[1] ?? null) {
 };
 ```
 
-Generate the starter SDL from Doctrine metadata:
+Generate the starter SDL from Doctrine mappings:
 
 ```bash
 php bin/watchtower schema:generate
 ```
 
-`generateSchema()` creates query types and built-in scalar definitions for `DateTime`, `Limit`, `Page`, and `Cursor` when they do not already exist. It does not generate mutations, subscriptions, enum/interface/union definitions, or custom computed fields. Add those to the SDL yourself.
+Use the generated SDL as a starting point. `generateSchema()` creates entity query types and built-in scalar definitions for `DateTime`, `Limit`, `Page`, and `Cursor` when they do not already exist. Add mutations, subscriptions, enum/interface/union definitions, and custom computed fields to the SDL yourself.
 
-`updateSchema()` currently invalidates the schema cache. It does not merge Doctrine changes into an existing SDL file.
+After editing an existing SDL file, run `schema:update` if your application uses the schema cache. It clears stale schema cache files; it does not merge Doctrine mapping changes into your SDL.
 
 ### Add a GraphQL Endpoint
 
@@ -166,6 +166,7 @@ type Query {
 }
 
 type Book {
+  _cursor: Cursor
   id: ID!
   title: String!
   summary: String
@@ -236,7 +237,7 @@ query {
 
 ### Through Associations
 
-Direct Doctrine associations do not need extra SDL metadata. If a field represents a relation through an explicit association entity, add `@watchtowerAssociation`.
+Direct Doctrine associations do not need extra SDL directives. If a field represents a relation through an explicit association entity, add `@watchtowerAssociation`.
 
 ```graphql
 directive @watchtowerAssociation(through: String!) on FIELD_DEFINITION
@@ -296,7 +297,7 @@ query {
 }
 ```
 
-Use the last returned row's `_cursor` as `after` for the next page, or the first returned row's `_cursor` as `before` for the previous page. `_cursor` is a nullable virtual field reserved by Watchtower for cursor metadata, so it must be declared on manually maintained entity types:
+Use the last returned row's `_cursor` as `after` for the next page, or the first returned row's `_cursor` as `before` for the previous page. If you maintain SDL manually, declare `_cursor: Cursor` on entity types where clients can request cursors:
 
 ```graphql
 type Book {
@@ -306,7 +307,11 @@ type Book {
 }
 ```
 
-The built-in `Cursor` scalar expects a base64-encoded JSON object. Cursor pagination and `_cursor` values require at least one selected ordering plugin that calls `$queryBuilder->registerCursorOrdering()`. When a cursor query includes multiple orderings, Watchtower runs their plugins in `rank` order and combines the cursor metadata they register. The cursor payload must contain values for every registered cursor key; the order of keys in the JSON object does not matter.
+Treat `_cursor` as an opaque string in clients. Pass the returned value back as `after` or `before`; clients do not need to decode or edit it.
+
+Ordering plugins used with cursor pagination must call `$queryBuilder->registerCursorOrdering()` for every ordered value that belongs in the cursor. If a query uses multiple orderings, register cursor fields in the same order as the effective `ORDER BY` clauses. Include a stable unique tie-breaker, usually `id`, at the end.
+
+If you need to create cursor values directly in tests or custom tooling, encode a JSON object with every registered cursor key:
 
 ```php
 $cursor = base64_encode(json_encode([
@@ -319,9 +324,8 @@ Cursor pagination rules:
 
 - Use either `after` or `before`, not both.
 - Do not combine cursor pagination with `page`.
-- Register cursor ordering metadata, in `ORDER BY` order, in every selected ordering plugin that may be used with cursors.
-- If a query passes multiple orderings, the expected cursor keys come from the combined metadata registered by all of those ordering plugins in `rank` order.
-- Include a unique tie-breaker, usually `id`, at the end of the effective ordering when ordered values may repeat. Avoid placing a unique tie-breaker before later orderings, because it makes those later orderings irrelevant.
+- Select at least one ordering that registers cursor fields.
+- Include all registered cursor keys if you construct a cursor manually.
 
 ## Plugins
 
@@ -341,7 +345,8 @@ $console->addAuthorizorPlugin('Book', false);
 $console->addRootAuthorizorPlugin();
 ```
 
-Plugin files are named after their generated function and placed under the pluralized plugin type directory.
+The console writes each plugin into the correct directory with the expected function name. Fill in the generated function body.
+
 For `addAuthorizorPlugin()`, pass `false` for a single-object result authorizor and `true` for a collection result authorizor.
 
 | Use case | Directory | Function shape |
@@ -397,12 +402,12 @@ function apply_books_ids_filter(
         return;
     }
 
-    $entityAlias = $queryBuilder->rootEntityAlias();
-    $idsAlias = $queryBuilder->reconciledAlias('ids');
+    $rootAlias = $queryBuilder->rootAlias();
+    $idsParameter = $queryBuilder->parameterName('ids');
 
     $queryBuilder
-        ->andWhere("$entityAlias.id IN (:$idsAlias)")
-        ->setParameter($idsAlias, $ids);
+        ->andWhere("$rootAlias.id IN (:$idsParameter)")
+        ->setParameter($idsParameter, $ids);
 }
 ```
 
@@ -415,6 +420,52 @@ query {
   }
 }
 ```
+
+### Sharing Joins Between Plugins
+
+When a constraint, filter, ordering, or selector needs an association, use `joinOnce()` or `leftJoinOnce()` when the query should have exactly one join for that path. These methods follow Doctrine's join style and return the builder. If the same join already exists with a different alias, Watchtower throws so the duplicate shape is caught early.
+
+When a plugin needs to reference the alias, ask for the join alias first:
+
+```php
+$rootAlias = $queryBuilder->rootAlias();
+$authorJoin = "$rootAlias.author";
+$authorAlias = $queryBuilder->joinAlias(
+    $authorJoin,
+    'bookAuthor'
+);
+$queryBuilder->joinOnce($authorJoin, $authorAlias);
+
+$queryBuilder->andWhere("LOWER($authorAlias.name) LIKE :authorName");
+```
+
+For deeper paths, compose the chain explicitly and use the alias returned from each step:
+
+```php
+$businessJoin = "$rootAlias.business";
+$businessAlias = $queryBuilder->joinAlias(
+    $businessJoin,
+    'listingBusiness'
+);
+$queryBuilder->joinOnce($businessJoin, $businessAlias);
+
+$sellerJoin = "$businessAlias.seller";
+$sellerAlias = $queryBuilder->joinAlias(
+    $sellerJoin,
+    'listingBusinessSeller'
+);
+$queryBuilder->joinOnce($sellerJoin, $sellerAlias);
+```
+
+Choose the join method that matches the data you want:
+
+- Use `joinOnce()` when the association is required.
+- Use `leftJoinOnce()` when rows without the association should remain.
+- Use a separate join when you need a different join condition; duplicate-join checks treat the condition as part of the join identity.
+
+Use `selectAlias()` for `AS` or `AS HIDDEN` aliases, and `parameterName()` for named parameters such as `:tenantId`.
+
+For expensive association paths, add a query-shape test. Call `$queryBuilder->assertNoDuplicateJoins()` after your plugins have modified the query, or set `WATCHTOWER_STRICT_QUERY_SHAPE=1` in test runs. If you want to make your own assertion, `duplicateJoinPaths()` returns repeated equivalent joins by path and alias.
 
 ### Orderings
 
@@ -447,35 +498,35 @@ function apply_books_title_asc_ordering(
     QueryBuilder $queryBuilder,
     Node $node
 ): void {
-    $entityAlias = $queryBuilder->rootEntityAlias();
-    $titleAlias = $queryBuilder->reconciledAlias('titleOrder');
-    $idAlias = $queryBuilder->reconciledAlias('idOrder');
+    $rootAlias = $queryBuilder->rootAlias();
+    $titleAlias = $queryBuilder->selectAlias('titleOrder');
+    $idAlias = $queryBuilder->selectAlias('idOrder');
 
     $queryBuilder
-        ->addSelect("LOWER($entityAlias.title) AS HIDDEN $titleAlias")
-        ->addSelect("$entityAlias.id AS HIDDEN $idAlias")
+        ->addSelect("LOWER($rootAlias.title) AS HIDDEN $titleAlias")
+        ->addSelect("$rootAlias.id AS HIDDEN $idAlias")
         ->addOrderBy($titleAlias, 'ASC')
         ->addOrderBy($idAlias, 'ASC');
 
-    $queryBuilder->registerCursorOrdering('title', "LOWER($entityAlias.title)", 'ASC', ParameterType::STRING);
-    $queryBuilder->registerCursorOrdering('id', "$entityAlias.id", 'ASC', ParameterType::INTEGER);
+    $queryBuilder->registerCursorOrdering('title', "LOWER($rootAlias.title)", 'ASC', ParameterType::STRING);
+    $queryBuilder->registerCursorOrdering('id', "$rootAlias.id", 'ASC', ParameterType::INTEGER);
 }
 ```
 
-Use the optional fourth argument to pass the Doctrine/DBAL parameter type used for cursor comparisons.
+Use the optional fourth argument to pass the Doctrine/DBAL parameter type used when comparing cursor values.
 
 ### Computed Fields
 
-Use a selector when the value can be computed in DQL:
+Use a selector when the value can be selected by the Doctrine query:
 
 ```php
 function apply_book_summary_selector(
     QueryBuilder $queryBuilder,
     Node $node
 ): void {
-    $entityAlias = $queryBuilder->rootEntityAlias();
+    $rootAlias = $queryBuilder->rootAlias();
 
-    $queryBuilder->addSelect("CONCAT($entityAlias.title, ' #', $entityAlias.id) AS summary");
+    $queryBuilder->addSelect("CONCAT($rootAlias.title, ' #', $rootAlias.id) AS summary");
 }
 ```
 
@@ -510,7 +561,7 @@ function resolve_books_search(Node $node): mixed
 }
 ```
 
-Search resolvers return their own collection results. Built-in Doctrine filters, orderings, and pagination are not applied after a search resolver takes over, so handle any supported `queryParams` inside the resolver.
+When `queryParams.search` is present and a search resolver exists for the type, return the full collection result from the search resolver. Apply any supported filters, ordering, or pagination inside the resolver.
 
 ### Mutations
 
@@ -545,12 +596,12 @@ Use constraints to apply query restrictions before Doctrine fetches data, such a
 ```php
 function apply_book_constraint(QueryBuilder $queryBuilder, Node $node): void
 {
-    $entityAlias = $queryBuilder->rootEntityAlias();
-    $tenantIdAlias = $queryBuilder->reconciledAlias('tenantId');
+    $rootAlias = $queryBuilder->rootAlias();
+    $tenantIdParameter = $queryBuilder->parameterName('tenantId');
 
     $queryBuilder
-        ->andWhere("$entityAlias.tenant = :$tenantIdAlias")
-        ->setParameter($tenantIdAlias, $node->context()['tenantId']);
+        ->andWhere("$rootAlias.tenant = :$tenantIdParameter")
+        ->setParameter($tenantIdParameter, $node->context()['tenantId']);
 }
 ```
 
@@ -609,7 +660,7 @@ function parseLiteral(Node $value, ?array $variables = null): mixed
 
 ## Production Cache
 
-In development, use `optimize: false` so Watchtower reads schema, plugin, and scalar files directly.
+While developing, use `optimize: false` so file edits are picked up without regenerating the cache.
 
 For production:
 
@@ -645,7 +696,7 @@ Pass custom validation rules through `$executor->executeQuery(..., validationRul
 - Doctrine entity class base names must be unique across the application. Do not use both `App\Catalog\Product` and `App\Shop\Product` in the same Watchtower schema.
 - Composite association keys are supported only to one level of nesting.
 - Avoid custom aliases or parameter names that start with `__root`, `__parent`, or `__primary`.
-- A nested filter or ordering plugin may be applied to a batched query for several parents. Avoid baking one concrete `$node->parentId()` into the query unless the predicate is still correct for every parent in the batch.
+- For nested filters and orderings, avoid constraining the query to one concrete `$node->parentId()` unless the predicate is correct for every parent being resolved.
 
 ## Development
 

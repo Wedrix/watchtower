@@ -43,3 +43,9 @@ function camelize(
 ): string {
     return Inflector()->camelize($word);
 }
+
+function reservedFieldResultKey(
+    string $fieldName
+): string {
+    return "\0watchtower.reservedField\0{$fieldName}";
+}
