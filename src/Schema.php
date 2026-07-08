@@ -116,7 +116,11 @@ final class Schema extends GraphQLSchema
                 );
             })();
 
-            return BuildSchema::build($AST, $typeConfigDecorator);
+            return BuildSchema::build(
+                source: $AST,
+                typeConfigDecorator: $typeConfigDecorator,
+                options: $optimize ? ['assumeValidSDL' => true] : []
+            );
         })();
 
         parent::__construct($this->schema->getConfig());

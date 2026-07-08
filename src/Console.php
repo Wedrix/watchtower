@@ -8,6 +8,7 @@ use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Language\Parser;
 use GraphQL\Utils\AST;
 use GraphQL\Utils\SchemaPrinter;
+use GraphQL\Validator\DocumentValidator;
 
 interface Console
 {
@@ -339,6 +340,7 @@ function Console(
                             ? $schemaFileContents
                             : throw new UnreadableSchemaFileConsoleException("Unable to read the schema file '$schemaFile'.")
             );
+            DocumentValidator::assertValidSDL($document);
 
             file_force_put_contents($schemaCacheFile, "<?php\nreturn ".\var_export(AST::toArray($document), true).";\n");
 

@@ -17,6 +17,7 @@ use Wedrix\Watchtower\MissingSchemaCacheSchemaException;
 use Wedrix\Watchtower\ReservedFieldNameEntityException;
 use Wedrix\Watchtower\Resolver\ConflictingJoinAliasQueryBuilderException;
 use Wedrix\Watchtower\Resolver\DuplicateJoinPathQueryBuilderException;
+use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\SyncedQuerySchema;
 
 use function Wedrix\Watchtower\AuthorizorPlugin;
@@ -26,6 +27,7 @@ use function Wedrix\Watchtower\Executor;
 use function Wedrix\Watchtower\FilterPlugin;
 use function Wedrix\Watchtower\MutationPlugin;
 use function Wedrix\Watchtower\OrderingPlugin;
+use function Wedrix\Watchtower\Resolver\BatchKey;
 use function Wedrix\Watchtower\ResolverPlugin;
 use function Wedrix\Watchtower\RootAuthorizorPlugin;
 use function Wedrix\Watchtower\SearchResolverPlugin;
@@ -70,6 +72,31 @@ final class ExecutorWorkflowTest extends TestCase
         $this->workspace->cleanup();
 
         parent::tearDown();
+    }
+
+    public function test_batch_key_is_memoized_per_node(): void
+    {
+        $node = $this->createMock(Node::class);
+        $node
+            ->method('args')
+            ->willReturn([
+                'queryParams' => [
+                    'filters' => [
+                        'ids' => [3, 1, 2],
+                    ],
+                ],
+            ]);
+        $node
+            ->method('unwrappedParentType')
+            ->willReturn('Query');
+        $node
+            ->method('name')
+            ->willReturn('books');
+
+        $batchKey = BatchKey($node);
+
+        self::assertSame($batchKey, BatchKey($node));
+        self::assertSame('Query|books|{"queryParams":{"filters":{"ids":[1,2,3]}}}', $batchKey->value());
     }
 
     public function test_query_builder_reuses_join_aliases_for_matching_join_specs(): void

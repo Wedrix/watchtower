@@ -41,14 +41,10 @@ trait ParentAssociatedQuery
             $batchedNodes = (function (): array {
                 $batchKey = BatchKey(node: $this->node);
 
-                $nodes = [$this->node];
+                $nodes = NodeBuffer()->matching($batchKey);
 
-                foreach (NodeBuffer() as $bufferedNode) {
-                    $_batchKey = BatchKey(node: $bufferedNode);
-
-                    if ($_batchKey->value() === $batchKey->value()) {
-                        $nodes[] = $bufferedNode;
-                    }
+                if (! \in_array($this->node, $nodes, true)) {
+                    $nodes[] = $this->node;
                 }
 
                 return $nodes;

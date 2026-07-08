@@ -14,6 +14,13 @@ interface NodeBuffer extends \IteratorAggregate
     ): void;
 
     /**
+     * @return array<int,Node>
+     */
+    public function matching(
+        BatchKey $batchKey
+    ): array;
+
+    /**
      * @return \Traversable<int,Node>
      */
     public function getIterator(): \Traversable;
@@ -32,15 +39,28 @@ function NodeBuffer(): NodeBuffer
          */
         private array $nodes;
 
+        /**
+         * @var array<string,array<int,Node>>
+         */
+        private array $nodesByBatchKey;
+
         public function __construct()
         {
             $this->nodes = [];
+            $this->nodesByBatchKey = [];
         }
 
         public function add(
             Node $node,
         ): void {
             $this->nodes[] = $node;
+            $this->nodesByBatchKey[BatchKey($node)->value()][] = $node;
+        }
+
+        public function matching(
+            BatchKey $batchKey
+        ): array {
+            return $this->nodesByBatchKey[$batchKey->value()] ?? [];
         }
 
         public function getIterator(): \Traversable
@@ -53,6 +73,7 @@ function NodeBuffer(): NodeBuffer
         public function clear(): void
         {
             $this->nodes = [];
+            $this->nodesByBatchKey = [];
         }
     };
 }

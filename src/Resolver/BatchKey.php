@@ -14,45 +14,58 @@ interface BatchKey
 function BatchKey(
     Node $node,
 ): BatchKey {
-    return new class($node) implements BatchKey
-    {
-        private string $value;
+    /**
+     * @var \WeakMap<Node,BatchKey>|null
+     */
+    static $instances = null;
 
-        public function __construct(
-            private Node $node
-        ) {
-            $this->value = (function (): string {
-                $args = $this->node->args();
+    if ($instances === null) {
+        $instances = new \WeakMap;
+    }
 
-                // Recursively sort arrays and associative arrays
-                $sortArgs = static function ($value) use (&$sortArgs) {
-                    if (\is_array($value)) {
-                        $isList = array_is_list($value);
-
-                        // Check if associative
-                        if (! $isList) {
-                            \ksort($value);
-                        } else {
-                            \sort($value);
-                        }
-
-                        foreach ($value as &$v) {
-                            $v = $sortArgs($v);
-                        }
-                    }
-
-                    return $value;
-                };
-
-                $sortedArgs = $sortArgs($args);
-
-                return $this->node->unwrappedParentType().'|'.$this->node->name().'|'.\json_encode($sortedArgs);
-            })();
-        }
-
-        public function value(): string
+    if (! isset($instances[$node])) {
+        $instances[$node] = new class($node) implements BatchKey
         {
-            return $this->value;
-        }
-    };
+            private string $value;
+
+            public function __construct(
+                Node $node
+            ) {
+                $this->value = (function () use ($node): string {
+                    $args = $node->args();
+
+                    // Recursively sort arrays and associative arrays
+                    $sortArgs = static function ($value) use (&$sortArgs) {
+                        if (\is_array($value)) {
+                            $isList = array_is_list($value);
+
+                            // Check if associative
+                            if (! $isList) {
+                                \ksort($value);
+                            } else {
+                                \sort($value);
+                            }
+
+                            foreach ($value as &$v) {
+                                $v = $sortArgs($v);
+                            }
+                        }
+
+                        return $value;
+                    };
+
+                    $sortedArgs = $sortArgs($args);
+
+                    return $node->unwrappedParentType().'|'.$node->name().'|'.\json_encode($sortedArgs);
+                })();
+            }
+
+            public function value(): string
+            {
+                return $this->value;
+            }
+        };
+    }
+
+    return $instances[$node];
 }
