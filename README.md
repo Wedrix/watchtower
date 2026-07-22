@@ -9,7 +9,7 @@ It is built on [graphql-php](https://github.com/webonyx/graphql-php) and works w
 - GraphQL queries backed by Doctrine entities and associations.
 - Schema generation from Doctrine mappings to get started quickly.
 - Offset and cursor pagination for collection fields.
-- Plugin hooks for filters, ordering, computed fields, search, mutations, subscriptions, constraints, and authorization.
+- Plugin hooks for filters, ordering, computed fields, search, mutations, subscriptions, constraints, projections, and authorization.
 - Custom scalar support through small PHP definition files.
 - Production cache generation for schemas, plugins, and scalar definitions.
 
@@ -44,11 +44,13 @@ resources/
   graphql/
     schema.graphql
     plugins/
-      authorizors/
+      result_authorizors/
       constraints/
       filters/
       mutations/
+      node_authorizors/
       orderings/
+      projections/
       resolvers/
       search_resolvers/
       selectors/
@@ -337,33 +339,39 @@ $console->addOrderingPlugin('Book', 'titleAsc');
 $console->addSelectorPlugin('Book', 'summary');
 $console->addResolverPlugin('Book', 'externalRating');
 $console->addSearchResolverPlugin('Book');
+$console->addNodeAuthorizorPlugin('Book');
+$console->addRootNodeAuthorizorPlugin();
+$console->addProjectionPlugin('Book');
 $console->addConstraintPlugin('Book');
 $console->addRootConstraintPlugin();
 $console->addMutationPlugin('createBook');
 $console->addSubscriptionPlugin('bookCreated');
-$console->addAuthorizorPlugin('Book', false);
-$console->addRootAuthorizorPlugin();
+$console->addResultAuthorizorPlugin('Book', false);
+$console->addRootResultAuthorizorPlugin();
 ```
 
 The console writes each plugin into the correct directory with the expected function name. Fill in the generated function body.
 
-For `addAuthorizorPlugin()`, pass `false` for a single-object result authorizor and `true` for a collection result authorizor.
+For `addResultAuthorizorPlugin()`, pass `false` for a single-object result authorizor and `true` for a collection result authorizor.
 
 | Use case | Directory | Function shape |
 | --- | --- | --- |
 | Computed database field | `selectors/` | `apply_book_summary_selector(QueryBuilder $queryBuilder, Node $node): void` |
 | Computed service-backed field | `resolvers/` | `resolve_book_external_rating_field(Node $node): mixed` |
 | Search-backed collection | `search_resolvers/` | `resolve_books_search(Node $node): mixed` |
+| Pre-resolution authorization | `node_authorizors/` | `authorize_book_node(Node $node): void` |
+| Global pre-resolution authorization | `node_authorizors/` | `authorize_node(Node $node): void` |
+| Always-on private selection | `projections/` | `project_book(QueryBuilder $queryBuilder, Node $node): void` |
 | Client-supplied filter | `filters/` | `apply_books_ids_filter(QueryBuilder $queryBuilder, Node $node): void` |
 | Always-on query constraint | `constraints/` | `apply_book_constraint(QueryBuilder $queryBuilder, Node $node): void` |
 | Global query constraint | `constraints/` | `apply_constraint(QueryBuilder $queryBuilder, Node $node): void` |
 | Client-supplied ordering | `orderings/` | `apply_books_title_asc_ordering(QueryBuilder $queryBuilder, Node $node): void` |
 | Mutation field | `mutations/` | `call_create_book_mutation(Node $node): mixed` |
 | Subscription field | `subscriptions/` | `call_book_created_subscription(Node $node): mixed` |
-| Result authorization | `authorizors/` | `authorize_book_result(Result $result, Node $node): void` |
-| Global result authorization | `authorizors/` | `authorize_result(Result $result, Node $node): void` |
+| Result authorization | `result_authorizors/` | `authorize_book_result(Result $result, Node $node): void` |
+| Global result authorization | `result_authorizors/` | `authorize_result(Result $result, Node $node): void` |
 
-The generated namespace must stay as-is. For example, filters use `Wedrix\Watchtower\FilterPlugin`, orderings use `Wedrix\Watchtower\OrderingPlugin`, and mutations use `Wedrix\Watchtower\MutationPlugin`.
+The generated namespace must stay as-is. For example, node authorizors use `Wedrix\Watchtower\NodeAuthorizorPlugin`, result authorizors use `Wedrix\Watchtower\ResultAuthorizorPlugin`, and mutations use `Wedrix\Watchtower\MutationPlugin`.
 
 ### Filters
 
@@ -553,15 +561,50 @@ input BooksQueryParams {
 ```
 
 ```php
+use function Wedrix\Watchtower\Resolver\EntityManager;
+use function Wedrix\Watchtower\Resolver\HydrationQuery;
+
 function resolve_books_search(Node $node): mixed
 {
-    return $node->context()['search']->books(
+    $ids = $node->context()['search']->bookIds(
         (string) ($node->args()['queryParams']['search'] ?? ''),
     );
+
+    if ($ids === []) {
+        return [];
+    }
+
+    $query = HydrationQuery(
+        node: $node,
+        entityManager: EntityManager($node->context()['entityManager']),
+        plugins: $node->context()['watchtowerPlugins']
+    );
+
+    if (! $query->isWorkable()) {
+        return [];
+    }
+
+    $queryBuilder = $query->builder();
+    $rootAlias = $queryBuilder->rootAlias();
+
+    $rows = $queryBuilder
+        ->andWhere("$rootAlias.id IN (:searchIds)")
+        ->setParameter('searchIds', $ids)
+        ->getQuery()
+        ->getArrayResult();
+
+    $rowsById = array_column($rows, null, 'id');
+
+    return array_values(array_filter(array_map(
+        static fn ($id) => $rowsById[$id] ?? null,
+        $ids
+    )));
 }
 ```
 
-When `queryParams.search` is present and a search resolver exists for the type, return the full collection result from the search resolver. Apply any supported filters, ordering, or pagination inside the resolver.
+When `queryParams.search` is present and a search resolver exists for the type, return the full collection result from the search resolver. The resolver receives only the current `Node`; the context keys above are application-defined.
+
+`HydrationQuery(Node $node, EntityManager $entityManager, Plugins $plugins, bool $applyFilters = true)` is optional. It returns a fresh Doctrine query with base selections, projections, constraints, and client filters applied. Pass `false` as the fourth argument to omit filters. Construct it only for the current node or another already-authorized node from the same search batch. It deliberately applies neither ordering nor pagination, which remain owned by the search provider. A resolver that skips hydration must provide any private values its result authorizors require.
 
 ### Mutations
 
@@ -589,7 +632,7 @@ function call_create_book_mutation(Node $node): mixed
 }
 ```
 
-### Constraints and Authorizors
+### Constraints, Projections, Node Authorizors, and Result Authorizors
 
 Use constraints to apply query restrictions before Doctrine fetches data, such as tenant scoping or soft-delete rules.
 
@@ -605,7 +648,32 @@ function apply_book_constraint(QueryBuilder $queryBuilder, Node $node): void
 }
 ```
 
-Use authorizors to validate resolved results across queries, mutations, and subscriptions.
+Use a node authorizor for rules that can be decided from the operation, arguments, selected fields, and context. It runs before Doctrine queries, search calls, resolvers, mutations, and subscriptions.
+
+```php
+function authorize_book_node(Node $node): void
+{
+    if (
+        $node->isACollection()
+        && $node->context()['currentUser']->isGuest()
+        && (($node->args()['queryParams']['filters']['public'] ?? null) !== true)
+    ) {
+        throw new \RuntimeException('A public-only filter is required.');
+    }
+}
+```
+
+Use a projection to add private selects, shared joins, or parameters needed by downstream query plugins and result authorizors on every Doctrine hydration path.
+
+```php
+function project_book(QueryBuilder $queryBuilder, Node $node): void
+{
+    $rootAlias = $queryBuilder->rootAlias();
+    $queryBuilder->addSelect("$rootAlias.public AS authorizationPublic");
+}
+```
+
+Use result authorizors to validate resolved results across queries, search, mutations, and subscriptions.
 
 ```php
 function authorize_book_result(Result $result, Node $node): void
@@ -616,7 +684,9 @@ function authorize_book_result(Result $result, Node $node): void
 }
 ```
 
-For query access control, prefer constraints when the rule can be represented as a database predicate.
+For collections, Watchtower runs the root result authorizor once, the collection result authorizor once, and then the singular result authorizor for every non-null row. The singular result authorizor receives the original collection `Node`, so it can distinguish the collection path with `isACollection()`. Individual results keep the root-then-singular order.
+
+Use constraints for mandatory database predicates, node authorizors for request-shape rules that must fail before work begins, and result authorizors for row-dependent checks.
 
 ## Custom Scalars
 

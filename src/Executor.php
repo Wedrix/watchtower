@@ -119,22 +119,22 @@ function Executor(
             ?string $operationName,
             ?array $validationRules
         ): ExecutionResult {
-            $result = GraphQL::executeQuery(
-                schema: $this->schema,
-                source: $source,
-                rootValue: $rootValue,
-                contextValue: $contextValue,
-                variableValues: $variableValues,
-                operationName: $operationName,
-                fieldResolver: $this->resolver,
-                validationRules: $validationRules
-            );
-
-            // Clear buffers after each execution to avoid data leakage between executions.
-            NodeBuffer()->clear();
-            ResultBuffer()->clear();
-
-            return $result;
+            try {
+                return GraphQL::executeQuery(
+                    schema: $this->schema,
+                    source: $source,
+                    rootValue: $rootValue,
+                    contextValue: $contextValue,
+                    variableValues: $variableValues,
+                    operationName: $operationName,
+                    fieldResolver: $this->resolver,
+                    validationRules: $validationRules
+                );
+            } finally {
+                // Clear buffers after each execution to avoid data leakage between executions.
+                NodeBuffer()->clear();
+                ResultBuffer()->clear();
+            }
         }
     };
 }

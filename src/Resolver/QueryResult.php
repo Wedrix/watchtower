@@ -8,11 +8,8 @@ use Doctrine\ORM\NonUniqueResultException;
 use Doctrine\ORM\NoResultException;
 use Doctrine\ORM\Query as DoctrineQuery;
 use GraphQL\Deferred;
-use Wedrix\Watchtower\Plugins;
 
 use function Wedrix\Watchtower\reservedFieldResultKey;
-use function Wedrix\Watchtower\ResolverPlugin;
-use function Wedrix\Watchtower\SearchResolverPlugin;
 
 trait QueryResult
 {
@@ -24,26 +21,9 @@ trait QueryResult
     public function __construct(
         private Query $query,
         private Node $node,
-        private Plugins $plugins,
         private EntityManager $entityManager,
     ) {
-        $this->isWorkable = ! $this->plugins
-            ->contains(
-                ResolverPlugin(
-                    nodeType: $this->node->unwrappedParentType(),
-                    fieldName: $this->node->name()
-                )
-            )
-            && ! (
-                isset($this->node->args()['queryParams']['search'])
-                && $this->plugins
-                    ->contains(
-                        SearchResolverPlugin(
-                            nodeType: $this->node->unwrappedType()
-                        )
-                    )
-            )
-            && $this->query->isWorkable();
+        $this->isWorkable = $this->query->isWorkable();
 
         $this->value = (function (): mixed {
             if (! $this->isWorkable) {

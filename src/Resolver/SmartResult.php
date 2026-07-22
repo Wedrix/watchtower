@@ -35,28 +35,11 @@ trait SmartResult
             return;
         }
 
-        $this->_constructQueryResult(
-            query: SmartQuery(
-                node: $this->node,
-                entityManager: $this->entityManager,
-                plugins: $this->plugins,
-            ),
-            node: $this->node,
-            plugins: $this->plugins,
-            entityManager: $this->entityManager,
-        );
-
-        // @phpstan-ignore if.alwaysFalse
-        if ($this->isWorkable) {
-            return;
-        }
-
         $this->_constructResolverResult(
             node: $this->node,
             plugins: $this->plugins
         );
 
-        // @phpstan-ignore if.alwaysFalse
         if ($this->isWorkable) {
             return;
         }
@@ -66,17 +49,15 @@ trait SmartResult
             plugins: $this->plugins
         );
 
-        // @phpstan-ignore if.alwaysFalse
         if ($this->isWorkable) {
             return;
         }
 
         $this->_constructMutationResult(
             node: $this->node,
-            plugins: $this->plugins
+            plugins: $this->plugins,
         );
 
-        // @phpstan-ignore if.alwaysFalse
         if ($this->isWorkable) {
             return;
         }
@@ -86,7 +67,20 @@ trait SmartResult
             plugins: $this->plugins
         );
 
-        // @phpstan-ignore if.alwaysFalse
+        if ($this->isWorkable) {
+            return;
+        }
+
+        $this->_constructQueryResult(
+            query: SmartQuery(
+                node: $this->node,
+                entityManager: $this->entityManager,
+                plugins: $this->plugins,
+            ),
+            node: $this->node,
+            entityManager: $this->entityManager,
+        );
+
         if ($this->isWorkable) {
             return;
         }

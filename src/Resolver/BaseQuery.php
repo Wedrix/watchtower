@@ -6,6 +6,7 @@ namespace Wedrix\Watchtower\Resolver;
 
 use Wedrix\Watchtower\Plugins;
 
+use function Wedrix\Watchtower\ProjectionPlugin;
 use function Wedrix\Watchtower\SelectorPlugin;
 
 trait BaseQuery
@@ -130,6 +131,16 @@ trait BaseQuery
                         $identifierResultAlias = "{$identifierAlias}_{$identifierAssociationField}_{$targetIdFieldName}";
                         $queryBuilder->addSelect("IDENTITY({$rootAlias}.$identifierAssociationField, '$targetIdFieldName') AS $identifierResultAlias");
                     }
+                }
+
+                $projectionPlugin = ProjectionPlugin(
+                    nodeType: $this->node->unwrappedType()
+                );
+
+                if ($this->plugins->contains($projectionPlugin)) {
+                    require_once $this->plugins->filePath($projectionPlugin);
+
+                    $projectionPlugin->callback()($queryBuilder, $this->node);
                 }
             }
 

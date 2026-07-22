@@ -6,9 +6,10 @@ namespace Watchtower\Tests;
 
 use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Error\DebugFlag;
+use GraphQL\Validator\QueryValidationContext;
+use GraphQL\Validator\Rules\ValidationRule;
 use PHPUnit\Framework\TestCase;
 use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
-use Watchtower\Tests\Support\Fixtures\Entity\Author;
 use Watchtower\Tests\Support\Fixtures\Entity\Book;
 use Watchtower\Tests\Support\FixtureWorkspace;
 use Wedrix\Watchtower\Console;
@@ -20,16 +21,21 @@ use Wedrix\Watchtower\Resolver\DuplicateJoinPathQueryBuilderException;
 use Wedrix\Watchtower\Resolver\Node;
 use Wedrix\Watchtower\SyncedQuerySchema;
 
-use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
 use function Wedrix\Watchtower\ConstraintPlugin;
 use function Wedrix\Watchtower\Executor;
 use function Wedrix\Watchtower\FilterPlugin;
 use function Wedrix\Watchtower\MutationPlugin;
+use function Wedrix\Watchtower\NodeAuthorizorPlugin;
 use function Wedrix\Watchtower\OrderingPlugin;
+use function Wedrix\Watchtower\ProjectionPlugin;
 use function Wedrix\Watchtower\Resolver\BatchKey;
+use function Wedrix\Watchtower\Resolver\NodeBuffer;
+use function Wedrix\Watchtower\Resolver\ResultBuffer;
 use function Wedrix\Watchtower\ResolverPlugin;
-use function Wedrix\Watchtower\RootAuthorizorPlugin;
+use function Wedrix\Watchtower\ResultAuthorizorPlugin;
+use function Wedrix\Watchtower\RootNodeAuthorizorPlugin;
+use function Wedrix\Watchtower\RootResultAuthorizorPlugin;
 use function Wedrix\Watchtower\SearchResolverPlugin;
 use function Wedrix\Watchtower\SelectorPlugin;
 
@@ -854,6 +860,63 @@ final class ExecutorWorkflowTest extends TestCase
                 ],
             ],
             $result['data']['books'] ?? []
+        );
+    }
+
+    public function test_search_hydration_applies_filters_and_returns_fresh_queries(): void
+    {
+        $hydrationQueries = new \ArrayObject;
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(
+                queryParams: {
+                  search: "graphql"
+                  filters: { titleContains: "basics" }
+                }
+              ) {
+                title
+              }
+            }
+            GRAPHQL,
+            [
+                'hydrationQueries' => $hydrationQueries,
+            ]
+        );
+
+        $this->assertNoErrors($result);
+        self::assertSame(
+            [
+                ['title' => 'GraphQL Basics'],
+            ],
+            $result['data']['books'] ?? []
+        );
+        self::assertCount(2, $hydrationQueries);
+        self::assertNotSame($hydrationQueries[0], $hydrationQueries[1]);
+    }
+
+    public function test_search_strategy_does_not_build_a_discarded_doctrine_query(): void
+    {
+        $events = new \ArrayObject;
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(queryParams: { search: "graphql" }) {
+                id
+              }
+            }
+            GRAPHQL,
+            [
+                'resolutionEvents' => $events,
+            ]
+        );
+
+        $this->assertNoErrors($result);
+        self::assertSame(
+            ['root-node', 'book-node', 'search', 'projection'],
+            \iterator_to_array($events)
         );
     }
 
@@ -1967,7 +2030,7 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertSame('Renamed with Mutation', $queryResult['data']['book']['title']);
     }
 
-    public function test_collection_authorizor_blocks_unauthorized_results(): void
+    public function test_collection_result_authorizor_blocks_unauthorized_results(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -1985,7 +2048,219 @@ final class ExecutorWorkflowTest extends TestCase
         $this->assertErrorContains($result, 'Unauthorized books collection');
     }
 
-    public function test_root_authorizor_blocks_all_results_when_enabled_in_context(): void
+    public function test_node_authorizor_blocks_before_ordinary_or_search_resolution(): void
+    {
+        foreach (
+            [
+                <<<'GRAPHQL'
+                query {
+                  books {
+                    id
+                  }
+                }
+                GRAPHQL,
+                <<<'GRAPHQL'
+                query {
+                  books(queryParams: { search: "graphql" }) {
+                    id
+                  }
+                }
+                GRAPHQL,
+            ] as $source
+        ) {
+            $events = new \ArrayObject;
+
+            $result = $this->executeQuery(
+                $source,
+                [
+                    'blockBookNodes' => true,
+                    'resolutionEvents' => $events,
+                ]
+            );
+
+            $this->assertErrorContains($result, 'Blocked by book node authorizor');
+            self::assertSame(['root-node', 'book-node'], \iterator_to_array($events));
+        }
+    }
+
+    public function test_root_node_authorizor_runs_before_type_node_authorizor(): void
+    {
+        $events = new \ArrayObject;
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books {
+                id
+              }
+            }
+            GRAPHQL,
+            [
+                'blockAllNodes' => true,
+                'resolutionEvents' => $events,
+            ]
+        );
+
+        $this->assertErrorContains($result, 'Blocked by root node authorizor');
+        self::assertSame(['root-node'], \iterator_to_array($events));
+    }
+
+    public function test_collection_result_authorizor_runs_before_each_singular_result_authorizor(): void
+    {
+        $events = new \ArrayObject;
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books {
+                id
+              }
+            }
+            GRAPHQL,
+            [
+                'authorizationEvents' => $events,
+            ]
+        );
+
+        $this->assertNoErrors($result);
+
+        $books = $result['data']['books'] ?? [];
+        $expectedEvents = [
+            ['kind' => 'root'],
+            ['kind' => 'collection', 'count' => \count($books)],
+        ];
+
+        foreach ($books as $book) {
+            $expectedEvents[] = [
+                'kind' => 'row',
+                'id' => (int) $book['id'],
+                'authorizationBookId' => (int) $book['id'],
+            ];
+        }
+
+        self::assertSame($expectedEvents, \iterator_to_array($events));
+    }
+
+    public function test_singular_result_authorizor_can_reject_a_row_in_a_collection(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books {
+                id
+              }
+            }
+            GRAPHQL,
+            [
+                'denyBookId' => $this->firstBookId,
+            ]
+        );
+
+        $this->assertErrorContains($result, 'Unauthorized book row');
+        self::assertNull($result['data'] ?? null);
+    }
+
+    public function test_individual_result_uses_root_and_singular_result_authorizors_only(): void
+    {
+        $events = new \ArrayObject;
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($id: ID!) {
+              book(id: $id) {
+                id
+              }
+            }
+            GRAPHQL,
+            [
+                'authorizationEvents' => $events,
+            ],
+            [
+                'id' => $this->firstBookId,
+            ]
+        );
+
+        $this->assertNoErrors($result);
+        self::assertSame(
+            [
+                ['kind' => 'root'],
+                [
+                    'kind' => 'row',
+                    'id' => $this->firstBookId,
+                    'authorizationBookId' => $this->firstBookId,
+                ],
+            ],
+            \iterator_to_array($events)
+        );
+    }
+
+    public function test_empty_collection_still_uses_collection_result_authorizor_without_row_calls(): void
+    {
+        $events = new \ArrayObject;
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              books(
+                queryParams: {
+                  filters: { titleContains: "does-not-exist" }
+                }
+              ) {
+                id
+              }
+            }
+            GRAPHQL,
+            [
+                'authorizationEvents' => $events,
+            ]
+        );
+
+        $this->assertNoErrors($result);
+        self::assertSame(
+            [
+                ['kind' => 'root'],
+                ['kind' => 'collection', 'count' => 0],
+            ],
+            \iterator_to_array($events)
+        );
+    }
+
+    public function test_declared_type_result_authorizors_handle_traversable_null_and_deferred_rows(): void
+    {
+        $events = new \ArrayObject;
+
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query {
+              searchAsInterface {
+                __typename
+                id
+                label
+              }
+            }
+            GRAPHQL,
+            [
+                'deferredInterfaceResults' => true,
+                'interfaceAuthorizationEvents' => $events,
+            ]
+        );
+
+        $this->assertNoErrors($result);
+        self::assertSame(
+            [
+                null,
+                [
+                    '__typename' => 'SearchBook',
+                    'id' => 'b-deferred',
+                    'label' => 'Deferred GraphQL',
+                ],
+            ],
+            $result['data']['searchAsInterface'] ?? []
+        );
+        self::assertSame(['collection', 'b-deferred'], \iterator_to_array($events));
+    }
+
+    public function test_root_result_authorizor_blocks_all_results_when_enabled_in_context(): void
     {
         $result = $this->executeQuery(
             <<<'GRAPHQL'
@@ -2000,7 +2275,7 @@ final class ExecutorWorkflowTest extends TestCase
             ]
         );
 
-        $this->assertErrorContains($result, 'Blocked by root authorizor');
+        $this->assertErrorContains($result, 'Blocked by root result authorizor');
     }
 
     public function test_missing_filter_plugin_returns_meaningful_error(): void
@@ -2082,62 +2357,43 @@ final class ExecutorWorkflowTest extends TestCase
         $this->createExecutor(true);
     }
 
-    public function test_buffers_are_cleared_between_executor_calls(): void
+    public function test_buffers_are_cleared_when_execution_throws(): void
     {
-        $executor = $this->createExecutor(false);
+        $node = $this->createMock(Node::class);
+        $node->method('args')->willReturn([]);
+        $node->method('unwrappedParentType')->willReturn('Query');
+        $node->method('name')->willReturn('books');
 
-        $query = <<<'GRAPHQL'
-        query {
-          books {
-            id
-            title
-          }
+        $batchKey = BatchKey($node);
+
+        NodeBuffer()->add($node);
+        ResultBuffer()->add($batchKey, ['stale']);
+
+        $validationRule = new class extends ValidationRule
+        {
+            public function getVisitor(QueryValidationContext $context): array
+            {
+                throw new \RuntimeException('Validation failed unexpectedly.');
+            }
+        };
+
+        try {
+            $this->createExecutor(false)->executeQuery(
+                source: '{ books { id } }',
+                rootValue: [],
+                contextValue: $this->defaultContext(),
+                variableValues: null,
+                operationName: null,
+                validationRules: [$validationRule]
+            );
+
+            self::fail('Expected validation to throw.');
+        } catch (\RuntimeException $exception) {
+            self::assertSame('Validation failed unexpectedly.', $exception->getMessage());
         }
-        GRAPHQL;
 
-        $firstResult = $executor
-            ->executeQuery(
-                source: $query,
-                rootValue: [],
-                contextValue: $this->defaultContext(),
-                variableValues: null,
-                operationName: null,
-                validationRules: null
-            )
-            ->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE);
-
-        $this->assertNoErrors($firstResult);
-
-        $countBefore = \count($firstResult['data']['books'] ?? []);
-
-        $author = $this->entityManager->find(Author::class, $this->firstAuthorId);
-        self::assertInstanceOf(Author::class, $author);
-
-        $newBook = new Book(
-            $author,
-            'Fresh GraphQL Stories',
-            13.40,
-            new \DateTimeImmutable('2024-03-01T00:00:00+00:00')
-        );
-        $this->entityManager->persist($newBook);
-        $this->entityManager->flush();
-
-        $secondResult = $executor
-            ->executeQuery(
-                source: $query,
-                rootValue: [],
-                contextValue: $this->defaultContext(),
-                variableValues: null,
-                operationName: null,
-                validationRules: null
-            )
-            ->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE);
-
-        $this->assertNoErrors($secondResult);
-
-        $countAfter = \count($secondResult['data']['books'] ?? []);
-
-        self::assertSame($countBefore + 1, $countAfter);
+        self::assertSame([], \iterator_to_array(NodeBuffer()));
+        self::assertFalse(ResultBuffer()->has($batchKey));
     }
 
     private function prepareExecutorWorkspace(): void
@@ -2147,6 +2403,100 @@ final class ExecutorWorkflowTest extends TestCase
 
         $console = $this->createConsole();
         $plugins = $console->plugins();
+
+        $console->addRootNodeAuthorizorPlugin();
+        $rootNodeAuthorizor = RootNodeAuthorizorPlugin();
+        $this->writePluginFile(
+            $plugins->filePath($rootNodeAuthorizor),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\Watchtower\NodeAuthorizorPlugin;
+
+            use ArrayObject;
+            use Wedrix\Watchtower\Resolver\Node;
+
+            function {$rootNodeAuthorizor->name()}(
+                Node \$node
+            ): void
+            {
+                \$events = \$node->context()['resolutionEvents'] ?? null;
+
+                if (\$events instanceof ArrayObject && \$node->unwrappedType() === 'Book') {
+                    \$events[] = 'root-node';
+                }
+
+                if ((\$node->context()['blockAllNodes'] ?? false) === true) {
+                    throw new \RuntimeException('Blocked by root node authorizor.');
+                }
+            }
+            PHP
+        );
+
+        $console->addNodeAuthorizorPlugin('Book');
+        $nodeAuthorizor = NodeAuthorizorPlugin('Book');
+        $this->writePluginFile(
+            $plugins->filePath($nodeAuthorizor),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\Watchtower\NodeAuthorizorPlugin;
+
+            use ArrayObject;
+            use Wedrix\Watchtower\Resolver\Node;
+
+            function {$nodeAuthorizor->name()}(
+                Node \$node
+            ): void
+            {
+                \$events = \$node->context()['resolutionEvents'] ?? null;
+
+                if (\$events instanceof ArrayObject) {
+                    \$events[] = 'book-node';
+                }
+
+                if ((\$node->context()['blockBookNodes'] ?? false) === true) {
+                    throw new \RuntimeException('Blocked by book node authorizor.');
+                }
+            }
+            PHP
+        );
+
+        $console->addProjectionPlugin('Book');
+        $projection = ProjectionPlugin('Book');
+        $this->writePluginFile(
+            $plugins->filePath($projection),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\Watchtower\ProjectionPlugin;
+
+            use ArrayObject;
+            use Wedrix\Watchtower\Resolver\Node;
+            use Wedrix\Watchtower\Resolver\QueryBuilder;
+
+            function {$projection->name()}(
+                QueryBuilder \$queryBuilder,
+                Node \$node
+            ): void
+            {
+                \$rootAlias = \$queryBuilder->rootAlias();
+                \$queryBuilder->addSelect("\$rootAlias.id AS authorizationBookId");
+
+                \$events = \$node->context()['resolutionEvents'] ?? null;
+
+                if (\$events instanceof ArrayObject) {
+                    \$events[] = 'projection';
+                }
+            }
+            PHP
+        );
 
         $console->addSelectorPlugin('Book', 'titleLength');
         $selectorPlugin = SelectorPlugin('Book', 'titleLength');
@@ -2232,12 +2582,26 @@ final class ExecutorWorkflowTest extends TestCase
 
             namespace Wedrix\\Watchtower\\ResolverPlugin;
 
+            use GraphQL\\Deferred;
             use Wedrix\\Watchtower\\Resolver\\Node;
 
             function {$interfaceResolverPlugin->name()}(
                 Node \$node
             ): mixed
             {
+                if ((\$node->context()['deferredInterfaceResults'] ?? false) === true) {
+                    return (static function (): \\Generator {
+                        yield null;
+                        yield new Deferred(static fn (): array => [
+                            '__typename' => 'SearchBook',
+                            'id' => 'b-deferred',
+                            'label' => 'Deferred GraphQL',
+                            'kind' => 'BOOK',
+                            'pageCount' => 240,
+                        ]);
+                    })();
+                }
+
                 return [
                     [
                         '__typename' => 'SearchBook',
@@ -2450,39 +2814,57 @@ final class ExecutorWorkflowTest extends TestCase
 
             namespace Wedrix\\Watchtower\\SearchResolverPlugin;
 
-            use Doctrine\\ORM\\EntityManagerInterface;
-            use Watchtower\\Tests\\Support\\Fixtures\\Entity\\Book;
+            use ArrayObject;
             use Wedrix\\Watchtower\\Resolver\\Node;
 
-            function {$searchResolverPlugin->name()}(
-                Node \$node
-            ): mixed
+            use function Wedrix\\Watchtower\\Resolver\\EntityManager;
+            use function Wedrix\\Watchtower\\Resolver\\HydrationQuery;
+
+            function {$searchResolverPlugin->name()}(Node \$node): mixed
             {
                 \$search = (string) (\$node->args()['queryParams']['search'] ?? '');
-                \$entityManager = \$node->context()['entityManager'] ?? null;
+                \$events = \$node->context()['resolutionEvents'] ?? null;
 
-                if (!\$entityManager instanceof EntityManagerInterface) {
-                    throw new \\RuntimeException('Expected entity manager in context.');
+                if (\$events instanceof ArrayObject) {
+                    \$events[] = 'search';
                 }
 
-                \$books = \$entityManager->createQueryBuilder()
-                    ->select('book')
-                    ->from(Book::class, 'book')
-                    ->where('LOWER(book.title) LIKE :search')
-                    ->setParameter('search', '%' . \\strtolower(\$search) . '%')
-                    ->orderBy('book.title', 'ASC')
-                    ->getQuery()
-                    ->getResult();
-
-                return \\array_map(
-                    static fn (Book \$book): array => [
-                        'id' => \$book->getId(),
-                        '_cursor' => 'search-owned-cursor',
-                        'title' => \$book->getTitle(),
-                        'price' => \$book->getPrice(),
-                    ],
-                    \$books
+                \$query = HydrationQuery(
+                    node: \$node,
+                    entityManager: EntityManager(\$node->context()['entityManager']),
+                    plugins: \$node->context()['watchtowerPlugins']
                 );
+
+                if (!\$query->isWorkable()) {
+                    throw new \\RuntimeException('Expected a workable hydration query.');
+                }
+
+                \$queries = \$node->context()['hydrationQueries'] ?? null;
+
+                if (\$queries instanceof ArrayObject) {
+                    \$queries[] = \$query;
+                    \$queries[] = HydrationQuery(
+                        node: \$node,
+                        entityManager: EntityManager(\$node->context()['entityManager']),
+                        plugins: \$node->context()['watchtowerPlugins']
+                    );
+                }
+
+                \$queryBuilder = \$query->builder();
+                \$rootAlias = \$queryBuilder->rootAlias();
+
+                \$books = \$queryBuilder
+                    ->andWhere("LOWER(\$rootAlias.title) LIKE :search")
+                    ->setParameter('search', '%' . \\strtolower(\$search) . '%')
+                    ->orderBy("\$rootAlias.title", 'ASC')
+                    ->getQuery()
+                    ->getArrayResult();
+
+                foreach (\$books as &\$book) {
+                    \$book['_cursor'] = 'search-owned-cursor';
+                }
+
+                return \$books;
             }
             PHP
         );
@@ -2535,25 +2917,35 @@ final class ExecutorWorkflowTest extends TestCase
             PHP
         );
 
-        $console->addAuthorizorPlugin('Book', true);
-        $collectionAuthorizor = AuthorizorPlugin('Book', true);
+        $console->addResultAuthorizorPlugin('Book', true);
+        $collectionResultAuthorizor = ResultAuthorizorPlugin('Book', true);
         $this->writePluginFile(
-            $plugins->filePath($collectionAuthorizor),
+            $plugins->filePath($collectionResultAuthorizor),
             <<<PHP
             <?php
 
             declare(strict_types=1);
 
-            namespace Wedrix\\Watchtower\\AuthorizorPlugin;
+            namespace Wedrix\\Watchtower\\ResultAuthorizorPlugin;
 
+            use ArrayObject;
             use Wedrix\\Watchtower\\Resolver\\Node;
             use Wedrix\\Watchtower\\Resolver\\Result;
 
-            function {$collectionAuthorizor->name()}(
+            function {$collectionResultAuthorizor->name()}(
                 Result \$result,
                 Node \$node
             ): void
             {
+                \$events = \$node->context()['authorizationEvents'] ?? null;
+
+                if (\$events instanceof ArrayObject) {
+                    \$events[] = [
+                        'kind' => 'collection',
+                        'count' => \\is_countable(\$result->value()) ? \\count(\$result->value()) : null,
+                    ];
+                }
+
                 if ((\$node->context()['allowBooks'] ?? false) !== true) {
                     throw new \\RuntimeException('Unauthorized books collection.');
                 }
@@ -2561,27 +2953,135 @@ final class ExecutorWorkflowTest extends TestCase
             PHP
         );
 
-        $console->addRootAuthorizorPlugin();
-        $rootAuthorizor = RootAuthorizorPlugin();
+        $console->addResultAuthorizorPlugin('Book', false);
+        $bookResultAuthorizor = ResultAuthorizorPlugin('Book', false);
         $this->writePluginFile(
-            $plugins->filePath($rootAuthorizor),
+            $plugins->filePath($bookResultAuthorizor),
             <<<PHP
             <?php
 
             declare(strict_types=1);
 
-            namespace Wedrix\\Watchtower\\AuthorizorPlugin;
+            namespace Wedrix\\Watchtower\\ResultAuthorizorPlugin;
 
+            use ArrayObject;
             use Wedrix\\Watchtower\\Resolver\\Node;
             use Wedrix\\Watchtower\\Resolver\\Result;
 
-            function {$rootAuthorizor->name()}(
+            function {$bookResultAuthorizor->name()}(
                 Result \$result,
                 Node \$node
             ): void
             {
+                \$events = \$node->context()['authorizationEvents'] ?? null;
+                \$value = \$result->value();
+                \$id = \\is_array(\$value) ? (\$value['id'] ?? null) : null;
+
+                if (
+                    isset(\$node->context()['denyBookId'])
+                    && (string) \$node->context()['denyBookId'] === (string) \$id
+                ) {
+                    throw new \\RuntimeException('Unauthorized book row.');
+                }
+
+                if (\$events instanceof ArrayObject) {
+                    \$events[] = [
+                        'kind' => 'row',
+                        'id' => \$id,
+                        'authorizationBookId' => \\is_array(\$value) ? (\$value['authorizationBookId'] ?? null) : null,
+                    ];
+                }
+            }
+            PHP
+        );
+
+        $console->addResultAuthorizorPlugin('SearchResult', true);
+        $searchResultCollectionAuthorizor = ResultAuthorizorPlugin('SearchResult', true);
+        $this->writePluginFile(
+            $plugins->filePath($searchResultCollectionAuthorizor),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\ResultAuthorizorPlugin;
+
+            use ArrayObject;
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\Result;
+
+            function {$searchResultCollectionAuthorizor->name()}(
+                Result \$result,
+                Node \$node
+            ): void
+            {
+                \$events = \$node->context()['interfaceAuthorizationEvents'] ?? null;
+
+                if (\$events instanceof ArrayObject) {
+                    \$events[] = 'collection';
+                }
+            }
+            PHP
+        );
+
+        $console->addResultAuthorizorPlugin('SearchResult', false);
+        $searchResultAuthorizor = ResultAuthorizorPlugin('SearchResult', false);
+        $this->writePluginFile(
+            $plugins->filePath($searchResultAuthorizor),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\ResultAuthorizorPlugin;
+
+            use ArrayObject;
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\Result;
+
+            function {$searchResultAuthorizor->name()}(
+                Result \$result,
+                Node \$node
+            ): void
+            {
+                \$events = \$node->context()['interfaceAuthorizationEvents'] ?? null;
+                \$value = \$result->value();
+
+                if (\$events instanceof ArrayObject) {
+                    \$events[] = \\is_array(\$value) ? (\$value['id'] ?? null) : null;
+                }
+            }
+            PHP
+        );
+
+        $console->addRootResultAuthorizorPlugin();
+        $rootResultAuthorizor = RootResultAuthorizorPlugin();
+        $this->writePluginFile(
+            $plugins->filePath($rootResultAuthorizor),
+            <<<PHP
+            <?php
+
+            declare(strict_types=1);
+
+            namespace Wedrix\\Watchtower\\ResultAuthorizorPlugin;
+
+            use ArrayObject;
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\Result;
+
+            function {$rootResultAuthorizor->name()}(
+                Result \$result,
+                Node \$node
+            ): void
+            {
+                \$events = \$node->context()['authorizationEvents'] ?? null;
+
+                if (\$events instanceof ArrayObject && \$node->unwrappedType() === 'Book') {
+                    \$events[] = ['kind' => 'root'];
+                }
+
                 if ((\$node->context()['blockAll'] ?? false) === true) {
-                    throw new \\RuntimeException('Blocked by root authorizor.');
+                    throw new \\RuntimeException('Blocked by root result authorizor.');
                 }
             }
             PHP
@@ -2611,6 +3111,7 @@ final class ExecutorWorkflowTest extends TestCase
     {
         return [
             'entityManager' => $this->entityManager,
+            'watchtowerPlugins' => $this->createConsole()->plugins(),
             'scoreMultiplier' => 2,
             'allowBooks' => true,
             'blockAll' => false,
@@ -2754,7 +3255,7 @@ final class ExecutorWorkflowTest extends TestCase
           authorProfiles(queryParams: AuthorProfilesQueryParams): [AuthorProfile!]!
           tags(queryParams: TagsQueryParams): [Tag!]!
           echoContentKind(kind: ContentKind!): ContentKind!
-          searchAsInterface: [SearchResult!]!
+          searchAsInterface: [SearchResult]
           searchAsUnion: [SearchItem!]!
         }
 

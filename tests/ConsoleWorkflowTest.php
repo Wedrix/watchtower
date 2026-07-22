@@ -11,15 +11,18 @@ use Watchtower\Tests\Support\FixtureWorkspace;
 use Wedrix\Watchtower\Console;
 use Wedrix\Watchtower\ExistingSchemaConsoleException;
 
-use function Wedrix\Watchtower\AuthorizorPlugin;
 use function Wedrix\Watchtower\Console;
 use function Wedrix\Watchtower\ConstraintPlugin;
 use function Wedrix\Watchtower\FilterPlugin;
 use function Wedrix\Watchtower\MutationPlugin;
+use function Wedrix\Watchtower\NodeAuthorizorPlugin;
 use function Wedrix\Watchtower\OrderingPlugin;
+use function Wedrix\Watchtower\ProjectionPlugin;
 use function Wedrix\Watchtower\ResolverPlugin;
-use function Wedrix\Watchtower\RootAuthorizorPlugin;
+use function Wedrix\Watchtower\ResultAuthorizorPlugin;
 use function Wedrix\Watchtower\RootConstraintPlugin;
+use function Wedrix\Watchtower\RootNodeAuthorizorPlugin;
+use function Wedrix\Watchtower\RootResultAuthorizorPlugin;
 use function Wedrix\Watchtower\SelectorPlugin;
 
 /**
@@ -91,8 +94,11 @@ final class ConsoleWorkflowTest extends TestCase
         $console->addOrderingPlugin('Book', 'titleAsc');
         $console->addSelectorPlugin('Book', 'titleLength');
         $console->addResolverPlugin('Book', 'externalScore');
-        $console->addAuthorizorPlugin('Book', true);
-        $console->addRootAuthorizorPlugin();
+        $console->addNodeAuthorizorPlugin('Book');
+        $console->addRootNodeAuthorizorPlugin();
+        $console->addProjectionPlugin('Book');
+        $console->addResultAuthorizorPlugin('Book', true);
+        $console->addRootResultAuthorizorPlugin();
         $console->addMutationPlugin('renameBook');
 
         $plugins = $console->plugins();
@@ -103,8 +109,11 @@ final class ConsoleWorkflowTest extends TestCase
         self::assertFileExists($plugins->filePath(OrderingPlugin('Book', 'titleAsc')));
         self::assertFileExists($plugins->filePath(SelectorPlugin('Book', 'titleLength')));
         self::assertFileExists($plugins->filePath(ResolverPlugin('Book', 'externalScore')));
-        self::assertFileExists($plugins->filePath(AuthorizorPlugin('Book', true)));
-        self::assertFileExists($plugins->filePath(RootAuthorizorPlugin()));
+        self::assertFileExists($plugins->filePath(NodeAuthorizorPlugin('Book')));
+        self::assertFileExists($plugins->filePath(RootNodeAuthorizorPlugin()));
+        self::assertFileExists($plugins->filePath(ProjectionPlugin('Book')));
+        self::assertFileExists($plugins->filePath(ResultAuthorizorPlugin('Book', true)));
+        self::assertFileExists($plugins->filePath(RootResultAuthorizorPlugin()));
         self::assertFileExists($plugins->filePath(MutationPlugin('renameBook')));
     }
 

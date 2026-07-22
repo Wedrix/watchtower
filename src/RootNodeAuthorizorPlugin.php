@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-trait RootAuthorizorPlugin
+trait RootNodeAuthorizorPlugin
 {
     private string $type;
 
@@ -18,11 +18,11 @@ trait RootAuthorizorPlugin
 
     public function __construct()
     {
-        $this->type = 'authorizor';
+        $this->type = 'node_authorizor';
 
-        $this->name = 'authorize_result';
+        $this->name = 'authorize_node';
 
-        $this->namespace = __NAMESPACE__.'\\AuthorizorPlugin';
+        $this->namespace = __NAMESPACE__.'\\NodeAuthorizorPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -32,10 +32,8 @@ trait RootAuthorizorPlugin
         namespace {$this->namespace};
 
         use Wedrix\Watchtower\Resolver\Node;
-        use Wedrix\Watchtower\Resolver\Result;
 
         function {$this->name}(
-            Result \$result,
             Node \$node
         ): void
         {
@@ -68,12 +66,12 @@ trait RootAuthorizorPlugin
     }
 }
 
-function RootAuthorizorPlugin(): Plugin
+function RootNodeAuthorizorPlugin(): Plugin
 {
     static $instance;
 
     return $instance ??= new class implements Plugin
     {
-        use RootAuthorizorPlugin;
+        use RootNodeAuthorizorPlugin;
     };
 }

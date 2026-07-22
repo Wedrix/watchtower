@@ -8,9 +8,9 @@ use Doctrine\ORM\EntityManagerInterface as DoctrineEntityManager;
 use GraphQL\Type\Definition\ResolveInfo;
 use Wedrix\Watchtower\Resolver\EntityManager;
 
+use function Wedrix\Watchtower\Resolver\AuthorizedNode;
 use function Wedrix\Watchtower\Resolver\AuthorizedSmartResult;
 use function Wedrix\Watchtower\Resolver\EntityManager;
-use function Wedrix\Watchtower\Resolver\Node;
 
 interface Resolver
 {
@@ -68,12 +68,13 @@ function Resolver(
             ResolveInfo $info
         ): mixed {
             $result = AuthorizedSmartResult(
-                node: Node(
+                node: AuthorizedNode(
                     root: $root,
                     args: $args,
                     context: $context,
                     info: $info,
-                    entityManager: $this->entityManager
+                    entityManager: $this->entityManager,
+                    plugins: $this->plugins
                 ),
                 entityManager: $this->entityManager,
                 plugins: $this->plugins,

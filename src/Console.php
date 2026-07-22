@@ -54,12 +54,22 @@ interface Console
         string $nodeType
     ): void;
 
-    public function addAuthorizorPlugin(
+    public function addNodeAuthorizorPlugin(
+        string $nodeType
+    ): void;
+
+    public function addRootNodeAuthorizorPlugin(): void;
+
+    public function addProjectionPlugin(
+        string $nodeType
+    ): void;
+
+    public function addResultAuthorizorPlugin(
         string $nodeType,
         bool $isForCollections
     ): void;
 
-    public function addRootAuthorizorPlugin(): void;
+    public function addRootResultAuthorizorPlugin(): void;
 
     public function addMutationPlugin(
         string $fieldName
@@ -272,24 +282,54 @@ function Console(
                 );
         }
 
-        public function addAuthorizorPlugin(
+        public function addNodeAuthorizorPlugin(
+            string $nodeType
+        ): void {
+            $this->plugins
+                ->add(
+                    plugin: NodeAuthorizorPlugin(
+                        nodeType: $nodeType
+                    )
+                );
+        }
+
+        public function addRootNodeAuthorizorPlugin(): void
+        {
+            $this->plugins
+                ->add(
+                    plugin: RootNodeAuthorizorPlugin()
+                );
+        }
+
+        public function addProjectionPlugin(
+            string $nodeType
+        ): void {
+            $this->plugins
+                ->add(
+                    plugin: ProjectionPlugin(
+                        nodeType: $nodeType
+                    )
+                );
+        }
+
+        public function addResultAuthorizorPlugin(
             string $nodeType,
             bool $isForCollections
         ): void {
             $this->plugins
                 ->add(
-                    plugin: AuthorizorPlugin(
+                    plugin: ResultAuthorizorPlugin(
                         nodeType: $nodeType,
                         isForCollections: $isForCollections
                     )
                 );
         }
 
-        public function addRootAuthorizorPlugin(): void
+        public function addRootResultAuthorizorPlugin(): void
         {
             $this->plugins
                 ->add(
-                    plugin: RootAuthorizorPlugin()
+                    plugin: RootResultAuthorizorPlugin()
                 );
         }
 

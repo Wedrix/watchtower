@@ -7,8 +7,8 @@ namespace Wedrix\Watchtower\Resolver;
 use GraphQL\Deferred;
 use Wedrix\Watchtower\Plugins;
 
-use function Wedrix\Watchtower\AuthorizorPlugin;
-use function Wedrix\Watchtower\RootAuthorizorPlugin;
+use function Wedrix\Watchtower\ResultAuthorizorPlugin;
+use function Wedrix\Watchtower\RootResultAuthorizorPlugin;
 
 trait AuthorizedResult
 {
@@ -20,23 +20,94 @@ trait AuthorizedResult
     ) {
         if ($this->isWorkable) {
             $authorize = function (): void {
-                $rootAuthorizorPlugin = RootAuthorizorPlugin();
+                $resultAuthorizorPlugin = ResultAuthorizorPlugin(
+                    nodeType: $this->node->unwrappedType(),
+                    isForCollections: false
+                );
+                $hasResultAuthorizorPlugin = $this->plugins->contains($resultAuthorizorPlugin);
 
-                if ($this->plugins->contains($rootAuthorizorPlugin)) {
-                    require_once $this->plugins->filePath($rootAuthorizorPlugin);
-
-                    $rootAuthorizorPlugin->callback()($this, $this->node);
+                if (
+                    $hasResultAuthorizorPlugin
+                    && $this->node->isACollection()
+                    && $this->value instanceof \Traversable
+                ) {
+                    $this->value = \iterator_to_array($this->value, false);
                 }
 
-                $authorizorPlugin = AuthorizorPlugin(
+                $rootResultAuthorizorPlugin = RootResultAuthorizorPlugin();
+
+                if ($this->plugins->contains($rootResultAuthorizorPlugin)) {
+                    require_once $this->plugins->filePath($rootResultAuthorizorPlugin);
+
+                    $rootResultAuthorizorPlugin->callback()($this, $this->node);
+                }
+
+                if (! $this->node->isACollection()) {
+                    if ($hasResultAuthorizorPlugin) {
+                        require_once $this->plugins->filePath($resultAuthorizorPlugin);
+
+                        $resultAuthorizorPlugin->callback()($this, $this->node);
+                    }
+
+                    return;
+                }
+
+                $collectionResultAuthorizorPlugin = ResultAuthorizorPlugin(
                     nodeType: $this->node->unwrappedType(),
-                    isForCollections: $this->node->isACollection()
+                    isForCollections: true
                 );
 
-                if ($this->plugins->contains($authorizorPlugin)) {
-                    require_once $this->plugins->filePath($authorizorPlugin);
+                if ($this->plugins->contains($collectionResultAuthorizorPlugin)) {
+                    require_once $this->plugins->filePath($collectionResultAuthorizorPlugin);
 
-                    $authorizorPlugin->callback()($this, $this->node);
+                    $collectionResultAuthorizorPlugin->callback()($this, $this->node);
+                }
+
+                if (! $hasResultAuthorizorPlugin || ! \is_array($this->value)) {
+                    return;
+                }
+
+                require_once $this->plugins->filePath($resultAuthorizorPlugin);
+
+                $authorizeRow = function (mixed $value) use ($resultAuthorizorPlugin): void {
+                    $result = new class(value: $value) implements Result
+                    {
+                        public function __construct(
+                            private mixed $value
+                        ) {}
+
+                        public function value(): mixed
+                        {
+                            return $this->value;
+                        }
+
+                        public function isWorkable(): bool
+                        {
+                            return true;
+                        }
+                    };
+
+                    $resultAuthorizorPlugin->callback()($result, $this->node);
+                };
+
+                foreach ($this->value as $key => $value) {
+                    if ($value instanceof Deferred) {
+                        $this->value[$key] = $value->then(
+                            static function (mixed $resolvedValue) use ($authorizeRow): mixed {
+                                if ($resolvedValue !== null) {
+                                    $authorizeRow($resolvedValue);
+                                }
+
+                                return $resolvedValue;
+                            }
+                        );
+
+                        continue;
+                    }
+
+                    if ($value !== null) {
+                        $authorizeRow($value);
+                    }
                 }
             };
 
@@ -49,7 +120,7 @@ trait AuthorizedResult
 
                         \Closure::fromCallable($authorize)->call($result);
 
-                        return $resolvedValue;
+                        return $result->value;
                     }
                 );
             } else {

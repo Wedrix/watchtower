@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower;
 
-trait AuthorizorPlugin
+trait RootResultAuthorizorPlugin
 {
     private string $type;
 
@@ -16,19 +16,13 @@ trait AuthorizorPlugin
 
     private string $callback;
 
-    public function __construct(
-        private string $nodeType,
-        private bool $isForCollections
-    ) {
-        $this->type = 'authorizor';
+    public function __construct()
+    {
+        $this->type = 'result_authorizor';
 
-        $this->name = 'authorize_'.tableize(
-            $this->isForCollections
-                ? pluralize($this->nodeType)
-                : $this->nodeType
-        ).'_result';
+        $this->name = 'authorize_result';
 
-        $this->namespace = __NAMESPACE__.'\\AuthorizorPlugin';
+        $this->namespace = __NAMESPACE__.'\\ResultAuthorizorPlugin';
 
         $this->template = <<<EOD
         <?php
@@ -74,17 +68,12 @@ trait AuthorizorPlugin
     }
 }
 
-function AuthorizorPlugin(
-    string $nodeType,
-    bool $isForCollections
-): Plugin {
-    /**
-     * @var array<string,array<string,Plugin>>
-     */
-    static $instances = [];
+function RootResultAuthorizorPlugin(): Plugin
+{
+    static $instance;
 
-    return $instances[$nodeType][$isForCollections ? 'true' : 'false'] ??= new class(nodeType: $nodeType, isForCollections: $isForCollections) implements Plugin
+    return $instance ??= new class implements Plugin
     {
-        use AuthorizorPlugin;
+        use RootResultAuthorizorPlugin;
     };
 }
