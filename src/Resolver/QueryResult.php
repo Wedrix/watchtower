@@ -40,26 +40,26 @@ trait QueryResult
                 $queryParams = $this->node->args()['queryParams'] ?? [];
                 $limit = $queryParams['limit'] ?? null;
                 $before = $queryParams['before'] ?? null;
-
-                $queryBuilder = $this->query->builder();
-                $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
-                $cursorFieldNames = \array_keys(
-                    \array_filter(
-                        $rootEntity->reservedFields(),
-                        static fn (string $reservedFieldType): bool => $reservedFieldType === 'Cursor'
-                    )
-                );
-
-                if ($queryBuilder->cursorOrderings() !== []) {
-                    $queryBuilder->enableCursorProjection();
-                }
-
-                $cursorOrderings = $queryBuilder->cursorOrderings();
                 $batchKey = BatchKey(node: $this->node);
+                $queryBuilder = null;
 
                 if (ResultBuffer()->has($batchKey)) {
                     $batchResult = ResultBuffer()->get($batchKey);
                 } else {
+                    $queryBuilder = $this->query->builder();
+                    $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
+                    $cursorFieldNames = \array_keys(
+                        \array_filter(
+                            $rootEntity->reservedFields(),
+                            static fn (string $reservedFieldType): bool => $reservedFieldType === 'Cursor'
+                        )
+                    );
+
+                    if ($queryBuilder->cursorOrderings() !== []) {
+                        $queryBuilder->enableCursorProjection();
+                    }
+
+                    $cursorOrderings = $queryBuilder->cursorOrderings();
                     $doctrineQuery = $queryBuilder->getQuery();
 
                     // Nested collection pagination must happen per parent row,
@@ -163,11 +163,11 @@ trait QueryResult
                 }
 
                 // Filter the batch to only include results for the current node (only if node has a parent)
-                $filteredBatch = (function () use ($batchResult): array {
+                $filteredBatch = (function () use ($batchResult, $queryBuilder): array {
                     if (! $this->node->isTopLevel()) {
                         $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
 
-                        $parentAlias = $this->query->builder()->parentAlias();
+                        $parentAlias = ($queryBuilder ?? $this->entityManager->createQueryBuilder())->parentAlias();
 
                         // Extract this node's parent ID
                         $parentId = $this->node->parentId();
