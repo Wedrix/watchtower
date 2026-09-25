@@ -734,9 +734,14 @@ While developing, use `optimize: false` so file edits are picked up without rege
 
 For production:
 
-1. Generate the cache during deployment.
-2. Create the executor with `optimize: true`.
-3. Regenerate the cache whenever the schema, plugins, or scalar definitions change.
+1. Give each application release its own cache directory. Configure `Console()` and `Executor()` with the same directory for that release.
+2. Generate the complete cache during deployment, before starting that release's request-serving workers. If generation fails, do not activate the release.
+3. Create the executor with `optimize: true`.
+4. When the schema, plugins, or scalar definitions change, generate a new release's cache instead of replacing the cache used by running workers.
+
+Each cache file is published atomically, so readers cannot observe a partially written file. The schema, scalar definitions, and plugins are replaced separately, however; publication is not atomic across the complete set. Different releases must not share a cache directory, because their workers could read mismatched files. Workers using the same unchanged release may generate its cache concurrently.
+
+The example below assumes `__DIR__` belongs to an immutable release directory and `var/cache` is not shared with other releases. For an external cache location, include the release identifier in the path, such as `/var/cache/my-app/release-123`, and use that path for both the console and executor. Retain the old release's cache until its workers have stopped.
 
 ```bash
 php bin/watchtower cache:generate

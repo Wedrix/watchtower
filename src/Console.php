@@ -184,7 +184,7 @@ function Console(
         {
             // TODO: Update Schema
 
-            if (\is_file($schemaCacheFile = $this->cacheDirectory.'/'.$this->schemaFileName)) {
+            if (\is_file($schemaCacheFile = $this->cacheDirectory.'/'.\pathinfo($this->schemaFileName, \PATHINFO_BASENAME))) {
                 \unlink($schemaCacheFile);
             }
         }
@@ -357,20 +357,6 @@ function Console(
 
         public function generateCache(): void
         {
-            // Clear previous cache
-            if (\is_file($schemaCacheFile = $this->cacheDirectory.'/'.$this->schemaFileName)) {
-                \unlink($schemaCacheFile);
-            }
-
-            if (\is_file($schemaTypeDefinitionsCacheFile = $this->cacheDirectory.'/scalar_type_definitions.php')) {
-                \unlink($schemaTypeDefinitionsCacheFile);
-            }
-
-            if (\is_file($pluginsCacheFile = $this->cacheDirectory.'/plugins.php')) {
-                \unlink($pluginsCacheFile);
-            }
-
-            // Generate Schema cache
             if (! \is_file($schemaFile = $this->schemaFileDirectory.'/'.$this->schemaFileName)) {
                 throw new MissingSchemaConsoleException('No schema file! Kindly generate it first to proceed.');
             }
@@ -382,48 +368,50 @@ function Console(
             );
             DocumentValidator::assertValidSDL($document);
 
-            file_force_put_contents($schemaCacheFile, "<?php\nreturn ".\var_export(AST::toArray($document), true).";\n");
+            $caches = [
+                \pathinfo($this->schemaFileName, \PATHINFO_BASENAME) => AST::toArray($document),
+                'scalar_type_definitions.php' => \array_map(
+                    fn (ScalarTypeDefinition $definition) => $this->scalarTypeDefinitions->filePath($definition),
+                    \iterator_to_array($this->scalarTypeDefinitions)
+                ),
+                'plugins.php' => \array_map(
+                    fn (PluginInfo $plugin) => $this->plugins->filePath($plugin),
+                    \iterator_to_array($this->plugins)
+                ),
+            ];
 
-            // Generate Scalar Type Definitions cache
-            if (\count($scalarTypeDefinitions = \iterator_to_array($this->scalarTypeDefinitions)) > 0) {
-                $scalarTypeDefinitions = \var_export(
-                    value: \array_map(
-                        fn (ScalarTypeDefinition $scalarTypeDefinition) => $this->scalarTypeDefinitions->filePath($scalarTypeDefinition),
-                        $scalarTypeDefinitions
-                    ),
-                    return: true
-                );
-
-                file_force_put_contents(
-                    $schemaTypeDefinitionsCacheFile,
-                    <<<EOD
-                        <?php
-        
-                        return $scalarTypeDefinitions;
-                        EOD
-                );
+            if (! \is_dir($this->cacheDirectory)
+                && ! @\mkdir($this->cacheDirectory, 0777, true)
+                && ! \is_dir($this->cacheDirectory)) {
+                throw new \RuntimeException("Unable to create cache directory '{$this->cacheDirectory}'.");
             }
 
-            // Generate Plugins cache
-            if (\count($plugins = \iterator_to_array($this->plugins)) > 0) {
-                $plugins = \var_export(
-                    value: \array_map(
-                        fn (PluginInfo $pluginInfo) => $this->plugins->filePath($pluginInfo),
-                        $plugins
-                    ),
-                    return: true
-                );
-
-                file_force_put_contents(
-                    $pluginsCacheFile,
-                    <<<EOD
-                        <?php
-        
-                        return $plugins;
-                        EOD
-                );
+            $generationDirectory = $this->cacheDirectory.'/.generate-'.\bin2hex(\random_bytes(12));
+            if (! \mkdir($generationDirectory, 0777)) {
+                throw new \RuntimeException("Unable to create cache generation directory '$generationDirectory'.");
             }
 
+            try {
+                foreach ($caches as $filename => $data) {
+                    $contents = "<?php\nreturn ".\var_export($data, true).";\n";
+                    if (\file_put_contents($generationDirectory.'/'.$filename, $contents) !== \strlen($contents)) {
+                        throw new \RuntimeException("Unable to write cache file '$filename'.");
+                    }
+                }
+
+                foreach ($caches as $filename => $data) {
+                    if (! \rename($generationDirectory.'/'.$filename, $this->cacheDirectory.'/'.$filename)) {
+                        throw new \RuntimeException("Unable to publish cache file '$filename'.");
+                    }
+                }
+            } finally {
+                foreach ($caches as $filename => $data) {
+                    if (\is_file($file = $generationDirectory.'/'.$filename)) {
+                        \unlink($file);
+                    }
+                }
+                \rmdir($generationDirectory);
+            }
         }
     };
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Watchtower\Tests;
 
 use Doctrine\ORM\EntityManagerInterface;
+use GraphQL\Error\SyntaxError;
 use PHPUnit\Framework\TestCase;
 use Watchtower\Tests\Support\DoctrineEntityManagerFactory;
 use Watchtower\Tests\Support\FixtureWorkspace;
@@ -128,6 +129,144 @@ final class ConsoleWorkflowTest extends TestCase
         self::assertFileExists($this->workspace->cacheDirectory().'/'.$this->workspace->schemaFileName());
         self::assertFileExists($this->workspace->cacheDirectory().'/plugins.php');
         self::assertFileExists($this->workspace->cacheDirectory().'/scalar_type_definitions.php');
+    }
+
+    public function test_nested_schema_name_uses_the_cache_filename_expected_by_schema(): void
+    {
+        $console = Console(
+            entityManager: $this->entityManager,
+            schemaFileDirectory: $this->workspace->schemaDirectory(),
+            schemaFileName: 'nested/schema.graphql',
+            pluginsDirectory: $this->workspace->pluginsDirectory(),
+            scalarTypeDefinitionsDirectory: $this->workspace->scalarTypeDefinitionsDirectory(),
+            cacheDirectory: $this->workspace->cacheDirectory()
+        );
+        $console->generateSchema();
+        $console->generateCache();
+
+        $schemaCacheFile = $this->workspace->cacheDirectory().'/schema.graphql';
+        self::assertFileExists($schemaCacheFile);
+
+        $console->updateSchema();
+        self::assertFileDoesNotExist($schemaCacheFile);
+    }
+
+    public function test_failed_cache_generation_preserves_published_files(): void
+    {
+        $console = $this->createConsole();
+        $console->generateSchema();
+        $console->addFilterPlugin('Book', 'titleContains');
+        $console->generateCache();
+        $published = [];
+        foreach (\glob($this->workspace->cacheDirectory().'/*') as $file) {
+            $published[$file] = \file_get_contents($file);
+        }
+
+        $this->workspace->writeSchema('type Query {');
+        $this->expectException(SyntaxError::class);
+        try {
+            $console->generateCache();
+        } finally {
+            foreach ($published as $file => $contents) {
+                self::assertFileExists($file);
+                self::assertSame($contents, \file_get_contents($file));
+            }
+            self::assertSame([], \glob($this->workspace->cacheDirectory().'/.generate-*'));
+        }
+    }
+
+    public function test_cache_generation_publishes_empty_lists_after_removing_plugins_and_scalars(): void
+    {
+        $console = $this->createConsole();
+        $console->generateSchema();
+        $console->addFilterPlugin('Book', 'titleContains');
+        $console->generateCache();
+
+        \unlink($console->plugins()->filePath(FilterPlugin('Book', 'titleContains')));
+        foreach ($console->scalarTypeDefinitions() as $definition) {
+            \unlink($console->scalarTypeDefinitions()->filePath($definition));
+        }
+        $this->workspace->writeSchema('type Query { hello: String }');
+        $console->generateCache();
+
+        self::assertSame([], require $this->workspace->cacheDirectory().'/plugins.php');
+        self::assertSame([], require $this->workspace->cacheDirectory().'/scalar_type_definitions.php');
+    }
+
+    public function test_concurrent_cache_generation_keeps_published_files_readable(): void
+    {
+        if (! \function_exists('proc_open')) {
+            self::markTestSkipped('proc_open is required for concurrent cache generation.');
+        }
+
+        $console = $this->createConsole();
+        $console->generateSchema();
+        $console->addFilterPlugin('Book', 'titleContains');
+        $console->generateCache();
+        $published = [];
+        foreach (\glob($this->workspace->cacheDirectory().'/*') as $file) {
+            $published[$file] = \file_get_contents($file);
+        }
+        $code = <<<'PHP'
+            require $argv[1].'/vendor/autoload.php';
+            $console = \Wedrix\Watchtower\Console(
+                entityManager: \Watchtower\Tests\Support\DoctrineEntityManagerFactory::create($argv[1].'/tests/Support/Fixtures/mappings'),
+                schemaFileDirectory: $argv[2].'/schema',
+                schemaFileName: 'schema.graphql',
+                pluginsDirectory: $argv[2].'/plugins',
+                scalarTypeDefinitionsDirectory: $argv[2].'/scalar_type_definitions',
+                cacheDirectory: $argv[2].'/cache'
+            );
+            while (microtime(true) < (float) $argv[3]) {
+                usleep(1000);
+            }
+            for ($iteration = 0; $iteration < 20; ++$iteration) {
+                $console->generateCache();
+            }
+            PHP;
+        $children = [];
+        $start = \microtime(true) + 0.3;
+        $reads = 0;
+        try {
+            for ($index = 0; $index < 4; $index++) {
+                $process = \proc_open([
+                    \PHP_BINARY, '-d', 'opcache.enable_cli=0', '-r', $code,
+                    \dirname(__DIR__), $this->workspace->rootDirectory(), (string) $start,
+                ], [1 => ['pipe', 'w'], 2 => ['redirect', 1]], $pipes);
+                self::assertIsResource($process);
+                \stream_set_blocking($pipes[1], false);
+                $children[] = [$process, $pipes[1], ''];
+            }
+
+            $deadline = \microtime(true) + 15;
+            while ($children !== []) {
+                foreach ($published as $file => $contents) {
+                    self::assertSame($contents, \file_get_contents($file));
+                }
+                $reads++;
+                foreach ($children as $index => [$process, $pipe, $output]) {
+                    $children[$index][2] = $output.\stream_get_contents($pipe);
+                    $status = \proc_get_status($process);
+                    if (! $status['running']) {
+                        $output = $children[$index][2].\stream_get_contents($pipe);
+                        \fclose($pipe);
+                        \proc_close($process);
+                        unset($children[$index]);
+                        self::assertSame(0, $status['exitcode'], $output);
+                    }
+                }
+                self::assertLessThan($deadline, \microtime(true), 'Concurrent cache generation timed out.');
+                \usleep(1000);
+            }
+            self::assertGreaterThan(0, $reads);
+            self::assertSame([], \glob($this->workspace->cacheDirectory().'/.generate-*'));
+        } finally {
+            foreach ($children as [$process, $pipe]) {
+                \proc_terminate($process);
+                \fclose($pipe);
+                \proc_close($process);
+            }
+        }
     }
 
     public function test_update_schema_invalidates_existing_schema_cache_file(): void
