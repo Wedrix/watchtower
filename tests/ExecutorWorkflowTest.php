@@ -105,6 +105,48 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertSame('Query|books|{"queryParams":{"filters":{"ids":[1,2,3]}}}', $batchKey->value());
     }
 
+    public function test_batch_key_distinguishes_private_scalar_state(): void
+    {
+        $valueObject = static function (string $value): object {
+            return new class($value)
+            {
+                public function __construct(private string $value) {}
+            };
+        };
+
+        $nodeFor = function (string $value) use ($valueObject): Node {
+            $node = $this->createMock(Node::class);
+            $node->method('args')->willReturn([
+                'queryParams' => [
+                    'filters' => [
+                        'categoryId' => $valueObject($value),
+                    ],
+                ],
+            ]);
+            $node->method('unwrappedParentType')->willReturn('Query');
+            $node->method('name')->willReturn('businesses');
+
+            return $node;
+        };
+
+        $firstKey = BatchKey($nodeFor('food'))->value();
+
+        self::assertSame($firstKey, BatchKey($nodeFor('food'))->value());
+        self::assertNotSame($firstKey, BatchKey($nodeFor('property'))->value());
+    }
+
+    public function test_batch_key_rejects_invalid_json(): void
+    {
+        $node = $this->createMock(Node::class);
+        $node->method('args')->willReturn(['invalid' => "\xB1"]);
+        $node->method('unwrappedParentType')->willReturn('Query');
+        $node->method('name')->willReturn('books');
+
+        $this->expectException(\JsonException::class);
+
+        BatchKey($node);
+    }
+
     public function test_query_builder_reuses_join_aliases_for_matching_join_specs(): void
     {
         $queryBuilder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());

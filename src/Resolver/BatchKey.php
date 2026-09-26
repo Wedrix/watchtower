@@ -36,6 +36,13 @@ function BatchKey(
 
                     // Recursively sort arrays and associative arrays
                     $sortArgs = static function ($value) use (&$sortArgs) {
+                        if (\is_object($value)) {
+                            $value = [
+                                'class' => $value::class,
+                                'state' => (array) $value,
+                            ];
+                        }
+
                         if (\is_array($value)) {
                             $isList = array_is_list($value);
 
@@ -56,7 +63,7 @@ function BatchKey(
 
                     $sortedArgs = $sortArgs($args);
 
-                    return $node->unwrappedParentType().'|'.$node->name().'|'.\json_encode($sortedArgs);
+                    return $node->unwrappedParentType().'|'.$node->name().'|'.\json_encode($sortedArgs, \JSON_THROW_ON_ERROR);
                 })();
             }
 
