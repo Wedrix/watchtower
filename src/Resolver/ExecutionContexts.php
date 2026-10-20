@@ -14,7 +14,9 @@ interface ExecutionContexts
 
 function ExecutionContexts(): ExecutionContexts
 {
-    static $contexts = new class implements ExecutionContexts
+    static $contexts = null;
+
+    $contexts ??= new class implements ExecutionContexts
     {
         /** @var \WeakMap<Node,\WeakReference<ExecutionContext>> */
         private \WeakMap $contexts;

@@ -377,7 +377,7 @@ function QueryBuilder(
                 $previous = $last;
                 $last = $lexer->lookahead;
             }
-            if ($previous === null || $last === null) {
+            if ($last === null || $previous === null) {
                 return $expression;
             }
             $previousValue = self::tokenPart($previous, 'value');
