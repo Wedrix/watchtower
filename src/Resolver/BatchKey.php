@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Wedrix\Watchtower\Resolver;
 
+use GraphQL\Type\Definition\Type;
+
 use function Wedrix\Watchtower\array_is_list;
 
 interface BatchKey
@@ -32,10 +34,13 @@ function BatchKey(
                 Node $node
             ) {
                 $this->value = (function () use ($node): string {
-                    $args = $node->args();
+                    // Field projections and selector arguments must match before results can be shared.
+                    // Normalize maps, but preserve list order because GraphQL input lists are ordered.
+                    $normalize = static function ($value) use (&$normalize) {
+                        if ($value instanceof Type) {
+                            return (string) $value;
+                        }
 
-                    // Recursively sort arrays and associative arrays
-                    $sortArgs = static function ($value) use (&$sortArgs) {
                         if (\is_object($value)) {
                             $value = [
                                 'class' => $value::class,
@@ -44,26 +49,25 @@ function BatchKey(
                         }
 
                         if (\is_array($value)) {
-                            $isList = array_is_list($value);
-
-                            // Check if associative
-                            if (! $isList) {
+                            if (! array_is_list($value)) {
                                 \ksort($value);
-                            } else {
-                                \sort($value);
                             }
 
                             foreach ($value as &$v) {
-                                $v = $sortArgs($v);
+                                $v = $normalize($v);
                             }
                         }
 
                         return $value;
                     };
 
-                    $sortedArgs = $sortArgs($args);
+                    $signature = [
+                        'args' => $normalize($node->args()),
+                        'fields' => $normalize($node->concreteFieldsSelection()),
+                        'implementors' => $normalize($node->abstractFieldsSelection()),
+                    ];
 
-                    return $node->unwrappedParentType().'|'.$node->name().'|'.\json_encode($sortedArgs, \JSON_THROW_ON_ERROR);
+                    return $node->unwrappedParentType().'|'.$node->name().'|'.\json_encode($signature, \JSON_THROW_ON_ERROR);
                 })();
             }
 

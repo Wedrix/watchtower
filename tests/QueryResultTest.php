@@ -31,6 +31,13 @@ final class QueryResultTest extends TestCase
         $node->method('isTopLevel')->willReturn(false);
         $node->method('isACollection')->willReturn(true);
         $node->method('parentId')->willReturn(['id' => 1]);
+        $node->method('concreteFieldsSelection')->willReturn(['id' => [], 'name' => []]);
+
+        $bufferedNode = $this->createMock(Node::class);
+        $bufferedNode->method('args')->willReturn([]);
+        $bufferedNode->method('name')->willReturn('children');
+        $bufferedNode->method('unwrappedParentType')->willReturn('Parent');
+        $bufferedNode->method('concreteFieldsSelection')->willReturn(['name' => [], 'id' => []]);
 
         $query = $this->createMock(Query::class);
         $query->method('isWorkable')->willReturn(true);
@@ -51,7 +58,7 @@ final class QueryResultTest extends TestCase
         );
 
         $expected = [['id' => 10, '__parent_id' => 1]];
-        ResultBuffer()->add(BatchKey($node), $expected);
+        ResultBuffer()->add(BatchKey($bufferedNode), $expected);
 
         $result = new class(query: $query, node: $node, entityManager: $entityManager) implements Result
         {

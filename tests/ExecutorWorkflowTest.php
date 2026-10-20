@@ -102,7 +102,7 @@ final class ExecutorWorkflowTest extends TestCase
         $batchKey = BatchKey($node);
 
         self::assertSame($batchKey, BatchKey($node));
-        self::assertSame('Query|books|{"queryParams":{"filters":{"ids":[1,2,3]}}}', $batchKey->value());
+        self::assertSame('Query|books|{"args":{"queryParams":{"filters":{"ids":[3,1,2]}}},"fields":[],"implementors":[]}', $batchKey->value());
     }
 
     public function test_batch_key_distinguishes_private_scalar_state(): void
@@ -477,6 +477,86 @@ final class ExecutorWorkflowTest extends TestCase
         self::assertSame(\strlen('GraphQL in Action') * 2, $books[1]['externalScore']);
         self::assertSame('Ada Lovelace', $books[0]['author']['name']);
         self::assertSame('Alan Turing', $books[1]['author']['name']);
+    }
+
+    public function test_aliases_with_different_selected_fields_do_not_share_partial_results(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            {
+              brief: books { id }
+              detailed: books { id title titleLength }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+        self::assertCount(4, $result['data']['brief']);
+        self::assertCount(4, $result['data']['detailed']);
+
+        foreach ($result['data']['detailed'] as $book) {
+            self::assertSame(\strlen($book['title']), $book['titleLength']);
+        }
+    }
+
+    public function test_nested_associations_in_different_branches_keep_their_selected_fields(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            {
+              recent: books(queryParams: { limit: 1 }) {
+                author { id }
+              }
+              books {
+                title
+                author { id name }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+        self::assertCount(1, $result['data']['recent']);
+        self::assertCount(4, $result['data']['books']);
+        $authorsByBook = [];
+
+        foreach ($result['data']['books'] as $book) {
+            $authorsByBook[$book['title']] = $book['author']['name'];
+        }
+
+        self::assertSame('Ada Lovelace', $authorsByBook['GraphQL Basics']);
+        self::assertSame('Alan Turing', $authorsByBook['GraphQL in Action']);
+    }
+
+    public function test_nested_selectors_in_different_branches_keep_their_arguments(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            query($offset: Int!) {
+              recent: authors(queryParams: { limit: 1 }) {
+                books { title titleLength }
+              }
+              authors {
+                books { title titleLength(offset: $offset) }
+              }
+            }
+            GRAPHQL,
+            variableValues: ['offset' => 10]
+        );
+
+        $this->assertNoErrors($result);
+        self::assertCount(1, $result['data']['recent']);
+        self::assertCount(2, $result['data']['authors']);
+
+        foreach ($result['data']['recent'][0]['books'] as $book) {
+            self::assertSame(\strlen($book['title']), $book['titleLength']);
+        }
+
+        foreach ($result['data']['authors'] as $author) {
+            foreach ($author['books'] as $book) {
+                self::assertSame(\strlen($book['title']) + 10, $book['titleLength']);
+            }
+        }
     }
 
     public function test_many_to_many_relation_resolution_from_books_to_tags(): void
@@ -2561,7 +2641,10 @@ final class ExecutorWorkflowTest extends TestCase
             {
                 \$rootAlias = \$queryBuilder->rootAlias();
 
-                \$queryBuilder->addSelect("LENGTH(\$rootAlias.title) AS titleLength");
+                \$offset = \$node->concreteFieldsSelection()['titleLength']['args']['offset'];
+                \$parameter = \$queryBuilder->parameterName('titleLengthOffset');
+                \$queryBuilder->addSelect("LENGTH(\$rootAlias.title) + :\$parameter AS titleLength")
+                    ->setParameter(\$parameter, \$offset);
             }
             PHP
         );
@@ -3336,7 +3419,7 @@ final class ExecutorWorkflowTest extends TestCase
             @watchtowerAssociation(through: "ambiguousBookRecommendations")
           missingRecommendingAuthors(queryParams: AuthorsQueryParams): [Author!]!
             @watchtowerAssociation(through: "missingAssociation")
-          titleLength: Int!
+          titleLength(offset: Int = 0): Int!
           externalScore: Int!
         }
 
