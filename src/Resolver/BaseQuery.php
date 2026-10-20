@@ -15,6 +15,8 @@ trait BaseQuery
 
     private QueryBuilder $queryBuilder;
 
+    private ?BatchKey $batchKey = null;
+
     public function __construct(
         private Node $node,
         private EntityManager $entityManager,
@@ -110,7 +112,24 @@ trait BaseQuery
 
                     require_once $this->plugins->filePath($selectorPlugin);
 
-                    $selectorPlugin->callback()($queryBuilder, $this->node);
+                    $selector = $selectorPlugin->callback();
+                    $variants = $nodeFieldsSelection[$fieldName]['variants'] ?? null;
+                    if ($variants === null) {
+                        $selector($queryBuilder, $this->node);
+                    } else {
+                        foreach ($variants as $index => $variant) {
+                            $selectedNode = SelectionNode($this->node, $fieldName, $variant);
+                            if ($index === 0) {
+                                $selector($queryBuilder, $selectedNode);
+                            } else {
+                                $queryBuilder->projectAs(
+                                    $fieldName,
+                                    \Wedrix\Watchtower\selectorFieldResultKey($fieldName, $variant['args']),
+                                    static fn () => $selector($queryBuilder, $selectedNode)
+                                );
+                            }
+                        }
+                    }
                 }
 
                 $identifierAlias = $queryBuilder->identifierAlias();
@@ -146,6 +165,15 @@ trait BaseQuery
 
             return $queryBuilder;
         })();
+    }
+
+    public function batchKey(): BatchKey
+    {
+        if ($this->batchKey === null) {
+            throw new \LogicException('An unworkable query has no batch key.');
+        }
+
+        return $this->batchKey;
     }
 
     public function builder(): QueryBuilder

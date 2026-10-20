@@ -55,7 +55,7 @@ trait SmartResult
 
         $this->_constructMutationResult(
             node: $this->node,
-            plugins: $this->plugins,
+            plugins: $this->plugins
         );
 
         if ($this->isWorkable) {
@@ -76,9 +76,10 @@ trait SmartResult
                 node: $this->node,
                 entityManager: $this->entityManager,
                 plugins: $this->plugins,
+                nodeBuffer: NodeBuffer($this->node)
             ),
             node: $this->node,
-            entityManager: $this->entityManager,
+            entityManager: $this->entityManager
         );
 
         if ($this->isWorkable) {

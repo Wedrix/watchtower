@@ -46,7 +46,11 @@
             "src/Resolver/ResultBuffer.php",
             "src/Resolver/HydrationQuery.php",
             "src/Resolver/SmartQuery.php",
-            "src/Resolver/AuthorizedSmartResult.php"
+            "src/Resolver/AuthorizedSmartResult.php",
+            "src/Resolver/SelectionNode.php",
+            "src/Resolver/ExecutionContext.php",
+            "src/Resolver/ExecutionContexts.php",
+            "src/Resolver/Node.php"
         ]
     },
     "autoload-dev": {

@@ -471,7 +471,7 @@ Choose the join method that matches the data you want:
 - Use `leftJoinOnce()` when rows without the association should remain.
 - Use a separate join when you need a different join condition; duplicate-join checks treat the condition as part of the join identity.
 
-Use `selectAlias()` for `AS` or `AS HIDDEN` aliases, and `parameterName()` for named parameters such as `:tenantId`.
+Use `selectAlias()` for internal `AS` or `AS HIDDEN` aliases, and `parameterName()` for named parameters such as `:tenantId`. Selector output aliases use the schema field name, as shown under [Computed Fields](#computed-fields).
 
 For expensive association paths, add a query-shape test. Call `$queryBuilder->assertNoDuplicateJoins()` after your plugins have modified the query, or set `WATCHTOWER_STRICT_QUERY_SHAPE=1` in test runs. If you want to make your own assertion, `duplicateJoinPaths()` returns repeated equivalent joins by path and alias.
 
@@ -537,6 +537,38 @@ function apply_book_summary_selector(
     $queryBuilder->addSelect("CONCAT($rootAlias.title, ' #', $rootAlias.id) AS summary");
 }
 ```
+
+A selector receives a `QueryBuilder` and a `Node`. For a field with arguments, read the arguments from `$node->concreteFieldsSelection()['fieldName']['args']`. For example, a selector for `titleLength(offset: Int!): Int!` can use:
+
+```php
+function apply_book_title_length_selector(
+    QueryBuilder $queryBuilder,
+    Node $node
+): void {
+    $rootAlias = $queryBuilder->rootAlias();
+    $offset = $node->concreteFieldsSelection()['titleLength']['args']['offset'];
+    $parameter = $queryBuilder->parameterName('titleLengthOffset');
+
+    $queryBuilder
+        ->addSelect("LENGTH($rootAlias.title) + :$parameter AS titleLength")
+        ->setParameter($parameter, $offset);
+}
+```
+
+A client can request this field more than once with different arguments:
+
+```graphql
+{
+  books {
+    base: titleLength(offset: 0)
+    adjusted: titleLength(offset: 10)
+  }
+}
+```
+
+Watchtower calls the selector for each distinct argument set. In each call, the node's field selection contains the arguments for that call. Select the result using the schema field name (`AS titleLength`); Watchtower maps it to the correct GraphQL alias. Use `parameterName()` and the join helpers above to avoid conflicts between selector calls.
+
+Field selections account for `@skip`, `@include`, and fragment type conditions. Only included fields contribute projections. When a field has multiple argument sets, its selection outside the selector callback includes a `variants` list with each set and its selected fields.
 
 Use a resolver when the value comes from PHP code, another service, or an external API:
 
@@ -631,6 +663,54 @@ function call_create_book_mutation(Node $node): mixed
     ];
 }
 ```
+
+### Execution and Batching
+
+Watchtower groups compatible relation queries so it can fetch data for several parent records in one database call. For example, loading books for several authors can use a query containing all their author IDs. The resolver schedules this work, groups the parents, and reuses the fetched results.
+
+Each `Executor::executeQuery()` call has its own `ExecutionContext`. Its buffers and selection cache belong to that execution. When execution ends, the executor clears them, whether the operation succeeds or fails. Schema and Doctrine metadata can be reused across executions.
+
+| Part | Responsibility |
+| --- | --- |
+| `ExecutionContext` | Own one execution's node buffer, result buffer, and selection cache. |
+| `ExecutionContexts` | Find the context associated with a node. |
+| `Node` | Describe a requested field, its arguments, and the fields selected beneath it. |
+| `Query` | Provide the prepared database query and its batch key. |
+| `NodeBuffer` | Group pending nodes and track the distinct parent records in each batch. |
+| `ResultBuffer` | Cache fetched results, including empty and null results, and track which parents they cover. |
+
+`ExecutionContexts()->of($node)` returns the context associated with that node. The association lasts for the node's lifetime, so a deferred callback uses the correct buffers even when another operation runs before it resumes. The lookup uses weak references so it does not keep completed executions in memory.
+
+#### When results can be shared
+
+Relation queries share a batch only when their selected fields, arguments, prepared DQL, bound parameters, pagination, and cursor configuration match. Constraints that produce different queries or parameter values therefore produce separate batches.
+
+The resolver reuses cached results while they cover all the batch's parents. If another parent is discovered later, it refreshes the affected batch. Authorization runs for each node and result, including results read from the cache.
+
+Before each top-level mutation field runs, the resolver clears the node and result buffers. Later mutation fields therefore read the effects of earlier writes. The selection cache stays available because the operation's selections and variables are fixed.
+
+#### Accessing buffers in plugins
+
+Use the node passed to your plugin to obtain its execution's buffers:
+
+```php
+use function Wedrix\Watchtower\Resolver\NodeBuffer;
+use function Wedrix\Watchtower\Resolver\ResultBuffer;
+
+$nodes = NodeBuffer($node);
+$results = ResultBuffer($node);
+```
+
+The executor manages context creation and buffer cleanup. A node must belong to an execution before its buffers can be accessed; otherwise, the lookup throws a `LogicException`.
+
+#### Batch keys
+
+A `BatchKey` identifies work that can share results:
+
+- `BatchKey($node)` uses the field's identity, arguments, and selections. Custom resolvers can use it to group their own retrievals.
+- `BatchKey($node, $preparedBuilder)` also includes the database query, bound parameters, pagination, and cursor configuration.
+
+`Query::batchKey()` returns the key captured after the query's projections, constraints, filters, ordering, and pagination have been prepared, as applicable. Batched parent identifiers are added afterward, so adding parents does not change the key. `SmartQuery` and `HydrationQuery` both implement `Query`.
 
 ### Constraints, Projections, Node Authorizors, and Result Authorizors
 
@@ -772,6 +852,17 @@ Pass custom validation rules through `$executor->executeQuery(..., validationRul
 - Composite association keys are supported only to one level of nesting.
 - Avoid custom aliases or parameter names that start with `__root`, `__parent`, or `__primary`.
 - For nested filters and orderings, avoid constraining the query to one concrete `$node->parentId()` unless the predicate is correct for every parent being resolved.
+
+## Upgrading Custom Integrations
+
+For integrations written against the earlier buffer and query APIs:
+
+1. Replace `NodeBuffer()` and `ResultBuffer()` with `NodeBuffer($node)` and `ResultBuffer($node)`, using the node passed to your plugin.
+2. Remove calls that clear Watchtower's buffers at application request or worker boundaries. `Executor::executeQuery()` handles that cleanup.
+3. If you implement `Query`, add `batchKey(): BatchKey` using the prepared query described above.
+4. If you construct a `Resolver` or `AuthorizedNode` directly, supply the `ExecutionContext` that owns the operation.
+
+Plugin callback signatures do not need to change. Applications that only call `Executor::executeQuery()` need no changes.
 
 ## Development
 

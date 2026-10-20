@@ -7,6 +7,7 @@ namespace Wedrix\Watchtower;
 use Doctrine\ORM\EntityManagerInterface as DoctrineEntityManager;
 use GraphQL\Type\Definition\ResolveInfo;
 use Wedrix\Watchtower\Resolver\EntityManager;
+use Wedrix\Watchtower\Resolver\ExecutionContext;
 
 use function Wedrix\Watchtower\Resolver\AuthorizedNode;
 use function Wedrix\Watchtower\Resolver\AuthorizedSmartResult;
@@ -29,32 +30,17 @@ interface Resolver
 
 function Resolver(
     DoctrineEntityManager $doctrineEntityManager,
-    Plugins $plugins
+    Plugins $plugins,
+    ExecutionContext $executionContext
 ): Resolver {
-    /**
-     * @var \WeakMap<DoctrineEntityManager,\WeakMap<Plugins,?Resolver>>|null
-     */
-    static $instances = null;
-
-    if ($instances === null) {
-        $instances = new \WeakMap;
-    }
-
-    if (! isset($instances[$doctrineEntityManager])) {
-        $instances[$doctrineEntityManager] = new \WeakMap; // @phpstan-ignore-line
-    }
-
-    if (! isset($instances[$doctrineEntityManager][$plugins])) {
-        $instances[$doctrineEntityManager][$plugins] = null;
-    }
-
-    return $instances[$doctrineEntityManager][$plugins] ??= new class(doctrineEntityManager: $doctrineEntityManager, plugins: $plugins) implements Resolver
+    return new class(doctrineEntityManager: $doctrineEntityManager, plugins: $plugins, executionContext: $executionContext) implements Resolver
     {
         private EntityManager $entityManager;
 
         public function __construct(
             private DoctrineEntityManager $doctrineEntityManager,
-            private Plugins $plugins
+            private Plugins $plugins,
+            private ExecutionContext $executionContext
         ) {
             $this->entityManager = EntityManager(
                 doctrineEntityManager: $this->doctrineEntityManager
@@ -67,6 +53,11 @@ function Resolver(
             array $context,
             ResolveInfo $info
         ): mixed {
+            // GraphQL mutation fields execute serially. Each must read its own writes.
+            if ($info->operation->operation === 'mutation' && \count($info->path) === 1) {
+                $this->executionContext->clearResults();
+            }
+
             $result = AuthorizedSmartResult(
                 node: AuthorizedNode(
                     root: $root,
@@ -74,10 +65,11 @@ function Resolver(
                     context: $context,
                     info: $info,
                     entityManager: $this->entityManager,
-                    plugins: $this->plugins
+                    plugins: $this->plugins,
+                    executionContext: $this->executionContext
                 ),
                 entityManager: $this->entityManager,
-                plugins: $this->plugins,
+                plugins: $this->plugins
             );
 
             return $result->value();

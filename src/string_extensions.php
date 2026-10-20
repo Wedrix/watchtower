@@ -49,3 +49,9 @@ function reservedFieldResultKey(
 ): string {
     return "\0watchtower.reservedField\0{$fieldName}";
 }
+
+/** @param array<string,mixed> $arguments */
+function selectorFieldResultKey(string $fieldName, array $arguments): string
+{
+    return '__selector_'.\hash('sha256', $fieldName.'|'.argumentValuesKey($arguments));
+}

@@ -11,8 +11,7 @@ use GraphQL\Language\AST\DocumentNode;
 use GraphQL\Type\Schema as GraphQLTypeSchema;
 use GraphQL\Validator\Rules\ValidationRule;
 
-use function Wedrix\Watchtower\Resolver\NodeBuffer;
-use function Wedrix\Watchtower\Resolver\ResultBuffer;
+use function Wedrix\Watchtower\Resolver\ExecutionContext;
 
 interface Executor
 {
@@ -70,7 +69,7 @@ function Executor(
     {
         private GraphQLTypeSchema $schema;
 
-        private Resolver $resolver;
+        private Plugins $plugins;
 
         public function __construct(
             private EntityManagerInterface $entityManager,
@@ -95,13 +94,10 @@ function Executor(
                 optimize: $this->optimize
             );
 
-            $this->resolver = Resolver(
-                doctrineEntityManager: $this->entityManager,
-                plugins: Plugins(
-                    directory: $this->pluginsDirectory,
-                    cacheDirectory: $this->cacheDirectory,
-                    optimize: $this->optimize
-                )
+            $this->plugins = Plugins(
+                directory: $this->pluginsDirectory,
+                cacheDirectory: $this->cacheDirectory,
+                optimize: $this->optimize
             );
         }
 
@@ -119,6 +115,7 @@ function Executor(
             ?string $operationName,
             ?array $validationRules
         ): ExecutionResult {
+            $context = ExecutionContext();
             try {
                 return GraphQL::executeQuery(
                     schema: $this->schema,
@@ -127,13 +124,15 @@ function Executor(
                     contextValue: $contextValue,
                     variableValues: $variableValues,
                     operationName: $operationName,
-                    fieldResolver: $this->resolver,
+                    fieldResolver: Resolver(
+                        doctrineEntityManager: $this->entityManager,
+                        plugins: $this->plugins,
+                        executionContext: $context
+                    ),
                     validationRules: $validationRules
                 );
             } finally {
-                // Clear buffers after each execution to avoid data leakage between executions.
-                NodeBuffer()->clear();
-                ResultBuffer()->clear();
+                $context->clear();
             }
         }
     };

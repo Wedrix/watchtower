@@ -8,6 +8,8 @@ use Doctrine\DBAL\ArrayParameterType;
 use Doctrine\DBAL\ParameterType;
 use Doctrine\ORM\Query\Expr\Join;
 use Doctrine\ORM\Query\Expr\OrderBy;
+use Doctrine\ORM\Query\Expr\Select;
+use Doctrine\ORM\Query\Lexer;
 use Doctrine\ORM\QueryBuilder as DoctrineQueryBuilder;
 
 /**
@@ -70,6 +72,9 @@ interface QueryBuilder
         mixed $condition = null,
         ?string $indexBy = null
     ): string;
+
+    /** Capture a selector's added projections under a distinct result alias. */
+    public function projectAs(string $field, string $alias, callable $project): void;
 
     public function selectAlias(
         string $alias
@@ -339,6 +344,56 @@ function QueryBuilder(
                 condition: $condition,
                 indexBy: $indexBy
             );
+        }
+
+        public function projectAs(string $field, string $alias, callable $project): void
+        {
+            $before = \count($this->doctrineQueryBuilder->getDQLPart('select'));
+            $project();
+            $parts = $this->doctrineQueryBuilder->getDQLPart('select');
+            foreach ($parts as $partIndex => $part) {
+                if ($partIndex < $before || ! $part instanceof Select) {
+                    continue;
+                }
+                $parts[$partIndex] = new Select(\array_map(
+                    static fn (string|\Stringable $expression): string => self::renameProjection((string) $expression, $field, $alias),
+                    $part->getParts()
+                ));
+            }
+            $this->doctrineQueryBuilder->resetDQLPart('select');
+            foreach ($parts as $part) {
+                $this->doctrineQueryBuilder->addSelect((string) $part);
+            }
+        }
+
+        private static function renameProjection(string $expression, string $field, string $alias): string
+        {
+            // Token positions avoid changing quoted literals or a subquery's result alias.
+            // Lexer tokens are arrays in older Doctrine releases and objects in newer ones.
+            $lexer = new Lexer($expression);
+            $previous = null;
+            $last = null;
+            while ($lexer->moveNext()) {
+                $previous = $last;
+                $last = $lexer->lookahead;
+            }
+            if ($previous === null || $last === null) {
+                return $expression;
+            }
+            $previousValue = self::tokenPart($previous, 'value');
+            $lastValue = self::tokenPart($last, 'value');
+            $position = self::tokenPart($last, 'position');
+            if (\strtoupper((string) $previousValue) !== 'AS' || $lastValue !== $field) {
+                return $expression;
+            }
+
+            return \substr($expression, 0, $position).$alias.\substr($expression, $position + \strlen($field));
+        }
+
+        /** @param array<string,mixed>|object $token */
+        private static function tokenPart(array|object $token, string $part): mixed
+        {
+            return \is_array($token) ? $token[$part] : $token->$part;
         }
 
         public function selectAlias(

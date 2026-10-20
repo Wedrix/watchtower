@@ -22,50 +22,61 @@ interface ResultBuffer
     public function clear(): void;
 }
 
-function ResultBuffer(): ResultBuffer
+trait _ResultBuffer
 {
-    static $instance;
+    /**
+     * @var array<string,mixed>
+     */
+    private array $keys;
 
-    return $instance ??= new class implements ResultBuffer
+    /**
+     * @var array<string,int>
+     */
+    private array $parentRevisions;
+
+    public function __construct(private NodeBuffer $nodeBuffer)
     {
-        /**
-         * @var array<string,mixed>
-         */
-        private array $keys;
+        $this->keys = [];
+        $this->parentRevisions = [];
+    }
 
-        public function __construct()
-        {
-            $this->keys = [];
+    public function add(
+        BatchKey $batchKey,
+        mixed $batchResult
+    ): void {
+        $this->keys[$batchKey->value()] = $batchResult;
+        $this->parentRevisions[$batchKey->value()] = $this->nodeBuffer->revision($batchKey);
+    }
+
+    public function has(
+        BatchKey $batchKey
+    ): bool {
+        // Deeper branches can discover more parents after this batch was queried.
+        // Refresh only for new parents, including when the earlier result was empty.
+        return \array_key_exists($batchKey->value(), $this->keys)
+            && $this->parentRevisions[$batchKey->value()] === $this->nodeBuffer->revision($batchKey);
+    }
+
+    public function get(
+        BatchKey $batchKey
+    ): mixed {
+        if (! $this->has($batchKey)) {
+            throw new MissingResultBufferBatchKeyException(
+                message: 'ResultBuffer does not contain batchKey: '.$batchKey->value()
+            );
         }
 
-        public function add(
-            BatchKey $batchKey,
-            mixed $batchResult
-        ): void {
-            $this->keys[$batchKey->value()] = $batchResult;
-        }
+        return $this->keys[$batchKey->value()];
+    }
 
-        public function has(
-            BatchKey $batchKey
-        ): bool {
-            return isset($this->keys[$batchKey->value()]);
-        }
+    public function clear(): void
+    {
+        $this->keys = [];
+        $this->parentRevisions = [];
+    }
+}
 
-        public function get(
-            BatchKey $batchKey
-        ): mixed {
-            if (! $this->has($batchKey)) {
-                throw new MissingResultBufferBatchKeyException(
-                    message: 'ResultBuffer does not contain batchKey: '.$batchKey->value()
-                );
-            }
-
-            return $this->keys[$batchKey->value()];
-        }
-
-        public function clear(): void
-        {
-            $this->keys = [];
-        }
-    };
+function ResultBuffer(Node $node): ResultBuffer
+{
+    return ExecutionContexts()->of($node)->resultBuffer();
 }

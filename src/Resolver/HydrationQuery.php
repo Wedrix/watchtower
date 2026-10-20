@@ -45,6 +45,10 @@ trait HydrationQuery
                 isWorkable: $this->isWorkable
             );
         }
+
+        if ($this->isWorkable) {
+            $this->batchKey = BatchKey($this->node, $this->queryBuilder);
+        }
     }
 
     public function builder(): QueryBuilder

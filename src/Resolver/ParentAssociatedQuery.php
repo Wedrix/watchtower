@@ -24,12 +24,20 @@ namespace Wedrix\Watchtower\Resolver;
  */
 trait ParentAssociatedQuery
 {
+    private ?BatchKey $batchKey = null;
+
+    private NodeBuffer $nodeBuffer;
+
     public function __construct(
         private Node $node,
         private EntityManager $entityManager,
         private QueryBuilder $queryBuilder,
-        private bool $isWorkable
+        private bool $isWorkable,
+        ?BatchKey $batchKey = null,
+        ?NodeBuffer $nodeBuffer = null
     ) {
+        $this->batchKey = $batchKey ?? BatchKey($node);
+        $this->nodeBuffer = $nodeBuffer ?? NodeBuffer($node);
         $this->isWorkable = $this->isWorkable
             && ! $this->node->isTopLevel()
             && $this->entityManager->hasEntity(name: $this->node->unwrappedParentType());
@@ -38,24 +46,12 @@ trait ParentAssociatedQuery
     public function builder(): QueryBuilder
     {
         if ($this->isWorkable) {
-            $batchedNodes = (function (): array {
-                $batchKey = BatchKey(node: $this->node);
-
-                $nodes = NodeBuffer()->matching($batchKey);
-
-                if (! \in_array($this->node, $nodes, true)) {
-                    $nodes[] = $this->node;
-                }
-
-                return $nodes;
-            })();
-
+            $batchKey = $this->batchKey ?? BatchKey($this->node);
+            if (! \in_array($this->node, $this->nodeBuffer->matching($batchKey), true)) {
+                $this->nodeBuffer->add($this->node, $batchKey);
+            }
+            $parentIds = $this->nodeBuffer->parents($batchKey);
             $parentEntity = $this->entityManager->findEntity(name: $this->node->unwrappedParentType());
-
-            $parentIds = \array_map(
-                fn (Node $batchedNode): array => $batchedNode->parentId(),
-                $batchedNodes
-            );
 
             $association = $this->node->name();
 

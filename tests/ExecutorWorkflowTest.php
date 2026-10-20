@@ -6,6 +6,7 @@ namespace Watchtower\Tests;
 
 use Doctrine\ORM\EntityManagerInterface;
 use GraphQL\Error\DebugFlag;
+use GraphQL\Language\Parser;
 use GraphQL\Validator\QueryValidationContext;
 use GraphQL\Validator\Rules\ValidationRule;
 use PHPUnit\Framework\TestCase;
@@ -526,6 +527,108 @@ final class ExecutorWorkflowTest extends TestCase
 
         self::assertSame('Ada Lovelace', $authorsByBook['GraphQL Basics']);
         self::assertSame('Alan Turing', $authorsByBook['GraphQL in Action']);
+    }
+
+    public function test_later_nested_parents_receive_their_required_associations(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            {
+              early: books(queryParams: { filters: { titleContains: "Basics" } }) {
+                author { name }
+              }
+              authors {
+                books {
+                  title
+                  author { name }
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+        self::assertSame([['author' => ['name' => 'Ada Lovelace']]], $result['data']['early']);
+        $authorsByBook = [];
+
+        foreach ($result['data']['authors'] as $author) {
+            foreach ($author['books'] as $book) {
+                $authorsByBook[$book['title']] = $book['author']['name'];
+            }
+        }
+
+        self::assertSame([
+            'GraphQL Basics' => 'Ada Lovelace',
+            'PHP Patterns' => 'Ada Lovelace',
+            'GraphQL in Action' => 'Alan Turing',
+            'Zed Algorithms' => 'Alan Turing',
+        ], $authorsByBook);
+    }
+
+    public function test_later_nested_parents_receive_their_collections(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            {
+              early: books(queryParams: { filters: { titleContains: "Basics" } }) {
+                tags { name }
+              }
+              authors {
+                books {
+                  title
+                  tags { name }
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+        $tagsByBook = [];
+
+        foreach ($result['data']['authors'] as $author) {
+            foreach ($author['books'] as $book) {
+                $tagsByBook[$book['title']] = \array_column($book['tags'], 'name');
+                \sort($tagsByBook[$book['title']]);
+            }
+        }
+
+        self::assertSame([
+            'GraphQL Basics' => ['graphql', 'php'],
+            'PHP Patterns' => ['php'],
+            'GraphQL in Action' => ['graphql'],
+            'Zed Algorithms' => ['algorithms'],
+        ], $tagsByBook);
+    }
+
+    public function test_empty_batch_is_refreshed_for_later_nested_parents(): void
+    {
+        $result = $this->executeQuery(
+            <<<'GRAPHQL'
+            {
+              early: authors(queryParams: { limit: 1 }) {
+                books(queryParams: { filters: { titleContains: "Zed" } }) { title }
+              }
+              books {
+                author {
+                  name
+                  books(queryParams: { filters: { titleContains: "Zed" } }) { title }
+                }
+              }
+            }
+            GRAPHQL
+        );
+
+        $this->assertNoErrors($result);
+        self::assertSame([['books' => []]], $result['data']['early']);
+        self::assertCount(4, $result['data']['books']);
+
+        foreach ($result['data']['books'] as $book) {
+            self::assertSame(
+                $book['author']['name'] === 'Ada Lovelace' ? [] : [['title' => 'Zed Algorithms']],
+                $book['author']['books']
+            );
+        }
     }
 
     public function test_nested_selectors_in_different_branches_keep_their_arguments(): void
@@ -2479,43 +2582,359 @@ final class ExecutorWorkflowTest extends TestCase
         $this->createExecutor(true);
     }
 
-    public function test_buffers_are_cleared_when_execution_throws(): void
+    public function test_execution_clears_its_buffers_after_a_plugin_failure(): void
     {
-        $node = $this->createMock(Node::class);
-        $node->method('args')->willReturn([]);
-        $node->method('unwrappedParentType')->willReturn('Query');
-        $node->method('name')->willReturn('books');
+        $contexts = [];
+        $result = $this->executeQuery('{ books { title externalScore } }', [
+            'inspectNode' => static function (Node $node) use (&$contexts): void {
+                $context = \Wedrix\Watchtower\Resolver\ExecutionContexts()->of($node);
+                $key = BatchKey($node);
+                ResultBuffer($node)->add($key, ['temporary']);
+                $contexts[] = [$context, $key];
+                throw new \RuntimeException('Plugin failed.');
+            },
+        ]);
+        self::assertNotEmpty($result['errors']);
+        self::assertNotEmpty($contexts);
+        foreach ($contexts as [$context, $key]) {
+            self::assertSame([], iterator_to_array($context->nodeBuffer()));
+            self::assertFalse($context->resultBuffer()->has($key));
+        }
+        $following = $this->executeQuery('{ books { title externalScore } }');
+        $this->assertNoErrors($following);
+        self::assertCount(4, $following['data']['books']);
+    }
 
-        $batchKey = BatchKey($node);
+    public function test_completed_execution_and_nodes_are_not_retained_by_context_lookup(): void
+    {
+        $references = [];
+        $result = $this->executeQuery('{ books { title externalScore } }', [
+            'inspectNode' => static function (Node $node) use (&$references): void {
+                $references[] = [
+                    \WeakReference::create($node),
+                    \WeakReference::create(\Wedrix\Watchtower\Resolver\ExecutionContexts()->of($node)),
+                ];
+            },
+        ]);
+        $this->assertNoErrors($result);
+        self::assertNotEmpty($references);
+        \gc_collect_cycles();
+        foreach ($references as [$node, $context]) {
+            self::assertNull($node->get());
+            self::assertNull($context->get());
+        }
+    }
 
-        NodeBuffer()->add($node);
-        ResultBuffer()->add($batchKey, ['stale']);
-
-        $validationRule = new class extends ValidationRule
-        {
-            public function getVisitor(QueryValidationContext $context): array
-            {
-                throw new \RuntimeException('Validation failed unexpectedly.');
+    public function test_nested_execution_plugins_resolve_their_own_buffers(): void
+    {
+        $outerContext = null;
+        $innerContext = null;
+        $interleaved = false;
+        $insideInner = false;
+        $inspectOuter = static function (Node $node) use (&$outerContext, &$insideInner, &$interleaved): void {
+            $context = \Wedrix\Watchtower\Resolver\ExecutionContexts()->of($node);
+            $outerContext ??= $context;
+            self::assertSame($outerContext, $context);
+            self::assertSame($outerContext->nodeBuffer(), NodeBuffer($node));
+            $key = BatchKey($node);
+            ResultBuffer($node)->add($key, ['outer']);
+            if ($insideInner) {
+                $interleaved = true;
             }
         };
+        $result = $this->executeQuery('{ books { title externalScore author { name } } }', [
+            'inspectNode' => $inspectOuter,
+            'innerQuery' => function () use (&$innerContext, &$outerContext, &$insideInner): int {
+                $insideInner = true;
+                try {
+                    $inner = $this->executeQuery('{ books { title externalScore } }', [
+                        'inspectNode' => static function (Node $node) use (&$innerContext, &$outerContext): void {
+                            $context = \Wedrix\Watchtower\Resolver\ExecutionContexts()->of($node);
+                            $innerContext ??= $context;
+                            self::assertSame($innerContext, $context);
+                            self::assertNotSame($outerContext, $context);
+                            $key = BatchKey($node);
+                            self::assertFalse(ResultBuffer($node)->has($key));
+                        },
+                    ]);
+                    $this->assertNoErrors($inner);
 
-        try {
-            $this->createExecutor(false)->executeQuery(
-                source: '{ books { id } }',
-                rootValue: [],
-                contextValue: $this->defaultContext(),
-                variableValues: null,
-                operationName: null,
-                validationRules: [$validationRule]
-            );
+                    return count($inner['data']['books']);
+                } finally {
+                    $insideInner = false;
+                }
+            },
+        ]);
+        $this->assertNoErrors($result);
+        self::assertTrue($interleaved, 'The inner shared promise queue should also run outer callbacks.');
+        self::assertSame(4, $result['data']['books'][0]['externalScore']);
+    }
 
-            self::fail('Expected validation to throw.');
-        } catch (\RuntimeException $exception) {
-            self::assertSame('Validation failed unexpectedly.', $exception->getMessage());
+    public function test_selector_aliases_keep_all_argument_values_in_one_query(): void
+    {
+        $calls = new \ArrayObject;
+        $result = $this->executeQuery('{ books { title normal: titleLength extra: titleLength(offset: 10) again: titleLength(offset: 10) titleLength(offset: 20) } }', ['selectorCalls' => $calls]);
+        self::assertSame([0, 10, 20], $calls->getArrayCopy());
+        $this->assertNoErrors($result);
+        foreach ($result['data']['books'] as $book) {
+            self::assertSame(\strlen($book['title']), $book['normal']);
+            self::assertSame(\strlen($book['title']) + 10, $book['extra']);
+            self::assertSame($book['extra'], $book['again']);
+            self::assertSame(\strlen($book['title']) + 20, $book['titleLength']);
         }
+    }
 
-        self::assertSame([], \iterator_to_array(NodeBuffer()));
-        self::assertFalse(ResultBuffer()->has($batchKey));
+    public function test_selector_plan_respects_directives_on_fields_and_fragments(): void
+    {
+        $result = $this->executeQuery(<<<'GRAPHQL'
+            query ($skip: Boolean!, $include: Boolean!) {
+              books {
+                title
+                normal: titleLength(offset: 0)
+                skipped: titleLength(offset: 10) @skip(if: $skip)
+                excluded: titleLength(offset: 20) @include(if: $include)
+                ...Skipped @skip(if: $skip)
+                ... on Book @include(if: $include) { inline: titleLength(offset: 40) }
+                ...Included
+              }
+            }
+            fragment Skipped on Book { spread: titleLength(offset: 30) }
+            fragment Included on Book { extra: titleLength(offset: 50) }
+            GRAPHQL, [], ['skip' => true, 'include' => false]);
+        $this->assertNoErrors($result);
+        foreach ($result['data']['books'] as $book) {
+            self::assertSame(['title', 'normal', 'extra'], \array_keys($book));
+            self::assertSame(\strlen($book['title']), $book['normal']);
+            self::assertSame(\strlen($book['title']) + 50, $book['extra']);
+        }
+    }
+
+    public function test_repeated_fields_merge_selections_from_fragments(): void
+    {
+        $result = $this->executeQuery(<<<'GRAPHQL'
+            { authors { books { title } ...AuthorFields } }
+            fragment AuthorFields on Author { books { extra: titleLength(offset: 10) ...BookFields } }
+            fragment BookFields on Book { normal: titleLength }
+            GRAPHQL);
+        $this->assertNoErrors($result);
+        foreach ($result['data']['authors'] as $author) {
+            foreach ($author['books'] as $book) {
+                self::assertSame(\strlen($book['title']), $book['normal']);
+                self::assertSame(\strlen($book['title']) + 10, $book['extra']);
+            }
+        }
+    }
+
+    /**
+     * @runInSeparateProcess
+     *
+     * @preserveGlobalState disabled
+     */
+    public function test_parent_sensitive_constraints_do_not_leak_to_other_parents(): void
+    {
+        $this->configureParentPriceConstraint();
+        $result = $this->executeQuery('{ authors { name books { title price } } }', [
+            'parentPriceCaps' => ['Ada Lovelace' => 16],
+        ]);
+        $this->assertNoErrors($result);
+        self::assertCount(1, $result['data']['authors'][0]['books']);
+        self::assertCount(2, $result['data']['authors'][1]['books']);
+    }
+
+    /**
+     * @runInSeparateProcess
+     *
+     * @preserveGlobalState disabled
+     */
+    public function test_parent_sensitive_constraint_parameters_split_identical_dql(): void
+    {
+        $this->configureParentPriceConstraint();
+        $result = $this->executeQuery('{ authors { name books { title price } } }', [
+            'parentPriceCaps' => ['Ada Lovelace' => 16, 'Alan Turing' => 25],
+        ]);
+        $this->assertNoErrors($result);
+        self::assertCount(1, $result['data']['authors'][0]['books']);
+        self::assertCount(2, $result['data']['authors'][1]['books']);
+    }
+
+    public function test_nested_validation_failure_preserves_outer_batches(): void
+    {
+        $calls = 0;
+        $result = $this->executeQuery('{ books { title externalScore author { name } } }', [
+            'innerQuery' => function () use (&$calls): int {
+                $calls++;
+                $inner = $this->executeQuery('{ unknownField }');
+                self::assertNotEmpty($inner['errors']);
+
+                return 7;
+            },
+        ]);
+        $this->assertNoErrors($result);
+        self::assertSame(1, $calls);
+        self::assertCount(4, $result['data']['books']);
+        self::assertSame(7, $result['data']['books'][0]['externalScore']);
+        self::assertSame('Alan Turing', $result['data']['books'][2]['author']['name']);
+    }
+
+    public function test_nested_success_keeps_authorization_and_batches_isolated(): void
+    {
+        $result = $this->executeQuery('{ books { title externalScore author { name } } }', [
+            'innerQuery' => function (): int {
+                $inner = $this->executeQuery('{ books { title externalScore author { name } } }', ['denyBookId' => $this->firstBookId]);
+                self::assertNotEmpty($inner['errors']);
+                $allowed = $this->executeQuery('{ books { title externalScore author { name } } }');
+                $this->assertNoErrors($allowed);
+
+                return \count($allowed['data']['books']);
+            },
+        ]);
+        $this->assertNoErrors($result);
+        self::assertCount(4, $result['data']['books']);
+        self::assertSame(4, $result['data']['books'][0]['externalScore']);
+    }
+
+    public function test_nested_thrown_validation_does_not_clear_outer_batches(): void
+    {
+        $result = $this->executeQuery('{ books { title externalScore author { name } } }', [
+            'innerQuery' => function (): int {
+                $rule = new class extends ValidationRule
+                {
+                    public function getVisitor(QueryValidationContext $context): array
+                    {
+                        throw new \RuntimeException('Nested validation failed.');
+                    }
+                };
+                try {
+                    $this->createExecutor(false)->executeQuery('{ books { id } }', [], $this->defaultContext(), null, null, [$rule]);
+                    self::fail('Expected the validation exception.');
+                } catch (\RuntimeException $error) {
+                    self::assertSame('Nested validation failed.', $error->getMessage());
+                }
+
+                return 9;
+            },
+        ]);
+        $this->assertNoErrors($result);
+        self::assertCount(4, $result['data']['books']);
+    }
+
+    public function test_abstract_selection_plans_keep_concrete_fragment_fields_for_plugins(): void
+    {
+        $plans = new \ArrayObject;
+        $result = $this->executeQuery(<<<'GRAPHQL'
+            {
+              searchAsInterface { id label ... on SearchBook { pageCount } }
+              searchAsUnion {
+                ... on SearchBook { id label }
+                ... on SearchAuthor { id label }
+              }
+            }
+            GRAPHQL, ['selectionPlans' => $plans]);
+        $this->assertNoErrors($result);
+        self::assertSame(['id', 'label'], \array_keys($plans['searchAsInterface']['fields']));
+        self::assertSame(['SearchBook'], \array_keys($plans['searchAsInterface']['implementors']));
+        self::assertSame(['pageCount'], \array_keys($plans['searchAsInterface']['implementors']['SearchBook']['fields']));
+        self::assertSame([], $plans['searchAsUnion']['fields']);
+        foreach (['SearchBook', 'SearchAuthor'] as $type) {
+            self::assertSame(['id', 'label'], \array_keys($plans['searchAsUnion']['implementors'][$type]['fields']));
+        }
+    }
+
+    public function test_prepared_query_keys_are_immutable_and_do_not_change_node_keys(): void
+    {
+        $node = $this->createMock(Node::class);
+        $node->method('name')->willReturn('books');
+        $nodeKey = BatchKey($node);
+        $builder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+        $builder->select('book.id')->from(Book::class, 'book')
+            ->where('book.title = :title')->setParameter('title', 'first');
+        $prepared = BatchKey($node, $builder);
+        $value = $prepared->value();
+        $builder->setParameter('title', 'second');
+        self::assertSame($value, $prepared->value());
+        self::assertNotSame($value, BatchKey($node, $builder)->value());
+        self::assertSame($nodeKey, BatchKey($node));
+        self::assertNotSame($nodeKey->value(), $value);
+    }
+
+    public function test_bound_anonymous_value_objects_keep_their_state_in_batch_keys(): void
+    {
+        $keys = [];
+        foreach (['first', 'first', 'second'] as $value) {
+            $parameter = new class($value) implements \Stringable
+            {
+                public self $self;
+
+                public function __construct(private string $value)
+                {
+                    $this->self = $this;
+                }
+
+                public function __toString(): string
+                {
+                    return $this->value;
+                }
+            };
+            $node = $this->createMock(Node::class);
+            $node->method('name')->willReturn('books');
+            $builder = \Wedrix\Watchtower\Resolver\QueryBuilder($this->entityManager->createQueryBuilder());
+            $builder->select('book.id')->from(Book::class, 'book')
+                ->where('book.title = :title')->setParameter('title', $parameter, 'string');
+            $keys[] = BatchKey($node, $builder)->value();
+        }
+        self::assertSame($keys[0], $keys[1]);
+        self::assertNotSame($keys[0], $keys[2]);
+    }
+
+    public function test_reused_document_gets_fresh_selector_arguments_for_each_execution(): void
+    {
+        $document = Parser::parse('query ($offset: Int!) { books { title normal: titleLength extra: titleLength(offset: $offset) } }');
+        $executor = $this->createExecutor(false);
+        foreach ([10, 20] as $offset) {
+            $result = $executor->executeQuery($document, [], $this->defaultContext(), ['offset' => $offset], null, null)->toArray(DebugFlag::INCLUDE_DEBUG_MESSAGE);
+            $this->assertNoErrors($result);
+            foreach ($result['data']['books'] as $book) {
+                self::assertSame(\strlen($book['title']), $book['normal']);
+                self::assertSame(\strlen($book['title']) + $offset, $book['extra']);
+            }
+        }
+    }
+
+    public function test_serial_mutations_refresh_nested_cached_results(): void
+    {
+        $result = $this->executeQuery(<<<'GRAPHQL'
+            mutation {
+              first: renameBook(id: "1", title: "First") { author { books { id title } } }
+              second: renameBook(id: "1", title: "Second") { author { books { id title } } }
+            }
+            GRAPHQL);
+        $this->assertNoErrors($result);
+        self::assertSame('First', $result['data']['first']['author']['books'][0]['title']);
+        self::assertSame('Second', $result['data']['second']['author']['books'][0]['title']);
+    }
+
+    private function configureParentPriceConstraint(): void
+    {
+        $console = $this->createConsole();
+        $plugins = $console->plugins();
+        $console->addConstraintPlugin('Book');
+        $bookConstraint = ConstraintPlugin('Book');
+        $this->writePluginFile($plugins->filePath($bookConstraint), <<<PHP
+            <?php
+            namespace Wedrix\\Watchtower\\ConstraintPlugin;
+            use Wedrix\\Watchtower\\Resolver\\Node;
+            use Wedrix\\Watchtower\\Resolver\\QueryBuilder;
+            function {$bookConstraint->name()}(QueryBuilder \$builder, Node \$node): void
+            {
+                \$name = \$node->root()['name'] ?? null;
+                \$caps = \$node->context()['parentPriceCaps'] ?? [];
+                if (\$node->unwrappedParentType() === 'Author' && isset(\$caps[\$name])) {
+                    \$builder->andWhere(\$builder->rootAlias().'.price < :parentPriceCap')
+                        ->setParameter('parentPriceCap', \$caps[\$name]);
+                }
+            }
+            PHP);
+
     }
 
     private function prepareExecutorWorkspace(): void
@@ -2545,6 +2964,13 @@ final class ExecutorWorkflowTest extends TestCase
             ): void
             {
                 \$events = \$node->context()['resolutionEvents'] ?? null;
+
+                if (isset(\$node->context()['selectionPlans']) && \$node->isTopLevel()) {
+                    \$node->context()['selectionPlans'][\$node->name()] = [
+                        'fields' => \$node->concreteFieldsSelection(),
+                        'implementors' => \$node->abstractFieldsSelection(),
+                    ];
+                }
 
                 if (\$events instanceof ArrayObject && \$node->unwrappedType() === 'Book') {
                     \$events[] = 'root-node';
@@ -2642,6 +3068,9 @@ final class ExecutorWorkflowTest extends TestCase
                 \$rootAlias = \$queryBuilder->rootAlias();
 
                 \$offset = \$node->concreteFieldsSelection()['titleLength']['args']['offset'];
+                if (isset(\$node->context()['selectorCalls'])) {
+                    \$node->context()['selectorCalls'][] = \$offset;
+                }
                 \$parameter = \$queryBuilder->parameterName('titleLengthOffset');
                 \$queryBuilder->addSelect("LENGTH(\$rootAlias.title) + :\$parameter AS titleLength")
                     ->setParameter(\$parameter, \$offset);
@@ -2666,6 +3095,12 @@ final class ExecutorWorkflowTest extends TestCase
                 Node \$node
             ): mixed
             {
+                if (isset(\$node->context()['inspectNode'])) {
+                    (\$node->context()['inspectNode'])(\$node);
+                }
+                if (isset(\$node->context()['innerQuery']) && \$node->root()['id'] === 1) {
+                    return (\$node->context()['innerQuery'])();
+                }
                 \$multiplier = (int) (\$node->context()['scoreMultiplier'] ?? 1);
                 \$title = (string) (\$node->root()['title'] ?? '');
 
@@ -3200,6 +3635,13 @@ final class ExecutorWorkflowTest extends TestCase
             ): void
             {
                 \$events = \$node->context()['authorizationEvents'] ?? null;
+
+                if (isset(\$node->context()['selectionPlans']) && \$node->isTopLevel()) {
+                    \$node->context()['selectionPlans'][\$node->name()] = [
+                        'fields' => \$node->concreteFieldsSelection(),
+                        'implementors' => \$node->abstractFieldsSelection(),
+                    ];
+                }
 
                 if (\$events instanceof ArrayObject && \$node->unwrappedType() === 'Book') {
                     \$events[] = ['kind' => 'root'];

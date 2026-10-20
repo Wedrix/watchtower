@@ -21,7 +21,7 @@ trait QueryResult
     public function __construct(
         private Query $query,
         private Node $node,
-        private EntityManager $entityManager,
+        private EntityManager $entityManager
     ) {
         $this->isWorkable = $this->query->isWorkable();
 
@@ -30,21 +30,20 @@ trait QueryResult
                 return null;
             }
 
-            NodeBuffer()->add(
-                node: $this->node
-            );
+            $batchKey = $this->query->batchKey();
+            NodeBuffer($this->node)->add($this->node, $batchKey);
+            $results = ResultBuffer($this->node);
 
-            return new Deferred(function (): mixed {
+            return new Deferred(function () use ($batchKey, $results): mixed {
                 $batchResult = [];
 
                 $queryParams = $this->node->args()['queryParams'] ?? [];
                 $limit = $queryParams['limit'] ?? null;
                 $before = $queryParams['before'] ?? null;
-                $batchKey = BatchKey(node: $this->node);
                 $queryBuilder = null;
 
-                if (ResultBuffer()->has($batchKey)) {
-                    $batchResult = ResultBuffer()->get($batchKey);
+                if ($results->has($batchKey)) {
+                    $batchResult = $results->get($batchKey);
                 } else {
                     $queryBuilder = $this->query->builder();
                     $rootEntity = $this->entityManager->findEntity(name: $this->node->unwrappedType());
@@ -156,10 +155,7 @@ trait QueryResult
 
                     unset($resultRecord);
 
-                    ResultBuffer()->add(
-                        batchKey: $batchKey,
-                        batchResult: $batchResult
-                    );
+                    $results->add($batchKey, $batchResult);
                 }
 
                 // Filter the batch to only include results for the current node (only if node has a parent)

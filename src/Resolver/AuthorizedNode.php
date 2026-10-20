@@ -46,9 +46,10 @@ function AuthorizedNode(
     array $context,
     ResolveInfo $info,
     EntityManager $entityManager,
-    Plugins $plugins
+    Plugins $plugins,
+    ExecutionContext $executionContext
 ): Node {
-    return new class(root: $root, args: $args, context: $context, info: $info, entityManager: $entityManager, plugins: $plugins) implements Node
+    return new class(root: $root, args: $args, context: $context, info: $info, entityManager: $entityManager, plugins: $plugins, executionContext: $executionContext) implements Node
     {
         use AuthorizedNode, BaseNode {
             AuthorizedNode::__construct as private _constructAuthorizedNode;
@@ -66,14 +67,16 @@ function AuthorizedNode(
             array $context,
             ResolveInfo $info,
             EntityManager $entityManager,
-            Plugins $plugins
+            Plugins $plugins,
+            ExecutionContext $executionContext
         ) {
             $this->_constructBaseNode(
                 root: $root,
                 args: $args,
                 context: $context,
                 info: $info,
-                entityManager: $entityManager
+                entityManager: $entityManager,
+                executionContext: $executionContext
             );
 
             $this->_constructAuthorizedNode(

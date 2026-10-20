@@ -58,8 +58,11 @@ trait BaseNode
         private array $args,
         private array $context,
         private ResolveInfo $info,
-        private EntityManager $entityManager
+        private EntityManager $entityManager,
+        private ExecutionContext $executionContext
     ) {
+        ExecutionContexts()->associate($this, $this->executionContext);
+
         $this->name = $this->info->fieldName;
 
         $this->unwrappedType = \str_replace(['[', ']', '!'], '', (string) $this->info->returnType);
@@ -81,13 +84,9 @@ trait BaseNode
 
         $this->isALeaf = Type::isLeafType(Type::getNullableType($this->info->returnType));
 
-        $queryPlan = $this->info
-            ->lookAhead(['groupImplementorFields' => true])
-            ->queryPlan();
-
-        $this->concreteFieldsSelection = $queryPlan['fields'] ?? $queryPlan;
-
-        $this->abstractFieldsSelection = $queryPlan['implementors'] ?? [];
+        $selection = $this->executionContext->fieldsSelection($this->info);
+        $this->concreteFieldsSelection = $selection['fields'];
+        $this->abstractFieldsSelection = $selection['implementors'];
 
         $this->associationDirective = (function (): array {
             $fieldDefinitionNode = $this->info->fieldDefinition->astNode;

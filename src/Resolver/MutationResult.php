@@ -36,7 +36,7 @@ trait MutationResult
                 return null;
             }
 
-            NodeBuffer()->add(
+            NodeBuffer($this->node)->add(
                 node: $this->node
             );
 

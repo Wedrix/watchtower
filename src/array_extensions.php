@@ -45,3 +45,27 @@ function array_is_list(array $array): bool
 
     return $array === [] || \array_keys($array) === \range(0, \count($array) - 1);
 }
+
+/** Canonical argument values: map order is irrelevant, list order is significant.
+ * @param  array<string,mixed>  $arguments
+ */
+function argumentValuesKey(array $arguments): string
+{
+    $normalize = static function (mixed $value) use (&$normalize): mixed {
+        if (\is_object($value)) {
+            $value = [$value::class, (array) $value];
+        }
+        if (\is_array($value)) {
+            if (! array_is_list($value)) {
+                \ksort($value);
+            }
+            foreach ($value as &$part) {
+                $part = $normalize($part);
+            }
+        }
+
+        return $value;
+    };
+
+    return \serialize($normalize($arguments));
+}

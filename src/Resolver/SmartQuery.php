@@ -25,11 +25,16 @@ trait SmartQuery
 
     private QueryBuilder $queryBuilder;
 
+    private NodeBuffer $nodeBuffer;
+
     public function __construct(
         private Node $node,
         private EntityManager $entityManager,
-        private Plugins $plugins
+        private Plugins $plugins,
+        ?NodeBuffer $nodeBuffer = null
     ) {
+        $this->nodeBuffer = $nodeBuffer ?? NodeBuffer($this->node);
+
         $this->_constructBaseQuery(
             node: $this->node,
             entityManager: $this->entityManager,
@@ -83,12 +88,18 @@ trait SmartQuery
             );
         }
 
+        if ($this->isWorkable) {
+            $this->batchKey = BatchKey($this->node, $this->queryBuilder);
+        }
+
         if (! $this->node->isTopLevel()) {
             $this->_constructParentAssociatedQuery(
                 node: $this->node,
                 entityManager: $this->entityManager,
                 queryBuilder: $this->queryBuilder,
-                isWorkable: $this->isWorkable
+                isWorkable: $this->isWorkable,
+                batchKey: $this->batchKey,
+                nodeBuffer: $this->nodeBuffer
             );
         }
     }
@@ -111,9 +122,10 @@ trait SmartQuery
 function SmartQuery(
     Node $node,
     EntityManager $entityManager,
-    Plugins $plugins
+    Plugins $plugins,
+    ?NodeBuffer $nodeBuffer = null
 ): Query {
-    return new class(node: $node, entityManager: $entityManager, plugins: $plugins) implements Query
+    return new class(node: $node, entityManager: $entityManager, plugins: $plugins, nodeBuffer: $nodeBuffer) implements Query
     {
         use SmartQuery;
     };

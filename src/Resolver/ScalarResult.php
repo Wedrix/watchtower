@@ -32,7 +32,8 @@ trait ScalarResult
             );
         }
 
-        $this->isWorkable = $isManagedReservedEntityField || (
+        $selectorKey = \Wedrix\Watchtower\selectorFieldResultKey($this->node->name(), $this->node->args());
+        $this->isWorkable = \array_key_exists($selectorKey, $this->node->root()) || $isManagedReservedEntityField || (
             (\in_array($this->node->name(), \array_keys($this->node->root())))
             || (
                 ! $this->node->isTopLevel()
@@ -50,7 +51,7 @@ trait ScalarResult
             )
         );
 
-        $this->value = (function () use ($isManagedReservedEntityField): mixed {
+        $this->value = (function () use ($isManagedReservedEntityField, $selectorKey): mixed {
             if ($this->isWorkable) {
                 $fieldName = $this->node->name();
 
@@ -62,6 +63,10 @@ trait ScalarResult
                     return \array_key_exists($reservedFieldKey, $root)
                         ? $root[$reservedFieldKey]
                         : null;
+                }
+
+                if (\array_key_exists($selectorKey, $root)) {
+                    return $root[$selectorKey];
                 }
 
                 if (\array_key_exists($fieldName, $root)) {

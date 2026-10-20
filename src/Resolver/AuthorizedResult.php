@@ -118,7 +118,7 @@ trait AuthorizedResult
                     static function ($resolvedValue) use ($authorize, $result): mixed {
                         $result->value = $resolvedValue;
 
-                        \Closure::fromCallable($authorize)->call($result);
+                        $authorize();
 
                         return $result->value;
                     }
